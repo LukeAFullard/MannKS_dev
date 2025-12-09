@@ -56,6 +56,28 @@ def test_seasonal_test_parameter_validation():
     with pytest.raises(ValueError, match="Unknown season_type: 'invalid_season'."):
         seasonal_test(x, t, period=7, season_type='invalid_season')
 
+    # Test for day_of_year, which should not raise an error regardless of period
+    t_leap = pd.to_datetime(pd.date_range(start='2020-01-01', periods=400, freq='D'))
+    x_leap = np.arange(400)
+    seasonal_test(x_leap, t_leap, period=366, season_type='day_of_year')
+    seasonal_test(x_leap, t_leap, period=365, season_type='day_of_year')
+
+
+def test_seasonal_test_week_of_year():
+    # 10 years of weekly data
+    t = pd.to_datetime(pd.date_range(start='2010-01-01', periods=520, freq='W'))
+    # Constant value on non-trend weeks
+    x = np.full(520, 5.0)
+    # Inject trend in the 10th week of each year
+    tenth_week_mask = t.isocalendar().week == 10
+    num_trend_points = np.sum(tenth_week_mask)
+    x[tenth_week_mask] = np.arange(10, 10 * (num_trend_points + 1), 10)
+
+    result = seasonal_test(x, t, period=53, season_type='week_of_year')
+    assert result.trend == 'increasing'
+    assert result.h
+    assert result.s > 0
+
 
 def test_seasonal_test_datetime_aggregation():
     # 5 years of data with two observations in Jan

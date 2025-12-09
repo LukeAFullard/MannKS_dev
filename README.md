@@ -38,14 +38,46 @@ This function performs the seasonal Mann-Kendall test on unequally spaced time s
 
 **Input:**
 - `x`: A vector of data.
-- `t`: A vector of timestamps corresponding to the data. This can be a numeric vector or a datetime-like array.
-- `period`: The seasonal period. For numeric `t`, this defines the cycle length (e.g., 12 for monthly data if `t` is in months). For datetime `t`, this must match the expected period of the `season_type` (e.g., 7 for `'day_of_week'`).
+- `t`: A vector of timestamps. Can be a numeric vector or a datetime-like array (e.g., `numpy.datetime64` or a list of Python `datetime` objects).
+- `period`: The seasonal period. For numeric `t`, this defines the cycle length (e.g., 12 for monthly data if `t` is in months). For datetime `t`, this must match the expected period of the `season_type`.
 - `alpha`: The significance level (default is 0.05).
 - `agg_method`: The method for aggregating multiple data points within the same season-year.
   - `'none'` (default): Performs the analysis on all individual data points.
   - `'median'`: Aggregates data using the median of the values and times.
   - `'middle'`: Aggregates data by selecting the observation closest to the middle of the time period.
-- `season_type`: For datetime inputs, specifies how to define a season. Must be one of `'month'` (default), `'day_of_week'`, `'quarter'`, or `'hour'`.
+- `season_type`: For datetime inputs, specifies how to define a season. See the table below for options.
 
 **Output:**
 A named tuple with the same fields as `original_test`.
+
+#### `season_type` Options for Datetime Inputs
+
+| `season_type`    | Description                               | Expected `period` |
+|------------------|-------------------------------------------|-------------------|
+| `'month'`        | Month of the year (1-12)                  | 12                |
+| `'day_of_week'`  | Day of the week (0=Mon, 6=Sun)            | 7                 |
+| `'quarter'`      | Quarter of the year (1-4)                 | 4                 |
+| `'hour'`         | Hour of the day (0-23)                    | 24                |
+| `'week_of_year'` | ISO week of the year (1-53)               | 52 or 53          |
+| `'day_of_year'`  | Day of the year (1-366)                   | (no validation)   |
+| `'minute'`       | Minute of the hour (0-59)                 | 60                |
+| `'second'`       | Second of the minute (0-59)               | 60                |
+
+**Example: Weekly Seasonality**
+```python
+import numpy as np
+import pandas as pd
+from MannKenSen import seasonal_test
+
+# Create 4 years of weekly data
+t = pd.to_datetime(pd.date_range(start='2020-01-01', periods=208, freq='W'))
+x = np.random.rand(208)
+
+# Inject a clear increasing trend in the 10th week of each year
+tenth_week_mask = t.isocalendar().week == 10
+x[tenth_week_mask] = [10, 20, 30, 40]
+
+# Perform the test for weekly seasonality
+result = seasonal_test(x, t, period=53, season_type='week_of_year')
+print(result)
+```
