@@ -89,3 +89,43 @@ x[tenth_week_mask] = [10, 20, 30, 40]
 result = seasonal_test(x, t, period=53, season_type='week_of_year')
 print(result)
 ```
+
+### `seasonality_test(x, t, period=12, alpha=0.05, season_type='month')`
+
+Performs a Kruskal-Wallis H-test to determine if there is a statistically significant difference between the distributions of data across seasons. This is a common way to test for the presence of seasonality.
+
+**Input:**
+- `x`: A vector of data.
+- `t`: A vector of timestamps.
+- `period`: The seasonal period.
+- `alpha`: The significance level to determine if the result is seasonal.
+- `season_type`: For datetime inputs, specifies how to define a season.
+
+**Output:**
+A named tuple with the fields: `h_statistic`, `p_value`, and `is_seasonal` (a boolean).
+
+**Example: Testing for Seasonality**
+```python
+# Using the same seasonal data from the previous example
+is_seasonal_result = seasonality_test(x, t, period=53, season_type='week_of_year')
+print(is_seasonal_result)
+# Returns: Seasonality_Test(h_statistic=..., p_value=..., is_seasonal=True)
+```
+
+### `plot_seasonal_distribution(x, t, period=12, season_type='month', save_path='seasonal_distribution.png')`
+
+Generates and saves a box plot to visually compare the distribution of values across different seasons. This is a helpful utility for visually inspecting seasonality.
+
+**Input:**
+- Accepts the same `x`, `t`, `period`, and `season_type` parameters as `seasonal_test`.
+- `save_path`: The file path where the plot image will be saved.
+
+**Output:**
+The file path where the plot was saved.
+
+**Example: Plotting Seasonal Distributions**
+```python
+# Using the same seasonal data from the previous example
+plot_path = plot_seasonal_distribution(x, t, period=53, season_type='week_of_year', save_path='my_seasonal_plot.png')
+print(f"Plot saved to: {plot_path}")
+```
