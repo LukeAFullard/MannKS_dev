@@ -72,26 +72,27 @@ def __sens_estimator_unequal_spacing(x, t):
 
     return x_diff[valid_mask] / t_diff[valid_mask]
 
-def sens_slope(x_old, t_old):
+def __confidence_intervals(slopes, var_s, alpha):
     """
-    Computes Sen's slope for unequally spaced time series.
-    Input:
-        x_old: a vector of data
-        t_old: a vector of timestamps corresponding to x_old
-    Output:
-        slope: Theil-Sen estimator/slope
-        intercept: Intercept of the Kendall-Theil Robust Line
+    Computes the confidence intervals for Sen's slope.
     """
-    res = namedtuple('Sens_Slope_Test', ['slope', 'intercept'])
-    x, _ = __preprocessing(x_old)
-    t, _ = __preprocessing(t_old)
+    n = len(slopes)
+    if n == 0 or var_s == 0:
+        return np.nan, np.nan
 
-    mask = ~np.isnan(x) & ~np.isnan(t)
-    x, t = x[mask], t[mask]
+    # For a two-sided confidence interval
+    Z = norm.ppf(1 - alpha / 2)
 
-    if len(x) < 2:
-        return res(np.nan, np.nan)
+    # Ranks of the lower and upper confidence limits (1-based)
+    C = Z * np.sqrt(var_s)
+    M1 = (n - C) / 2
+    M2 = (n + C) / 2
 
-    slope = np.nanmedian(__sens_estimator_unequal_spacing(x, t))
-    intercept = np.nanmedian(x) - np.nanmedian(t) * slope
-    return res(slope, intercept)
+    sorted_slopes = np.sort(slopes)
+
+    # Interpolate to find the values at the fractional ranks
+    ranks = np.arange(1, n + 1)
+    lower_ci = np.interp(M1, ranks, sorted_slopes)
+    upper_ci = np.interp(M2, ranks, sorted_slopes)
+
+    return lower_ci, upper_ci
