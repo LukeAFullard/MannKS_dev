@@ -20,6 +20,8 @@ This function performs the Mann-Kendall test on unequally spaced time series dat
 - `x`: A vector of data.
 - `t`: A vector of timestamps corresponding to the data. The function automatically handles numeric vectors, as well as `numpy.datetime64` and Python `datetime` objects by converting them to Unix timestamps.
 - `alpha`: The significance level (default is 0.05).
+- `lt_mult`: The multiplier for left-censored data (default is 0.5).
+- `gt_mult`: The multiplier for right-censored data (default is 1.1).
 
 **Output:**
 A named tuple with the following fields:
@@ -52,6 +54,8 @@ This function performs the seasonal Mann-Kendall test on unequally spaced time s
   - `'median'`: Aggregates data using the median of the values and times.
   - `'middle'`: Aggregates data by selecting the observation closest to the middle of the time period.
 - `season_type`: For datetime inputs, specifies how to define a season. See the table below for options.
+- `lt_mult`: The multiplier for left-censored data (default is 0.5).
+- `gt_mult`: The multiplier for right-censored data (default is 1.1).
 
 **Output:**
 A named tuple with the same fields as `original_test`.
