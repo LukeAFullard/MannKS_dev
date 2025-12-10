@@ -147,3 +147,34 @@ The file path where the plot was saved.
 plot_path = plot_seasonal_distribution(x, t, period=53, season_type='week_of_year', save_path='my_seasonal_plot.png')
 print(f"Plot saved to: {plot_path}")
 ```
+
+### `analysis_notes` Module
+
+This module provides functions for data quality checks inspired by the LWP-TRENDS R script. These checks generate "Analysis Notes" to warn the user about potential issues with their data that could affect trend analysis results.
+
+#### `get_analysis_note(data, values_col='value', censored_col='censored', is_seasonal=False, post_aggregation=False, season_col='season')`
+
+Performs data quality checks and returns an analysis note.
+
+**Input:**
+- `data`: A pandas DataFrame containing the data.
+- `values_col`: The name of the column with data values.
+- `censored_col`: The name of the boolean column indicating censored data.
+- `is_seasonal`: A boolean indicating whether to perform seasonal checks.
+- `post_aggregation`: A boolean indicating whether the checks are for after data aggregation.
+- `season_col`: The name of the column with season identifiers.
+
+**Output:**
+A string containing the analysis note (e.g., "ok", "< 3 unique values").
+
+#### `get_sens_slope_analysis_note(slopes, t, cen_type)`
+
+Provides warnings about censored values used in the derivation of the Sen's Slope.
+
+**Input:**
+- `slopes`: An array of calculated slopes.
+- `t`: An array of timestamps.
+- `cen_type`: An array of censor types ('lt', 'gt', 'not').
+
+**Output:**
+A string containing the analysis note (e.g., "ok", "WARNING: Sen slope influenced by censored values").

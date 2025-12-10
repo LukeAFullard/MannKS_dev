@@ -381,7 +381,7 @@ def _sens_estimator_censored(x, t, cen_type):
     slopes_raw = x_diff_raw / t_diff
 
     # 2. Modify values for final slope calculation (as per R script)
-    x_mod = x.copy()
+    x_mod = x.copy().astype(float)
     x_mod[cen_type == 'lt'] *= 0.5
     x_mod[cen_type == 'gt'] *= 1.1
     x_diff_mod = x_mod[j_indices] - x_mod[i_indices]
