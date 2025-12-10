@@ -1,6 +1,6 @@
 # MannKenSen
 
-This project provides a Python implementation of the Mann-Kendall test for trend analysis. The original code was sourced from the `pyMannKendall` package and has been modified to support unequally spaced time series data. The `pyMannKendall` code will be deleted once we are production ready.
+This project provides a Python implementation of the Mann-Kendall test for trend analysis. The original code was sourced from the `pyMannKendall` package and has been modified to support unequally spaced time series data and regional trend aggregation. The `pyMannKendall` code will be deleted once we are production ready.
 
 ## Background and Acknowledgements
 
@@ -200,3 +200,67 @@ Inspects data availability over a trend period and determines the best time incr
 **Output:**
 - The filtered DataFrame with a new 'time_increment' column. If no suitable increment is found, this column will be filled with 'none'.
 - If `return_summary` is True, a namedtuple `InspectionResult` with `data` and `summary` attributes is returned.
+
+### `regional_test(trend_results, time_series_data, site_col='site', value_col='value', time_col='time', s_col='s', c_col='C')`
+
+Performs a regional trend aggregation analysis on the results of multiple single-site trend tests. This is useful for determining if there is a consistent, statistically significant trend across a network of monitoring sites. The methodology corrects for inter-site correlation, providing a more robust regional assessment.
+
+**Input:**
+- `trend_results`: A pandas DataFrame containing the results from running `original_test` or `seasonal_test` on multiple sites. Must contain columns for the site identifier, the Mann-Kendall score `s`, and the confidence `C`.
+- `time_series_data`: A pandas DataFrame containing the original time series data for all sites. This is used to calculate the inter-site correlation.
+- `site_col`: The name of the site identifier column in both DataFrames.
+- `value_col`: The name of the value column in `time_series_data`.
+- `time_col`: The name of the time column in `time_series_data`.
+- `s_col`: The name of the Mann-Kendall score column in `trend_results`.
+- `c_col`: The name of the confidence column in `trend_results`.
+
+**Output:**
+A named tuple with the following fields:
+- `M`: The total number of sites.
+- `TAU`: The aggregate trend strength (proportion of sites trending in the modal direction).
+- `VarTAU`: The uncorrected variance of `TAU`.
+- `CorrectedVarTAU`: The variance of `TAU` corrected for inter-site correlation.
+- `DT`: The aggregate trend direction ('Increasing' or 'Decreasing').
+- `CT`: The confidence in the aggregate trend direction.
+
+**Example: Regional Trend Aggregation**
+```python
+import pandas as pd
+import numpy as np
+from MannKenSen import original_test, regional_test
+
+# 1. Create synthetic data for three sites
+dates = pd.to_datetime(pd.date_range(start='2000-01-01', periods=20, freq='YE'))
+sites = ['A', 'B', 'C']
+all_ts_data = []
+
+for site in sites:
+    np.random.seed(hash(site) % (2**32 - 1))
+    noise = np.random.normal(0, 1.0, 20)
+    # Site B has a decreasing trend, A and C are increasing
+    trend = -0.1 * np.arange(20) if site == 'B' else 0.1 * np.arange(20)
+    values = 10 + trend + noise
+    df = pd.DataFrame({'time': dates, 'value': values, 'site': site})
+    all_ts_data.append(df)
+
+time_series_data = pd.concat(all_ts_data, ignore_index=True)
+
+# 2. Run single-site trend analysis for each site
+trend_results = []
+for site in sites:
+    site_data = time_series_data[time_series_data['site'] == site]
+    res = original_test(x=site_data['value'], t=site_data['time'])
+    res_dict = res._asdict()
+    res_dict['site'] = site
+    trend_results.append(res_dict)
+
+trend_results_df = pd.DataFrame(trend_results)
+
+# 3. Run the regional trend aggregation
+regional_res = regional_test(trend_results=trend_results_df,
+                             time_series_data=time_series_data)
+
+print(regional_res)
+# Expected Output (values will vary slightly due to random noise):
+# RegionalTrendResult(M=3, TAU=0.666..., VarTAU=..., CorrectedVarTAU=..., DT='Increasing', CT=...)
+```
