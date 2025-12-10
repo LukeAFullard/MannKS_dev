@@ -57,7 +57,7 @@ def plot_seasonal_distribution(x_old, t_old, period=12, season_type='month', sav
 
     return save_path
 
-def plot_trend(data, results, save_path):
+def plot_trend(data, results, save_path, alpha):
     """
     Generates and saves a plot of the data with the calculated trend line.
 
@@ -66,6 +66,7 @@ def plot_trend(data, results, save_path):
                              'censored', 't', and optionally 't_original'.
         results (namedtuple): The results from original_test or seasonal_test.
         save_path (str): The file path to save the plot.
+        alpha (float): The significance level for the confidence intervals.
     """
     if save_path is None:
         return
@@ -105,7 +106,8 @@ def plot_trend(data, results, save_path):
         x_line = pd.to_datetime([t_min, t_max], unit='s') if is_datetime else [t_min, t_max]
 
         plt.plot(x_line, trend_line, color='black', linestyle='--', label="Sen's Slope")
-        plt.fill_between(x_line, lower_line, upper_line, color='gray', alpha=0.3, label='95% CI')
+        ci_label = f'{int((1 - alpha) * 100)}% CI'
+        plt.fill_between(x_line, lower_line, upper_line, color='gray', alpha=0.3, label=ci_label)
 
     # Add statistics text box
     stats_text = (f"Trend: {results.trend}\n"

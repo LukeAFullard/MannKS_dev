@@ -187,6 +187,6 @@ def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='m
     results = res(trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd)
 
     if plot_path:
-        plot_trend(data_filtered, results, plot_path)
+        plot_trend(data_filtered, results, plot_path, alpha)
 
     return results

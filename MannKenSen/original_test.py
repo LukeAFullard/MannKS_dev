@@ -119,6 +119,6 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
     results = res(trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd)
 
     if plot_path:
-        plot_trend(data_filtered, results, plot_path)
+        plot_trend(data_filtered, results, plot_path, alpha)
 
     return results
