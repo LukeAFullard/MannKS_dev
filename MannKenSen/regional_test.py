@@ -1,0 +1,122 @@
+"""
+This module provides functions for regional trend aggregation, inspired by
+the LWP-TRENDS R script.
+"""
+import pandas as pd
+import numpy as np
+from scipy.stats import norm
+from collections import namedtuple
+
+
+def regional_test(trend_results, time_series_data, site_col='site',
+                  value_col='value', time_col='time', s_col='s', c_col='C'):
+    """
+    Performs a regional trend aggregation analysis on the results of
+    multiple single-site trend tests.
+
+    Args:
+        trend_results (pd.DataFrame): A DataFrame containing the results from
+            running `original_test` or `seasonal_test` on multiple sites.
+            Must contain columns for the site identifier, the Mann-Kendall
+            score `s`, and the confidence `C`.
+        time_series_data (pd.DataFrame): A DataFrame containing the original
+            time series data for all sites. Must contain columns for the
+            site identifier, the timestamp, and the value.
+        site_col (str): The name of the site identifier column in both DataFrames.
+        value_col (str): The name of the value column in `time_series_data`.
+        time_col (str): The name of the time column in `time_series_data`.
+        s_col (str): The name of the Mann-Kendall score column in `trend_results`.
+        c_col (str): The name of the confidence column in `trend_results`.
+
+    Returns:
+        namedtuple: A namedtuple `RegionalTrendResult` with the following fields:
+            - M (int): The total number of sites.
+            - TAU (float): The aggregate trend strength (proportion of sites
+                           trending in the modal direction).
+            - VarTAU (float): The uncorrected variance of TAU.
+            - CorrectedVarTAU (float): The variance of TAU corrected for
+                                       inter-site correlation.
+            - DT (str): The aggregate trend direction ('Increasing' or 'Decreasing').
+            - CT (float): The confidence in the aggregate trend direction.
+    """
+    RegionalTrendResult = namedtuple('RegionalTrendResult',
+                                     ['M', 'TAU', 'VarTAU', 'CorrectedVarTAU',
+                                      'DT', 'CT'])
+
+    # --- 1. Input Validation ---
+    required_trend_cols = [site_col, s_col, c_col]
+    if not all(col in trend_results.columns for col in required_trend_cols):
+        raise ValueError(f"trend_results DataFrame must contain the "
+                         f"following columns: {required_trend_cols}")
+
+    required_ts_cols = [site_col, value_col, time_col]
+    if not all(col in time_series_data.columns for col in required_ts_cols):
+        raise ValueError(f"time_series_data DataFrame must contain the "
+                         f"following columns: {required_ts_cols}")
+
+    # --- 2. Determine Modal Direction and Aggregate TAU ---
+    results = trend_results.dropna(subset=[s_col, c_col]).copy()
+    M = len(results)
+
+    if M == 0:
+        return RegionalTrendResult(0, np.nan, np.nan, np.nan, 'Insufficient Data', np.nan)
+
+    # Determine the modal direction
+    s_signs = np.sign(results[s_col])
+    modal_direction = np.sign(np.sum(s_signs) + np.sum(s_signs == 0) / 2)
+    if modal_direction == 0:
+        modal_direction = 1  # Default to increasing if exactly tied
+
+    DT = 'Increasing' if modal_direction == 1 else 'Decreasing'
+
+    # Calculate TAU
+    num_in_modal_direction = (np.sum(s_signs == modal_direction) +
+                              np.sum(s_signs == 0) / 2)
+    TAU = num_in_modal_direction / M
+
+    # --- 3. Inter-site Covariance Calculation ---
+    # Calculate the probability of being in the modal direction for each site
+    results['p_modal'] = np.where(s_signs == modal_direction,
+                                  results[c_col], 1 - results[c_col])
+
+    # Uncorrected variance
+    sum_var_tau = np.sum(results['p_modal'] * (1 - results['p_modal']))
+    VarTAU = (1 / M**2) * sum_var_tau
+
+    # Pivot the time series data to a wide format
+    ts_wide = time_series_data.pivot_table(index=time_col,
+                                           columns=site_col,
+                                           values=value_col)
+
+    # Align columns with trend_results
+    sites_in_common = results[site_col].unique()
+    ts_wide = ts_wide[sites_in_common]
+
+    # Calculate the pairwise correlation matrix
+    cor_matrix = ts_wide.corr(method='pearson')
+
+    # Calculate the covariance term
+    p_modal_series = results.set_index(site_col)['p_modal']
+    site_variances = p_modal_series * (1 - p_modal_series)
+    cov_matrix = np.outer(np.sqrt(site_variances), np.sqrt(site_variances))
+
+    # Align the correlation matrix with the covariance matrix
+    cor_matrix = cor_matrix.reindex(index=p_modal_series.index, columns=p_modal_series.index)
+
+    cov_term_matrix = cov_matrix * cor_matrix
+
+    # Sum the lower triangle of the covariance term matrix
+    sum_cov_term = np.sum(np.tril(cov_term_matrix, k=-1))
+
+    # Calculate the corrected variance
+    CorrectedVarTAU = (1 / M**2) * (sum_var_tau + 2 * sum_cov_term)
+
+    # --- 4. Calculate Final Regional Trend Confidence ---
+    if CorrectedVarTAU > 0:
+        z_score = (TAU - 0.5) / np.sqrt(CorrectedVarTAU)
+        CT = norm.cdf(z_score)
+    else:
+        CT = np.nan
+
+    return RegionalTrendResult(M=M, TAU=TAU, VarTAU=VarTAU,
+                               CorrectedVarTAU=CorrectedVarTAU, DT=DT, CT=CT)
