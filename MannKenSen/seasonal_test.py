@@ -10,9 +10,12 @@ from ._utils import (__preprocessing, __mk_score,
                    __variance_s, __z_score, __p_value,
                    __sens_estimator_unequal_spacing, __confidence_intervals,
                    __mk_probability, _get_season_func, _is_datetime_like,
-                   _get_cycle_identifier)
+                   _get_cycle_identifier, _mk_score_and_var_censored,
+                   _sens_estimator_censored)
+from .plotting import plot_trend
 
-def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='month', hicensor=False):
+
+def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='month', hicensor=False, plot_path=None):
     """
     Seasonal Mann-Kendall test for unequally spaced time series.
     Input:
@@ -23,6 +26,8 @@ def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='m
         hicensor (bool): If True, applies the high-censor rule, where all
                          values below the highest left-censor limit are
                          treated as censored at that limit.
+        plot_path (str, optional): If provided, saves a plot of the trend
+                                   analysis to this file path.
         agg_method: method for aggregating multiple data points within a season-year.
                     'none' (default): performs analysis on all data points.
                     'median': uses the median of values and times for each season-year.
@@ -163,4 +168,9 @@ def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='m
         intercept = np.nanmedian(data_filtered['value']) - np.nanmedian(data_filtered['t']) * slope
         lower_ci, upper_ci = __confidence_intervals(np.asarray(all_slopes), var_s, alpha)
 
-    return res(trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd)
+    results = res(trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd)
+
+    if plot_path:
+        plot_trend(data_filtered, results, plot_path)
+
+    return results

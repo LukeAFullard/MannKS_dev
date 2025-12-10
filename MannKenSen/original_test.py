@@ -6,9 +6,14 @@ from collections import namedtuple
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
-from ._utils import __preprocessing, __mk_score, __variance_s, __z_score, __p_value, __sens_estimator_unequal_spacing, __confidence_intervals, __mk_probability
+from ._utils import (__preprocessing, __mk_score, __variance_s, __z_score,
+                   __p_value, __sens_estimator_unequal_spacing,
+                   __confidence_intervals, __mk_probability,
+                   _mk_score_and_var_censored, _sens_estimator_censored)
+from .plotting import plot_trend
 
-def original_test(x, t, alpha=0.05, hicensor=False):
+
+def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None):
     """
     Mann-Kendall test for unequally spaced time series.
     Input:
@@ -18,6 +23,8 @@ def original_test(x, t, alpha=0.05, hicensor=False):
         hicensor (bool): If True, applies the high-censor rule, where all
                          values below the highest left-censor limit are
                          treated as censored at that limit.
+        plot_path (str, optional): If provided, saves a plot of the trend
+                                   analysis to this file path.
     Output:
         trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd
     """
@@ -86,4 +93,9 @@ def original_test(x, t, alpha=0.05, hicensor=False):
 
     lower_ci, upper_ci = __confidence_intervals(slopes, var_s, alpha)
 
-    return res(trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd)
+    results = res(trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd)
+
+    if plot_path:
+        plot_trend(data_filtered, results, plot_path)
+
+    return results
