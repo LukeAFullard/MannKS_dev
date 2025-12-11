@@ -183,7 +183,7 @@ tenth_week_mask = t.isocalendar().week == 10
 x[tenth_week_mask] = [10, 20, 30, 40]
 
 # Perform the test for weekly seasonality
-result = seasonal_test(x, t, period=53, season_type='week_of_year')
+result = seasonal_test(x, t, period=52, season_type='week_of_year')
 print(result)
 ```
 
@@ -204,10 +204,27 @@ A named tuple with the fields: `h_statistic`, `p_value`, and `is_seasonal` (a bo
 **Example: Testing for Seasonality**
 ```python
 # Using the same seasonal data from the previous example
-is_seasonal_result = seasonality_test(x, t, period=53, season_type='week_of_year')
+is_seasonal_result = seasonality_test(x, t, period=52, season_type='week_of_year')
 print(is_seasonal_result)
 # Returns: Seasonality_Test(h_statistic=..., p_value=..., is_seasonal=True)
 ```
+
+### Visualizing Trend Analysis
+
+Both the `original_test` and `seasonal_test` functions include a `plot_path` parameter that allows you to generate and save a visualization of the trend analysis.
+
+**Example: Generating a Trend Plot**
+```python
+# Using the data from the original_test example
+result = original_test(x=x_prepared, t=t, plot_path='trend_analysis.png')
+print("Trend plot saved to trend_analysis.png")
+```
+
+**Interpreting the Plot:**
+- **Data Points:** Non-censored data points are shown as blue circles, while censored data points are marked with red 'x's.
+- **Sen's Slope:** The calculated trend is displayed as a dashed black line.
+- **Confidence Intervals:** The shaded gray area represents the confidence interval of the slope (e.g., 95% CI for `alpha=0.05`), providing a visual representation of the uncertainty in the trend.
+- **Statistics Box:** A text box in the top-left corner provides a summary of the key statistical results: the trend direction, Kendall's Tau, the Sen's slope, and the p-value.
 
 ### `plot_seasonal_distribution(x, t, period=12, season_type='month', save_path='seasonal_distribution.png')`
 
@@ -223,7 +240,7 @@ The file path where the plot was saved.
 **Example: Plotting Seasonal Distributions**
 ```python
 # Using the same seasonal data from the previous example
-plot_path = plot_seasonal_distribution(x, t, period=53, season_type='week_of_year', save_path='my_seasonal_plot.png')
+plot_path = plot_seasonal_distribution(x, t, period=52, season_type='week_of_year', save_path='my_seasonal_plot.png')
 print(f"Plot saved to: {plot_path}")
 ```
 

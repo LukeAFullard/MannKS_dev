@@ -119,7 +119,10 @@ def inspect_trend_data(data, trend_period=None, end_year=None,
     availability_summary = []
     best_time_incr = 'none'
 
-    for name, num_increments in time_increments.items():
+    # Sort increments by frequency (descending) to find the best one first
+    sorted_increments = sorted(time_increments.items(), key=lambda item: item[1], reverse=True)
+
+    for name, num_increments in sorted_increments:
         if name not in increment_map:
             raise ValueError(f"Custom increment '{name}' is not supported. Supported increments are: {list(increment_map.keys())}")
         col = increment_map[name]
@@ -148,12 +151,9 @@ def inspect_trend_data(data, trend_period=None, end_year=None,
         }
         availability_summary.append(summary)
 
+        # The first valid increment found will be the best one because we sorted by frequency
         if is_ok and best_time_incr == 'none':
-            # Find the best increment by selecting the one with the highest frequency (most increments per year)
-            if not best_time_incr:
-                 best_time_incr = name
-            elif time_increments.get(name, 0) > time_increments.get(best_time_incr, 0):
-                best_time_incr = name
+            best_time_incr = name
 
     # --- 4. Add 'time_increment' Column ---
     if best_time_incr != 'none':
