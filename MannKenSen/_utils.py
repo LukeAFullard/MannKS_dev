@@ -403,31 +403,36 @@ def __confidence_intervals(slopes, var_s, alpha):
 def _aggregate_censored_median(group, is_datetime):
     """
     Computes a robust median for a group of observations which may contain
-    censored data. It identifies the median observation and returns its
-    properties.
+    censored data, following the LWP-TRENDS R script logic.
     """
     n = len(group)
     if n == 0:
         return None
 
-    # If no censored data, standard median is robust.
+    # Compute median value
+    median_val = group['value'].median()
+
+    # Determine if median is censored (R logic)
     if not group['censored'].any():
-        median_val = group['value'].median()
-        row_data = {
-            'value': median_val,
-            'censored': False,
-            'cen_type': 'not'
-        }
+        is_censored = False
+        cen_type = 'not'
     else:
-        # Sort by value to find the median observation. `mergesort` is stable.
-        sorted_group = group.sort_values(by='value', kind='mergesort')
-        # The median observation is the upper of the two middle values for even n
-        median_obs = sorted_group.iloc[n // 2]
-        row_data = {
-            'value': median_obs['value'],
-            'censored': median_obs['censored'],
-            'cen_type': median_obs['cen_type']
-        }
+        # Get maximum censored value
+        max_censored = group.loc[group['censored'], 'value'].max()
+        # Median is censored if it's <= the maximum censored value
+        is_censored = median_val <= max_censored
+
+        if is_censored:
+            # Get the most common censor type among censored values
+            cen_type = group.loc[group['censored'], 'cen_type'].mode()[0]
+        else:
+            cen_type = 'not'
+
+    row_data = {
+        'value': median_val,
+        'censored': is_censored,
+        'cen_type': cen_type,
+    }
 
     # Always aggregate time using the median of the original timestamps
     row_data['t_original'] = group['t_original'].median() if is_datetime else np.median(group['t_original'])
