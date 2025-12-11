@@ -69,3 +69,29 @@ def test_dynamic_tie_breaking_right_censored():
     # The trend should be increasing
     assert result.trend == 'increasing'
     assert result.h
+
+def test_hicensor_rule_original_test():
+    """Test the hicensor rule in original_test."""
+    x = ['<5', 3, 2, '<10', 8, 1] # More sensitive to hicensor
+    t = np.arange(len(x))
+    data = prepare_censored_data(x)
+
+    # Without hicensor, trend should be present
+    result_no_hicensor = original_test(x=data, t=t)
+
+    # With hicensor, all values < 10 become censored at 10.
+    # The data effectively becomes ['<10', '<10', '<10', '<10', '<10', '<10']
+    # This should result in no trend.
+    result_hicensor = original_test(x=data, t=t, hicensor=True)
+    assert result_hicensor.trend == 'no trend'
+    assert abs(result_hicensor.s) < abs(result_no_hicensor.s)
+
+def test_original_test_string_input_error():
+    """
+    Test that original_test raises a TypeError if the input contains
+    strings but is not a DataFrame from prepare_censored_data.
+    """
+    x = ['1', '2', '<3']
+    t = np.arange(len(x))
+    with pytest.raises(TypeError, match="Input data `x` contains strings. Please pre-process it with `prepare_censored_data` first."):
+        original_test(x=x, t=t)

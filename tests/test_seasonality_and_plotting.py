@@ -143,3 +143,52 @@ def test_general_season_types(season_type, period, freq, n_periods):
 
     result = seasonal_test(x, t, season_type=season_type, period=period)
     assert result.trend == 'increasing'
+
+def test_seasonal_test_aggregation_methods():
+    """
+    Test the 'median' and 'middle' aggregation methods in seasonal_test.
+    """
+    # Create a dataset with multiple observations per season-year
+    dates = pd.to_datetime(['2020-01-10', '2020-01-20', '2021-01-15', '2022-01-05', '2022-01-25',
+                            '2020-02-10', '2020-02-20', '2021-02-15', '2022-02-05', '2022-02-25',
+                           '2023-01-10', '2023-01-20', '2024-01-15', '2025-01-05', '2025-01-25'])
+    np.random.seed(0)
+    values = np.arange(15) + np.random.normal(0, 2, 15) # Clear increasing trend with more noise
+
+    # Test with no aggregation
+    result_none = seasonal_test(x=values, t=dates, period=12, season_type='month')
+    assert result_none.trend == 'increasing'
+
+    # Test with 'median' aggregation
+    # The data for Jan 2020 will be aggregated to a single point with value 1.5
+    # The data for Jan 2022 will be aggregated to a single point with value 4.5
+    result_median = seasonal_test(x=values, t=dates, period=12, season_type='month', agg_method='median')
+    assert result_median.trend == 'increasing'
+
+    # Test with 'middle' aggregation
+    # The data for Jan 2020 will be aggregated to the point on 2020-01-20 (value 2)
+    # The data for Jan 2022 will be aggregated to the point on 2022-01-25 (value 5)
+    result_middle = seasonal_test(x=values, t=dates, period=12, season_type='month', agg_method='middle')
+    assert result_middle.trend == 'increasing'
+
+    # The scores and slopes should be different for each aggregation method
+    assert result_none.s != result_median.s
+    assert result_median.s != result_middle.s
+    assert result_none.slope != result_median.slope
+    assert result_median.slope != result_middle.slope
+
+def test_seasonality_test_insufficient_data():
+    """Test seasonality_test with insufficient data."""
+    x = [1, 2, 3]
+    t = pd.to_datetime(pd.date_range(start='2020-01-01', periods=3, freq='ME'))
+    result = seasonality_test(x, t)
+    assert np.isnan(result.h_statistic)
+    assert np.isnan(result.p_value)
+    assert not result.is_seasonal
+
+def test_plot_seasonal_distribution_insufficient_data():
+    """Test plot_seasonal_distribution with insufficient data."""
+    x = [1]
+    t = [pd.to_datetime('2020-01-01')]
+    result = plot_seasonal_distribution(x, t, save_path='test.png')
+    assert result is None
