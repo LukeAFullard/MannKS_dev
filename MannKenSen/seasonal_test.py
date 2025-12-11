@@ -6,16 +6,17 @@ from collections import namedtuple
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
-from ._utils import (__preprocessing, __mk_score,
-                   __variance_s, __z_score, __p_value,
+from collections import namedtuple
+from ._utils import (__mk_score, __variance_s, __z_score, __p_value,
                    __sens_estimator_unequal_spacing, __confidence_intervals,
-                   __mk_probability, _get_season_func, _is_datetime_like,
+                   __mk_probability, _get_season_func,
                    _get_cycle_identifier, _mk_score_and_var_censored,
-                   _sens_estimator_censored)
+                   _sens_estimator_censored, _aggregate_censored_median,
+                   _prepare_data)
 from .plotting import plot_trend
 
 
-def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='month', hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1):
+def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='month', hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='lwp'):
     """
     Seasonal Mann-Kendall test for unequally spaced time series.
     Input:
@@ -30,13 +31,20 @@ def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='m
                                    analysis to this file path.
         agg_method: method for aggregating multiple data points within a season-year.
                     'none' (default): performs analysis on all data points.
-                    'median': uses the median of values and times for each season-year.
-                    'middle': uses the observation closest to the middle of the time period.
+                    'median': (LWP method) uses the median of values and times.
+                              For censored data, this is a simple heuristic.
+                    'robust_median': uses a more statistically robust median for
+                                     censored data.
+                    'middle': uses the observation closest to the middle of the
+                              time period.
         season_type: For datetime inputs, specifies the type of seasonality.
                      'year', 'month', 'day_of_week', 'quarter', 'hour', 'week_of_year',
                      'day_of_year', 'minute', 'second'.
         lt_mult (float): The multiplier for left-censored data (default 0.5).
         gt_mult (float): The multiplier for right-censored data (default 1.1).
+        sens_slope_method (str): The method to use for handling ambiguous slopes
+                                 in censored data. See `_sens_estimator_censored`
+                                 for details.
     Output:
         A namedtuple containing the following fields:
         - trend: The trend of the data ('increasing', 'decreasing', or 'no trend').
@@ -56,39 +64,10 @@ def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='m
     """
     res = namedtuple('Seasonal_Mann_Kendall_Test', ['trend', 'h', 'p', 'z', 'Tau', 's', 'var_s', 'slope', 'intercept', 'lower_ci', 'upper_ci', 'C', 'Cd'])
 
-    # Input validation and preparation
-    if isinstance(x, DataFrame) and all(col in x.columns for col in ['value', 'censored', 'cen_type']):
-        data = x.copy()
-    elif hasattr(x, '__iter__') and any(isinstance(i, str) for i in x):
-        raise TypeError("Input data `x` contains strings. Please pre-process it with `prepare_censored_data` first.")
-    else:
-        x_proc, _ = __preprocessing(x)
-        data = pd.DataFrame({
-            'value': x_proc,
-            'censored': np.zeros(len(x_proc), dtype=bool),
-            'cen_type': np.full(len(x_proc), 'not', dtype=object)
-        })
-
-    t_raw = np.asarray(t)
-    is_datetime = _is_datetime_like(t_raw)
-    t_numeric, _ = __preprocessing(t_raw)
-    data['t_original'] = t_raw
-    data['t'] = t_numeric
+    data_filtered, is_datetime = _prepare_data(x, t, hicensor)
 
     if is_datetime:
         season_func = _get_season_func(season_type, period)
-
-    # Handle missing values
-    mask = ~np.isnan(data['value'])
-    data_filtered = data[mask].copy()
-
-    # Apply HiCensor rule if requested
-    if hicensor and 'lt' in data_filtered['cen_type'].values:
-        max_lt_censor = data_filtered.loc[data_filtered['cen_type'] == 'lt', 'value'].max()
-        hi_censor_mask = data_filtered['value'] < max_lt_censor
-        data_filtered.loc[hi_censor_mask, 'censored'] = True
-        data_filtered.loc[hi_censor_mask, 'cen_type'] = 'lt'
-        data_filtered.loc[hi_censor_mask, 'value'] = max_lt_censor
 
     if len(data_filtered) < 2:
         return res('no trend', False, np.nan, 0, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan)
@@ -123,6 +102,8 @@ def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='m
                         'cen_type': group['cen_type'].mode()[0]
                     }
                     agg_data_list.append(pd.DataFrame([new_row]))
+                elif agg_method == 'robust_median':
+                    agg_data_list.append(_aggregate_censored_median(group, is_datetime))
                 elif agg_method == 'middle':
                     t_numeric_group = group['t'].to_numpy()
                     closest_idx = np.argmin(np.abs(t_numeric_group - np.mean(t_numeric_group)))
@@ -168,7 +149,10 @@ def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='m
                 denom += 0.5 * n * (n - 1)
 
             if np.any(season_censored):
-                all_slopes.extend(_sens_estimator_censored(season_x, season_t, season_cen_type, lt_mult=lt_mult, gt_mult=gt_mult))
+                all_slopes.extend(_sens_estimator_censored(
+                    season_x, season_t, season_cen_type,
+                    lt_mult=lt_mult, gt_mult=gt_mult, method=sens_slope_method
+                ))
             else:
                 all_slopes.extend(__sens_estimator_unequal_spacing(season_x, season_t))
 

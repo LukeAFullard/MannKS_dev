@@ -4,16 +4,16 @@ and Sen's slope estimator to handle unequally spaced time series data.
 """
 from collections import namedtuple
 import numpy as np
-import pandas as pd
-from pandas import DataFrame
-from ._utils import (__preprocessing, __mk_score, __variance_s, __z_score,
+from collections import namedtuple
+from ._utils import (__mk_score, __variance_s, __z_score,
                    __p_value, __sens_estimator_unequal_spacing,
                    __confidence_intervals, __mk_probability,
-                   _mk_score_and_var_censored, _sens_estimator_censored)
+                   _mk_score_and_var_censored, _sens_estimator_censored,
+                   _prepare_data)
 from .plotting import plot_trend
 
 
-def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1):
+def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='lwp'):
     """
     Mann-Kendall test for unequally spaced time series.
     Input:
@@ -27,6 +27,9 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
                                    analysis to this file path.
         lt_mult (float): The multiplier for left-censored data (default 0.5).
         gt_mult (float): The multiplier for right-censored data (default 1.1).
+        sens_slope_method (str): The method to use for handling ambiguous slopes
+                                 in censored data. See `_sens_estimator_censored`
+                                 for details.
     Output:
         trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd
 
@@ -48,38 +51,12 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
     """
     res = namedtuple('Mann_Kendall_Test', ['trend', 'h', 'p', 'z', 'Tau', 's', 'var_s', 'slope', 'intercept', 'lower_ci', 'upper_ci', 'C', 'Cd'])
 
-    # Input validation and preparation
-    if isinstance(x, DataFrame) and all(col in x.columns for col in ['value', 'censored', 'cen_type']):
-        data = x.copy()
-    elif hasattr(x, '__iter__') and any(isinstance(i, str) for i in x):
-        raise TypeError("Input data `x` contains strings. Please pre-process it with `prepare_censored_data` first.")
-    else:
-        x_proc, _ = __preprocessing(x)
-        data = pd.DataFrame({
-            'value': x_proc,
-            'censored': np.zeros(len(x_proc), dtype=bool),
-            'cen_type': np.full(len(x_proc), 'not', dtype=object)
-        })
-
-    t_proc, _ = __preprocessing(t)
-    data['t'] = t_proc
+    data_filtered, _ = _prepare_data(x, t, hicensor)
 
     # Check for tied timestamps
-    if len(t_proc) != len(np.unique(t_proc)):
+    if len(data_filtered['t']) != len(np.unique(data_filtered['t'])):
         import warnings
         warnings.warn("Tied timestamps detected in the time vector `t`. Corresponding data points will be excluded from the Sen's slope calculation.", UserWarning)
-
-    # Handle missing values
-    mask = ~np.isnan(data['value']) & ~np.isnan(data['t'])
-    data_filtered = data[mask].copy()
-
-    # Apply HiCensor rule if requested
-    if hicensor and 'lt' in data_filtered['cen_type'].values:
-        max_lt_censor = data_filtered.loc[data_filtered['cen_type'] == 'lt', 'value'].max()
-        hi_censor_mask = data_filtered['value'] < max_lt_censor
-        data_filtered.loc[hi_censor_mask, 'censored'] = True
-        data_filtered.loc[hi_censor_mask, 'cen_type'] = 'lt'
-        data_filtered.loc[hi_censor_mask, 'value'] = max_lt_censor
 
     x_filtered = data_filtered['value'].to_numpy()
     t_filtered = data_filtered['t'].to_numpy()
@@ -103,7 +80,10 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
     C, Cd = __mk_probability(p, s)
 
     if np.any(censored_filtered):
-        slopes = _sens_estimator_censored(x_filtered, t_filtered, cen_type_filtered, lt_mult=lt_mult, gt_mult=gt_mult)
+        slopes = _sens_estimator_censored(
+            x_filtered, t_filtered, cen_type_filtered,
+            lt_mult=lt_mult, gt_mult=gt_mult, method=sens_slope_method
+        )
     else:
         slopes = __sens_estimator_unequal_spacing(x_filtered, t_filtered)
 

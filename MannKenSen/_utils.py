@@ -365,11 +365,28 @@ def __sens_estimator_unequal_spacing(x, t):
     return x_diff[valid_mask] / t_diff[valid_mask]
 
 
-def _sens_estimator_censored(x, t, cen_type, lt_mult=0.5, gt_mult=1.1):
+def _sens_estimator_censored(x, t, cen_type, lt_mult=0.5, gt_mult=1.1, method='lwp'):
     """
     Computes Sen's slope for censored, unequally spaced data.
-    This is a Python translation of the GetInterObservationSlopes logic
-    from the LWP-TRENDS R script.
+
+    This implements the logic from the LWP-TRENDS R script, which is the
+    default behavior. An optional, more statistically robust method is also
+    provided.
+
+    Args:
+        x (np.array): The data values.
+        t (np.array): The timestamps.
+        cen_type (np.array): The censor types ('lt', 'gt', 'not').
+        lt_mult (float): Multiplier for left-censored data.
+        gt_mult (float): Multiplier for right-censored data.
+        method (str): The method to use for handling ambiguous slopes.
+            - 'lwp' (default): Sets ambiguous slopes to 0, mimicking the
+              LWP-TRENDS R script.
+            - 'nan': Sets ambiguous slopes to np.nan, which is a more
+              statistically neutral approach.
+
+    Returns:
+        np.array: An array of calculated slopes.
     """
     n = len(x)
     if n < 2:
@@ -402,14 +419,17 @@ def _sens_estimator_censored(x, t, cen_type, lt_mult=0.5, gt_mult=1.1):
     cen_type_pairs = cen_type[i_indices] + " " + cen_type[j_indices]
     slopes_final = slopes_mod.copy()
 
+    # Determine the value to assign to ambiguous slopes based on the method
+    ambiguous_slope_value = 0 if method == 'lwp' else np.nan
+
     # Rule 1: No slope between two censored values of the same type
-    slopes_final[(cen_type_pairs == 'gt gt') | (cen_type_pairs == 'lt lt')] = 0
+    slopes_final[(cen_type_pairs == 'gt gt') | (cen_type_pairs == 'lt lt')] = ambiguous_slope_value
 
     # Rules 2 & 3: Ambiguous slopes between left-censored and non-censored
-    slopes_final[(slopes_raw > 0) & ((cen_type_pairs == 'not lt') | (cen_type_pairs == 'lt not'))] = 0
+    slopes_final[(slopes_raw > 0) & ((cen_type_pairs == 'not lt') | (cen_type_pairs == 'lt not'))] = ambiguous_slope_value
 
     # Rules 4 & 5: Ambiguous slopes between right-censored and non-censored
-    slopes_final[(slopes_raw < 0) & ((cen_type_pairs == 'not gt') | (cen_type_pairs == 'gt not'))] = 0
+    slopes_final[(slopes_raw < 0) & ((cen_type_pairs == 'not gt') | (cen_type_pairs == 'gt not'))] = ambiguous_slope_value
 
     return slopes_final
 
@@ -417,7 +437,11 @@ def __confidence_intervals(slopes, var_s, alpha):
     """
     Computes the confidence intervals for Sen's slope.
     """
-    n = len(slopes)
+    # Filter out NaN values, which can occur with the 'nan' method for
+    # censored slopes.
+    valid_slopes = slopes[~np.isnan(slopes)]
+    n = len(valid_slopes)
+
     if n == 0 or var_s == 0:
         return np.nan, np.nan
 
@@ -429,7 +453,7 @@ def __confidence_intervals(slopes, var_s, alpha):
     M1 = (n - C) / 2
     M2 = (n + C) / 2
 
-    sorted_slopes = np.sort(slopes)
+    sorted_slopes = np.sort(valid_slopes)
 
     # Interpolate to find the values at the fractional ranks
     ranks = np.arange(1, n + 1)
@@ -437,3 +461,76 @@ def __confidence_intervals(slopes, var_s, alpha):
     upper_ci = np.interp(M2, ranks, sorted_slopes)
 
     return lower_ci, upper_ci
+
+
+def _aggregate_censored_median(group, is_datetime):
+    """
+    Computes a robust median for a group of observations which may contain
+    censored data. It identifies the median observation and returns its
+    properties.
+    """
+    n = len(group)
+    if n == 0:
+        return None
+
+    # If no censored data, standard median is robust.
+    if not group['censored'].any():
+        median_val = group['value'].median()
+        row_data = {
+            'value': median_val,
+            'censored': False,
+            'cen_type': 'not'
+        }
+    else:
+        # Sort by value to find the median observation. `mergesort` is stable.
+        sorted_group = group.sort_values(by='value', kind='mergesort')
+        # The median observation is the upper of the two middle values for even n
+        median_obs = sorted_group.iloc[n // 2]
+        row_data = {
+            'value': median_obs['value'],
+            'censored': median_obs['censored'],
+            'cen_type': median_obs['cen_type']
+        }
+
+    # Always aggregate time using the median of the original timestamps
+    row_data['t_original'] = group['t_original'].median() if is_datetime else np.median(group['t_original'])
+    row_data['t'] = np.median(group['t'])
+
+    return pd.DataFrame([row_data])
+
+
+def _prepare_data(x, t, hicensor):
+    """
+    Internal helper to prepare and validate data for trend tests.
+    """
+    if isinstance(x, pd.DataFrame) and all(col in x.columns for col in ['value', 'censored', 'cen_type']):
+        data = x.copy()
+    elif hasattr(x, '__iter__') and any(isinstance(i, str) for i in x):
+        raise TypeError("Input data `x` contains strings. Please pre-process it with `prepare_censored_data` first.")
+    else:
+        x_proc, _ = __preprocessing(x)
+        data = pd.DataFrame({
+            'value': x_proc,
+            'censored': np.zeros(len(x_proc), dtype=bool),
+            'cen_type': np.full(len(x_proc), 'not', dtype=object)
+        })
+
+    t_raw = np.asarray(t)
+    is_datetime = _is_datetime_like(t_raw)
+    t_numeric, _ = __preprocessing(t_raw)
+    data['t_original'] = t_raw
+    data['t'] = t_numeric
+
+    # Handle missing values
+    mask = ~np.isnan(data['value'])
+    data_filtered = data[mask].copy()
+
+    # Apply HiCensor rule if requested
+    if hicensor and 'lt' in data_filtered['cen_type'].values:
+        max_lt_censor = data_filtered.loc[data_filtered['cen_type'] == 'lt', 'value'].max()
+        hi_censor_mask = data_filtered['value'] < max_lt_censor
+        data_filtered.loc[hi_censor_mask, 'censored'] = True
+        data_filtered.loc[hi_censor_mask, 'cen_type'] = 'lt'
+        data_filtered.loc[hi_censor_mask, 'value'] = max_lt_censor
+
+    return data_filtered, is_datetime
