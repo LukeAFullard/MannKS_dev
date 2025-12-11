@@ -108,7 +108,7 @@ def get_sens_slope_analysis_note(slopes, t, cen_type):
     if slopes is None or len(slopes) == 0:
         return "ok"
 
-    median_slope = np.median(slopes)
+    median_slope = np.nanmedian(slopes)
     if np.isnan(median_slope):
         return "ok"
 
@@ -125,8 +125,12 @@ def get_sens_slope_analysis_note(slopes, t, cen_type):
 
     cen_type_pairs = (cen_type[i] + " " + cen_type[j])[valid_mask]
 
-    min_abs_diff = np.min(np.abs(slopes - median_slope))
-    indices_of_median = np.where(np.abs(slopes - median_slope) <= min_abs_diff + 1e-9)[0]
+    # Find the minimum absolute difference from the median
+    abs_diffs = np.abs(slopes - median_slope)
+    min_abs_diff = np.nanmin(abs_diffs)
+
+    # Find all slopes that are close to this minimum difference
+    indices_of_median = np.where(np.isclose(abs_diffs, min_abs_diff))[0]
 
     if len(indices_of_median) == 0:
         return "ok"

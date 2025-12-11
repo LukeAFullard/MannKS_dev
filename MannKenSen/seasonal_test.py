@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from collections import namedtuple
+import warnings
 from ._utils import (__mk_score, __variance_s, __z_score, __p_value,
                    __sens_estimator_unequal_spacing, __confidence_intervals,
                    __mk_probability, _get_season_func,
@@ -93,6 +94,11 @@ def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='m
                 agg_data_list.append(group)
             else:
                 if agg_method == 'median':
+                    if group['censored'].any():
+                        warnings.warn(
+                            "The 'median' aggregation method uses a simple heuristic for censored data, "
+                            "which may not be statistically robust. Consider using 'robust_median' for "
+                            "more accurate censored data aggregation.", UserWarning)
                     median_val = group['value'].median()
                     new_row = {
                         'value': median_val,

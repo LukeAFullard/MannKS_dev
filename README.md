@@ -183,7 +183,7 @@ tenth_week_mask = t.isocalendar().week == 10
 x[tenth_week_mask] = [10, 20, 30, 40]
 
 # Perform the test for weekly seasonality
-result = seasonal_test(x, t, period=53, season_type='week_of_year')
+result = seasonal_test(x, t, period=52, season_type='week_of_year')
 print(result)
 ```
 
@@ -204,7 +204,7 @@ A named tuple with the fields: `h_statistic`, `p_value`, and `is_seasonal` (a bo
 **Example: Testing for Seasonality**
 ```python
 # Using the same seasonal data from the previous example
-is_seasonal_result = seasonality_test(x, t, period=53, season_type='week_of_year')
+is_seasonal_result = seasonality_test(x, t, period=52, season_type='week_of_year')
 print(is_seasonal_result)
 # Returns: Seasonality_Test(h_statistic=..., p_value=..., is_seasonal=True)
 ```
@@ -240,7 +240,7 @@ The file path where the plot was saved.
 **Example: Plotting Seasonal Distributions**
 ```python
 # Using the same seasonal data from the previous example
-plot_path = plot_seasonal_distribution(x, t, period=53, season_type='week_of_year', save_path='my_seasonal_plot.png')
+plot_path = plot_seasonal_distribution(x, t, period=52, season_type='week_of_year', save_path='my_seasonal_plot.png')
 print(f"Plot saved to: {plot_path}")
 ```
 
