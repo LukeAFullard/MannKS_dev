@@ -76,5 +76,28 @@ class TestRegionalAggregation(unittest.TestCase):
         # Corrected variance should be different from uncorrected
         self.assertNotAlmostEqual(regional_res.VarTAU, regional_res.CorrectedVarTAU)
 
+    def test_regional_test_input_validation(self):
+        """Test the input validation in regional_test."""
+        # Create dummy data
+        trend_results = pd.DataFrame({'site': ['A'], 's': [1], 'C': [0.9]})
+        time_series_data = pd.DataFrame({'site': ['A'], 'value': [1], 'time': [pd.to_datetime('2020-01-01')]})
+
+        # Test missing columns in trend_results
+        with self.assertRaises(ValueError):
+            regional_test(trend_results.drop(columns=['s']), time_series_data)
+
+        # Test missing columns in time_series_data
+        with self.assertRaises(ValueError):
+            regional_test(trend_results, time_series_data.drop(columns=['value']))
+
+    def test_regional_test_insufficient_data(self):
+        """Test regional_test with no valid data."""
+        trend_results = pd.DataFrame({'site': ['A'], 's': [np.nan], 'C': [np.nan]})
+        time_series_data = pd.DataFrame({'site': ['A'], 'value': [1], 'time': [pd.to_datetime('2020-01-01')]})
+
+        result = regional_test(trend_results, time_series_data)
+        self.assertEqual(result.M, 0)
+        self.assertEqual(result.DT, 'Insufficient Data')
+
 if __name__ == '__main__':
     unittest.main()
