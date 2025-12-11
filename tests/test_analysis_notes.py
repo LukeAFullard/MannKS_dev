@@ -3,7 +3,8 @@ import numpy as np
 import pandas as pd
 import pytest
 from MannKenSen.analysis_notes import get_analysis_note, get_sens_slope_analysis_note
-from MannKenSen._utils import _sens_estimator_censored, prepare_censored_data
+from MannKenSen._utils import _sens_estimator_censored
+from MannKenSen.preprocessing import prepare_censored_data
 
 def test_get_analysis_note_all_na():
     data = pd.DataFrame({'value': [np.nan, np.nan, np.nan], 'censored': [False, False, False]})

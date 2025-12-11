@@ -8,20 +8,88 @@ The statistical methods used in this package, particularly for handling unequall
 
 For more information on the original R functions, please see: [LWPTrends_v2502.zip](https://landwaterpeople.co.nz/wp-content/uploads/2025/03/LWPTrends_v2502.zip)
 
+## Installation
+
+To install the necessary dependencies for this package, run the following command:
+
+```bash
+pip install -r requirements.txt
+```
+
+## Working with Censored Data
+
+The `MannKenSen` package is designed to work with censored data, where some measurements are only known to be above or below a certain detection limit.
+
+### `prepare_censored_data(x)`
+
+To use this feature, your data must first be pre-processed into a specific `pandas.DataFrame` format. The package provides the `prepare_censored_data` utility for this purpose. It converts an array of numbers and censored strings (e.g., `'<5'`) into the required DataFrame structure.
+
+**Input:**
+- `x` (array-like): A 1D array or list containing numeric values and/or censored strings.
+  - Left-censored values should be formatted as `'<value'`.
+  - Right-censored values should be formatted as `'>value'`.
+
+**Output:**
+A `pandas.DataFrame` with the following columns:
+- `'value'`: The numeric value of the detection limit.
+- `'censored'`: A boolean, `True` if the value was censored.
+- `'cen_type'`: The type of censoring (`'lt'`, `'gt'`, or `'not'`).
+
+This pre-processed DataFrame can be passed directly to the `original_test` and `seasonal_test` functions.
+
+**Example: Preparing Censored Data**
+```python
+import numpy as np
+import pandas as pd
+from MannKenSen import prepare_censored_data, original_test
+
+# Create a time vector
+t = pd.to_datetime(pd.date_range(start='2010-01-01', periods=10, freq='YE'))
+
+# Create a data vector with mixed numeric and censored string values
+x_raw = [5, '<4', 3.5, '>6', 6.2, '<4', 3, 2.5, '<2', 2.1]
+
+# Pre-process the censored data
+x_prepared = prepare_censored_data(x_raw)
+
+print(x_prepared)
+# Expected Output:
+#    value  censored cen_type
+# 0    5.0     False      not
+# 1    4.0      True       lt
+# 2    3.5     False      not
+# 3    6.0      True       gt
+# 4    6.2     False      not
+# 5    4.0      True       lt
+# 6    3.0     False      not
+# 7    2.5     False      not
+# 8    2.0      True       lt
+# 9    2.1     False      not
+
+# The prepared DataFrame can now be used in the trend test
+result = original_test(x=x_prepared, t=t)
+print(result)
+```
+
 ## MannKenSen Package
 
 The `MannKenSen` package provides modified versions of the Mann-Kendall test and Sen's slope estimator to handle unequally spaced time series data.
 
-### `original_test(x, t, alpha=0.05)`
+### `original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='lwp')`
 
 This function performs the Mann-Kendall test on unequally spaced time series data.
 
 **Input:**
-- `x`: A vector of data.
-- `t`: A vector of timestamps corresponding to the data. The function automatically handles numeric vectors, as well as `numpy.datetime64` and Python `datetime` objects by converting them to Unix timestamps.
+- `x`: A vector of data, or a pre-processed DataFrame from `prepare_censored_data`.
+- `t`: A vector of timestamps corresponding to `x`.
 - `alpha`: The significance level (default is 0.05).
-- `lt_mult`: The multiplier for left-censored data (default is 0.5).
-- `gt_mult`: The multiplier for right-censored data (default is 1.1).
+- `hicensor` (bool): If `True`, applies the high-censor rule, where all values below the highest left-censor limit are treated as censored at that limit. Default is `False`.
+- `plot_path` (str, optional): If a file path is provided, a plot of the trend analysis is saved. Default is `None`.
+- `lt_mult` (float): The multiplier for left-censored data in the Sen's slope calculation (default is 0.5).
+- `gt_mult` (float): The multiplier for right-censored data in the Sen's slope calculation (default is 1.1).
+- `sens_slope_method` (str): The method for handling ambiguous slopes in censored data.
+  - `'lwp'` (default): Sets ambiguous slopes to 0, mimicking the LWP-TRENDS R script.
+  - `'nan'`: Sets ambiguous slopes to `np.nan`, a more statistically neutral approach.
 
 **Output:**
 A named tuple with the following fields:
@@ -40,22 +108,28 @@ A named tuple with the following fields:
 - `Cd`: The confidence that the trend is decreasing.
 
 
-### `seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='month')`
+### `seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='month', hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='lwp')`
 
 This function performs the seasonal Mann-Kendall test on unequally spaced time series data.
 
 **Input:**
-- `x`: A vector of data.
-- `t`: A vector of timestamps. Can be a numeric vector or a datetime-like array.
-- `period`: The seasonal period. For numeric `t`, this defines the cycle length. Cycles are calculated relative to the start of the time series (e.g., for `t=[1990, 1991, 1992]` and `period=1`, each year is a cycle). For datetime `t`, this must match the expected period of the `season_type`.
+- `x`: A vector of data, or a pre-processed DataFrame from `prepare_censored_data`.
+- `t`: A vector of timestamps.
+- `period`: The seasonal period (default is 12).
 - `alpha`: The significance level (default is 0.05).
-- `agg_method`: The method for aggregating multiple data points within the same season-year.
-  - `'none'` (default): Performs the analysis on all individual data points.
-  - `'median'`: Aggregates data using the median of the values and times.
-  - `'middle'`: Aggregates data by selecting the observation closest to the middle of the time period.
-- `season_type`: For datetime inputs, specifies how to define a season. See the table below for options.
-- `lt_mult`: The multiplier for left-censored data (default is 0.5).
-- `gt_mult`: The multiplier for right-censored data (default is 1.1).
+- `agg_method`: The method for aggregating data within a season-cycle.
+  - `'none'` (default): No aggregation is performed.
+  - `'median'`: (LWP method) A simple median aggregation.
+  - `'robust_median'`: A more robust median for censored data.
+  - `'middle'`: Selects the observation closest to the middle of the time period.
+- `season_type`: For datetime inputs, specifies how to define a season (default is `'month'`).
+- `hicensor` (bool): If `True`, applies the high-censor rule. Default is `False`.
+- `plot_path` (str, optional): If provided, saves a plot of the trend analysis.
+- `lt_mult` (float): Multiplier for left-censored data (default is 0.5).
+- `gt_mult` (float): Multiplier for right-censored data (default is 1.1).
+- `sens_slope_method` (str): The method for handling ambiguous slopes in censored data.
+  - `'lwp'` (default): Sets ambiguous slopes to 0.
+  - `'nan'`: Sets ambiguous slopes to `np.nan`.
 
 **Output:**
 A named tuple with the same fields as `original_test`.

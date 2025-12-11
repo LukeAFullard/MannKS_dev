@@ -12,6 +12,7 @@ from .plotting import plot_seasonal_distribution
 from .inspection import inspect_trend_data
 from .regional_test import regional_test
 from .classification import classify_trend
+from .preprocessing import prepare_censored_data
 
 __all__ = [
     'original_test',
@@ -20,5 +21,6 @@ __all__ = [
     'plot_seasonal_distribution',
     'inspect_trend_data',
     'regional_test',
-    'classify_trend'
+    'classify_trend',
+    'prepare_censored_data'
 ]

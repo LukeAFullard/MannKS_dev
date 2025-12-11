@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 from MannKenSen import original_test, seasonal_test
-from MannKenSen._utils import prepare_censored_data
+from MannKenSen.preprocessing import prepare_censored_data
 
 # Unit tests for the new `prepare_censored_data` function
 def test_prepare_censored_data_valid():
