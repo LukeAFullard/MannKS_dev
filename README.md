@@ -209,6 +209,23 @@ print(is_seasonal_result)
 # Returns: Seasonality_Test(h_statistic=..., p_value=..., is_seasonal=True)
 ```
 
+### Visualizing Trend Analysis
+
+Both the `original_test` and `seasonal_test` functions include a `plot_path` parameter that allows you to generate and save a visualization of the trend analysis.
+
+**Example: Generating a Trend Plot**
+```python
+# Using the data from the original_test example
+result = original_test(x=x_prepared, t=t, plot_path='trend_analysis.png')
+print("Trend plot saved to trend_analysis.png")
+```
+
+**Interpreting the Plot:**
+- **Data Points:** Non-censored data points are shown as blue circles, while censored data points are marked with red 'x's.
+- **Sen's Slope:** The calculated trend is displayed as a dashed black line.
+- **Confidence Intervals:** The shaded gray area represents the confidence interval of the slope (e.g., 95% CI for `alpha=0.05`), providing a visual representation of the uncertainty in the trend.
+- **Statistics Box:** A text box in the top-left corner provides a summary of the key statistical results: the trend direction, Kendall's Tau, the Sen's slope, and the p-value.
+
 ### `plot_seasonal_distribution(x, t, period=12, season_type='month', save_path='seasonal_distribution.png')`
 
 Generates and saves a box plot to visually compare the distribution of values across different seasons. This is a helpful utility for visually inspecting seasonality.

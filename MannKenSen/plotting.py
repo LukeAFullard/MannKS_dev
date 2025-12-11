@@ -94,9 +94,11 @@ def plot_trend(data, results, save_path, alpha):
         # Trend line
         trend_line = results.slope * np.array([t_min, t_max]) + results.intercept
 
-        # Confidence interval lines
-        ymed = data['value'].median()
-        tmed = data['t'].median()
+        # Confidence interval lines, pivoted around the median data point
+        ymed = np.nanmedian(data['value'])
+        tmed = np.nanmedian(data['t'])
+
+        # Correctly calculate intercepts so lines pass through (tmed, ymed)
         intercept_lower = ymed - results.lower_ci * tmed
         intercept_upper = ymed - results.upper_ci * tmed
 
@@ -111,6 +113,7 @@ def plot_trend(data, results, save_path, alpha):
 
     # Add statistics text box
     stats_text = (f"Trend: {results.trend}\n"
+                  f"Tau: {results.Tau:.4f}\n"
                   f"Slope: {results.slope:.4f}\n"
                   f"P-value: {results.p:.4f}")
     plt.gca().text(0.05, 0.95, stats_text, transform=plt.gca().transAxes,
