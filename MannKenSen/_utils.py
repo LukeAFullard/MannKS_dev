@@ -77,14 +77,15 @@ def _get_cycle_identifier(dt_series, season_type):
         return dt_accessor.year.to_numpy()
 
 def _rle_lengths(a):
-    """Calculates the lengths of runs of equal values in an array."""
+    """
+    Calculates the lengths of runs of equal values in an array.
+    Equivalent to R's `rle(x)$lengths`.
+    """
     if len(a) == 0:
         return np.array([], dtype=int)
-    # Pad the array to detect changes at the start and end
-    # and find the indices where the array changes
-    pad = np.array([False])
-    idx = np.flatnonzero(np.concatenate((pad, a[1:] != a[:-1], pad)))
-    return np.diff(idx)
+    y = a[1:] != a[:-1]
+    i = np.append(np.where(y), len(a) - 1)
+    return np.diff(np.append(-1, i))
 
 
 def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b'):
