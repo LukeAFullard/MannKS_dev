@@ -62,6 +62,13 @@ def regional_test(trend_results, time_series_data, site_col='site',
     4.  **Validity of Single-Site Tests**: The quality of the regional analysis
         is dependent on the validity of the individual site trend tests that
         are used as input.
+
+    *Note on Methodology*: The use of Pearson correlation on the raw (or
+    temporally aggregated) time series data is a direct replication of the
+    methodology used in the reference LWP-TRENDS R script. While other
+    correlation methods (e.g., Spearman's Rho) might be more robust for
+    non-normal or censored data, this implementation prioritizes consistency
+    with the original R script's behavior.
     """
     RegionalTrendResult = namedtuple('RegionalTrendResult',
                                      ['M', 'TAU', 'VarTAU', 'CorrectedVarTAU',
