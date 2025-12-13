@@ -34,13 +34,17 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
                                median slope calculation. This is a statistically neutral
                                approach.
             - 'lwp': Sets ambiguous slopes to 0, mimicking the LWP-TRENDS R script.
-                     This may bias the slope towards zero.
+                     This may bias the slope towards zero and is primarily available
+                     for replicating results from that script.
         tau_method (str): The method for calculating Kendall's Tau ('a' or 'b').
-                          Default is 'b', which accounts for ties.
-        agg_method (str): The method for aggregating data at tied timestamps.
-            - 'none' (default): No aggregation. A warning is issued if ties are present.
-            - 'median': Use the median of values and times. For censored data, this
-                        is a simple heuristic.
+                          Default is 'b', which accounts for ties in the data and is
+                          the recommended method.
+        agg_method (str): The method for aggregating data at tied timestamps. It is
+                          recommended to use an aggregation method if tied timestamps
+                          are present, as this can affect the Sen's slope calculation.
+            - 'none' (default): No aggregation is performed. A warning is issued if
+                                ties are present.
+            - 'median': Use the median of values and times.
             - 'robust_median': A more statistically robust median for censored data.
             - 'middle': Use the observation closest to the middle of the time period.
         min_size (int): Minimum sample size. Warnings issued if n < min_size.

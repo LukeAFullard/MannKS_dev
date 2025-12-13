@@ -31,16 +31,15 @@ def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='m
         plot_path (str, optional): If provided, saves a plot of the trend
                                    analysis to this file path.
         agg_method: method for aggregating multiple data points within a season-year.
-                    'none' (default): performs analysis on all data points.
-                    'median': (LWP method) uses the median of values and times.
-                              For censored data, this is a simple heuristic.
-                    'robust_median': uses a more statistically robust median for
-                                     censored data. Note: The logic to determine
-                                     if the result is censored is a heuristic
-                                     from the LWP-TRENDS R script and may not be
-                                     universally robust.
-                    'middle': uses the observation closest to the middle of the
-                              time period.
+            - 'none' (default): performs analysis on all data points.
+            - 'median': (LWP method) uses the median of values and times.
+            - 'robust_median': uses a more statistically robust median for
+                               censored data. Note: The logic to determine
+                               if the result is censored is a heuristic
+                               from the LWP-TRENDS R script and may not be
+                               universally robust.
+            - 'middle': uses the observation closest to the middle of the
+                        time period.
         season_type: For datetime inputs, specifies the type of seasonality.
                      'year', 'month', 'day_of_week', 'quarter', 'hour', 'week_of_year',
                      'day_of_year', 'minute', 'second'.
@@ -52,16 +51,19 @@ def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='m
                                median slope calculation. This is a statistically neutral
                                approach.
             - 'lwp': Sets ambiguous slopes to 0, mimicking the LWP-TRENDS R script.
-                     This may bias the slope towards zero.
+                     This may bias the slope towards zero and is primarily available
+                     for replicating results from that script.
         tau_method (str): The method for calculating Kendall's Tau ('a' or 'b').
-                          Default is 'b', which accounts for ties.
+                          Default is 'b', which accounts for ties in the data and is
+                          the recommended method.
         time_method (str): The method for handling timestamps in the seasonal test.
-                           'absolute' (default): Uses the precise numeric timestamps.
-                                                 This is statistically robust for
-                                                 unequally spaced data.
-                           'rank': Uses cycle-based ranks (1, 2, 3,...) for time,
-                                   matching the LWP-TRENDS R script's methodology.
-                                   This may be useful for result replication.
+            - 'absolute' (default): Uses the precise numeric timestamps for the
+                                    variance calculation. This approach is more
+                                    statistically precise for unequally spaced
+                                    data, though it differs from the LWP-TRENDS script.
+            - 'rank': Uses cycle-based ranks (1, 2, 3,...) for time, matching the
+                      LWP-TRENDS R script's methodology. This is useful for
+                      replicating results from that script.
         min_size_per_season (int): Minimum observations per season.
                                    Warnings issued if any season < this.
     Output:
