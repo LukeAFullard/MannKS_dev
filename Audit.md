@@ -7,71 +7,84 @@ This document outlines a comprehensive audit of the `MannKenSen` Python package.
 ### 1.1 Censored Data Handling
 
 - **`_mk_score_and_var_censored`**:
-    - **Issue**: The function uses a tie-breaking method (`delx`, `dely`) that adds a small epsilon, calculated as `np.min(np.diff(unique_xx)) / 1000.0`. This approach is sensitive to the data's scale. For data with very small-magnitude values, this epsilon could be insignificant, failing to break ties. Conversely, for integer-based data, it may work as intended, but it's not a universally robust strategy.
+    - **Issue**: The function uses a tie-breaking method (`delx`, `dely`) that adds a small epsilon, calculated as `np.min(np.diff(unique_xx)) / 1000.0`. This approach is sensitive to the data's scale.
     - **Status**: **Resolved**
-    - **Resolution**: The epsilon calculation was made more robust. It is now calculated as half the minimum difference between unique values (`min_diff / 2.0`) when a difference exists, or defaults to `1.0` if all values are identical. This prevents floating-point underflow and ensures a reliable tie-breaking mechanism.
+    - **Resolution**: The epsilon calculation was made more robust. It is now calculated as half the minimum difference between unique values (`min_diff / 2.0`) when a difference exists, or defaults to `1.0` if all values are identical.
 - **`_sens_estimator_censored`**:
-    - **Issue**: The default `method='lwp'` sets ambiguous slopes to 0. This is a statistically biased choice, as it actively pulls the median slope towards zero. In a dataset with many ambiguous pairs, this can incorrectly suggest a "no trend" result.
+    - **Issue**: The default `method='lwp'` sets ambiguous slopes to 0. This is a statistically biased choice that can incorrectly suggest a "no trend" result.
     - **Status**: **Resolved**
-    - **Resolution**: The default method was changed from `'lwp'` to `'nan'`. This makes the function's default behavior more statistically neutral by excluding ambiguous slopes from the calculation, rather than biasing the result towards zero. The user-facing functions `original_test` and `seasonal_test` were also updated to use this new, more robust default. The `'lwp'` method remains available as a non-default option.
+    - **Resolution**: The default method was changed from `'lwp'` to `'nan'`, which is a more statistically neutral approach. The user-facing functions were also updated to use this new default.
 - **`_aggregate_censored_median`**:
-    - **Issue**: The logic for determining if a median is censored (`is_censored = median_val <= max_censored`) is a direct translation of the LWP-TRENDS heuristic. While useful for replication, it's not a statistically derived method and may not be robust, especially for complex data distributions.
+    - **Issue**: The logic for determining if a median is censored is a heuristic from the LWP-TRENDS R script and may not be universally robust.
     - **Status**: **Resolved**
-    - **Resolution**: Added a note to the docstrings of `_aggregate_censored_median` and `seasonal_test` to clarify that the `'robust_median'` aggregation method uses a heuristic for determining censored medians, which is intended to replicate the LWP-TRENDS R script's behavior and may not be universally robust.
+    - **Resolution**: Added a note to the relevant docstrings to clarify that this is a heuristic intended to replicate the R script's behavior.
 
-### 1.2 Confidence Intervals
+### 1.2 Code Clarity
+
+- **`_stats.py`**:
+  - **Issue:** The variance calculation in `_mk_score_and_var_censored` is a direct and complex translation from R and lacks explanatory comments.
+  - **Status**: **Resolved**
+  - **Resolution**: Added comments to the variance calculation section, explaining the statistical purpose of the `delc`, `deluc`, and `delu` correction terms, improving maintainability.
+
+### 1.3 Confidence Intervals
 
 - **`__confidence_intervals`**:
-    - **Issue**: The function uses `np.interp` to find the confidence intervals. This linear interpolation assumes the slopes are uniformly distributed between ranks, which is not guaranteed. For small or heavily tied datasets, this can lead to inaccuracies. The standard, non-parametric method involves selecting the k-th smallest and (N-k+1)-th smallest slopes from the sorted list of slopes, where k is determined by the Z-statistic and variance.
+    - **Issue**: The function uses `np.interp` to find confidence intervals, which can be inaccurate for small or heavily tied datasets.
     - **Status**: **Resolved**
-    - **Resolution**: The function was modified to use direct indexing of the sorted slopes array instead of interpolation. It now calculates the integer ranks for the upper and lower confidence limits, rounds them to the nearest integer, and selects the slope at that index. This is a more statistically robust, non-parametric method.
+    - **Resolution**: The function was modified to use direct indexing of the sorted slopes array, which is a more statistically robust, non-parametric method.
 
 ## 2. Code Structure & Readability
 
 - **`_utils.py`**:
-    - **Issue**: This file is monolithic, containing over 500 lines of disparate functionality, including core statistics, data preparation, date handling, and aggregation logic. This makes the code hard to navigate, debug, and maintain.
+    - **Issue**: This file was monolithic, containing over 500 lines of disparate functionality, making it hard to maintain.
     - **Status**: **Resolved**
-    - **Resolution**: The `_utils.py` file was broken down into three smaller, more focused internal modules: `_stats.py` for core statistical calculations, `_helpers.py` for data manipulation, and `_datetime.py` for time- and season-related functions.
+    - **Resolution**: The `_utils.py` file was refactored into three smaller, more focused internal modules: `_stats.py`, `_helpers.py`, and `_datetime.py`.
 - **Function Naming**:
-    - **Issue**: Several internal functions use a double-underscore prefix (e.g., `__p_value`, `__sens_estimator_unequal_spacing`), which is typically reserved for name mangling in classes, not for private module functions.
+    - **Issue**: Several internal functions used a double-underscore prefix, which is not standard for private module functions.
     - **Status**: **Resolved**
-    - **Resolution**: All internal helper functions were renamed to use a single leading underscore (e.g., `_p_value`) to follow standard Python conventions for "internal use" functions.
+    - **Resolution**: All internal helper functions were renamed to use a single leading underscore.
 - **Dead Code**:
-    - **Issue**: The functions `__mk_score` and `__variance_s` appear to be legacy code from a non-censored implementation. The main workflows use `_mk_score_and_var_censored`, which contains its own, more complex variance calculation. This dead code adds clutter and potential confusion.
+    - **Issue**: The functions `__mk_score` and `__variance_s` were unused legacy code.
     - **Status**: **Resolved**
-    - **Resolution**: The unused `__mk_score` and `__variance_s` functions were removed from the codebase.
+    - **Resolution**: The unused functions were removed from the codebase.
 
 ## 3. Error Handling & Validation
 
 - **Input Validation**:
-    - **Issue**: User-facing functions like `original_test` and `seasonal_test` do not validate string-based enum parameters like `sens_slope_method`, `tau_method`, or `agg_method`. A user typo (e.g., `agg_method='medain'`) would not raise an immediate error but would cause the logic to default to the `'none'` case, leading to silent failure and incorrect results.
+    - **Issue**: User-facing functions did not validate string-based enum parameters, leading to silent failures.
     - **Status**: **Resolved**
-    - **Resolution**: Added explicit validation checks at the beginning of `original_test` and `seasonal_test` to ensure that these parameters are one of the accepted values. A `ValueError` is now raised if an invalid option is provided.
+    - **Resolution**: Added explicit validation checks to `original_test` and `seasonal_test` that raise a `ValueError` for invalid parameter values.
 - **`prepare_censored_data`**:
-    - **Issue**: The error messages for malformed censored strings are not very descriptive. For example, inputting `'<'` raises `ValueError: Invalid left-censored value format: '<'`, which doesn't explain *why* it's invalid (i.e., missing a number).
+    - **Issue**: The error messages for malformed censored strings were not descriptive.
     - **Status**: **Resolved**
     - **Resolution**: Enhanced the error messages to be more informative (e.g., `ValueError: Invalid left-censored value format: '<'. Expected a number after the '<' symbol.`).
+- **`seasonality_test`**:
+    - **Issue**: The function would silently fail if a season had insufficient data, rather than continuing with the remaining seasons.
+    - **Status**: **Resolved**
+    - **Resolution**: The function now skips seasons with insufficient data, issues a `UserWarning`, and continues the analysis with the valid seasons.
 
 ## 4. Testing
 
 - **Coverage Gaps**:
-    - **Issue**: The test suite is missing coverage for several important scenarios:
-        - The `hicensor=True` functionality is not tested at all.
-        - The various `agg_method` options in `seasonal_test` are not explicitly tested.
-        - Edge cases in `prepare_censored_data` (e.g., malformed strings like `'<>5'`, strings with extra spaces) are not tested.
-        - Behavior with empty inputs or inputs containing only `np.nan`.
-    - **Status**: **Resolved**
-    - **Resolution**: Added specific unit tests to cover all of the identified scenarios. This includes new tests for the `hicensor` rule, a dedicated test file for aggregation methods, and tests for various edge cases in data preparation (including malformed strings, empty inputs, and all-NaN inputs).
+    - **Issue**: The test suite had gaps in coverage, particularly for `hicensor=True`, aggregation methods, and edge cases in data preparation.
+    - **Status**: **Partially Resolved**
+    - **Resolution**: The most critical gaps have been closed, and overall test coverage is high (93%). However, minor gaps for specific edge cases remain.
+    - **Recommendation**: Write additional tests for the missed lines in `_helpers.py`, `plotting.py`, and `analysis_notes.py` to achieve 100% coverage.
 - **Statistical Validation**:
-    - **Issue**: There are no integration tests that validate the statistical output against a known, trusted implementation. While the user has instructed not to use `rpy2` for this, it represents a major gap in ensuring the scientific validity of the package's results.
-    - **Recommendation**: As a temporary measure, create static test cases using data and results generated *manually* from the LWP-TRENDS R script. These "snapshot" tests would provide a baseline for correctness, even without a direct R dependency. This should be noted as a limitation.
+    - **Issue**: There are no integration tests that validate the statistical output against a known, trusted implementation.
+    - **Recommendation**: Create static test cases using data and results generated manually from the LWP-TRENDS R script to provide a baseline for correctness.
 
 ## 5. Documentation
 
 - **Docstrings**:
-    - **Issue**: The docstrings for user-facing functions often refer to internal functions for implementation details. For example, the `sens_slope_method` parameter in `original_test` says "See `_sens_estimator_censored` for details." This is unhelpful for a user who should not need to read internal code.
+    - **Issue**: User-facing docstrings referred to internal functions for implementation details.
     - **Status**: **Resolved**
-    - **Resolution**: The docstrings for the main public functions (`original_test` and `seasonal_test`) were updated to be self-contained. Detailed explanations for key parameters were added directly into the docstrings, so users no longer need to reference internal code or other documentation.
+    - **Resolution**: The docstrings for public functions were updated to be self-contained and comprehensive.
 - **`README.md`**:
-    - **Issue**: The README lacks a "Limitations" section and a clear, prominent example of how to handle censored data, which is a key feature of the package.
-    - **Recommendation**: Add a "Limitations" section that explicitly states which features from the LWP-TRENDS R script are *not* implemented (e.g., covariate adjustment). Add a dedicated "Censored Data Analysis" section with a clear code example using `prepare_censored_data`.
+    - **Issue**: The `README.md` had several inaccuracies and omissions, including an incorrect default value for `sens_slope_method`, a missing parameter, and a broken link.
+    - **Status**: **Resolved**
+    - **Resolution**: The `README.md` has been updated to be consistent with the current codebase. The incorrect default value was corrected, the missing parameter was added, and the broken link was removed and replaced with an explanatory note.
+- **`prepare_censored_data` Docstring**:
+  - **Issue:** The docstring did not specify the function's behavior for `np.nan` inputs.
+  - **Status**: **Resolved**
+  - **Resolution**: The docstring was updated to clarify that `np.nan` values are treated as non-censored numeric values.
