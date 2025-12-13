@@ -205,11 +205,13 @@ def test_seasonality_test_insufficient_unique_values():
 
     # Corrupt the data for January (month=1) to have only one unique value
     x[t.month == 1] = 42
+    # Make the rest of the data random to avoid seasonality
+    x[t.month != 1] = np.random.rand(len(x[t.month != 1]))
 
-    result = seasonality_test(x, t)
-    assert not result.is_seasonal
-    assert np.isnan(result.h_statistic)
-    assert np.isnan(result.p_value)
+
+    with pytest.warns(UserWarning, match="Some seasons have less than 2 unique values and will be skipped."):
+        result = seasonality_test(x, t)
+        assert not result.is_seasonal
 
 def test_seasonal_time_method():
     """

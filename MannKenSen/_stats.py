@@ -170,7 +170,19 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b'):
     dyy = dupy[dorder_y]
     dcy = cy[dorder_y]
 
-    # delc correction for ties
+    # NADA STATISTICAL NOTE:
+    # The following section calculates three correction terms for the variance
+    # of S (varS), based on the methodology from the NADA R package by
+    # Dennis Helsel. This is crucial for handling ties in censored data
+    # correctly.
+    #
+    # Term 1: delc - Correction for ties between any pair of values (censored
+    #                or uncensored).
+    # Term 2: deluc - Correction for ties between an uncensored value and a
+    #                 censored value.
+    # Term 3: delu - Correction for ties between two censored values.
+
+    # delc: Correction for all ties.
     tmpx = dxx - intg * (1 - dcx) * delx
     tmpy = dyy - intg * (1 - dcy) * dely
     rxlng = _rle_lengths(rankdata(tmpx, method='ordinal'))
@@ -190,7 +202,7 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b'):
     term3 = (x3 * y3) / (2.0 * n * (n - 1))
     delc = (x1 + y1) / 18.0 - term2 - term3
 
-    # deluc correction for uncensored-censored ties
+    # deluc: Correction for ties between uncensored and censored values.
     x4 = x3
     y4 = y3
     tmpx_uc = intg * dcx - 1
@@ -211,7 +223,7 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b'):
     term3_uc = (x3_uc * y3_uc) / (2.0 * n * (n - 1))
     deluc = (x1_uc + y1_uc) / 18.0 - term2_uc - term3_uc - (x4 + y4)
 
-    # delu correction for censored-censored ties
+    # delu: Correction for ties between two censored values.
     dxx_u = dxx - intg * dcx * delx
     dyy_u = dyy - intg * dcy * dely
     rxlng_u = _rle_lengths(rankdata(dxx_u, method='ordinal'))

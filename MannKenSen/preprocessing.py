@@ -13,6 +13,11 @@ def prepare_censored_data(x):
     pandas DataFrame with separate columns for the numeric value, a boolean
     censored flag, and the type of censoring.
 
+    Note:
+        `np.nan` values in the input array will be converted to `np.nan` in
+        the output 'value' column and will be treated as non-censored
+        (`censored=False`).
+
     Args:
         x (array-like): A 1D array or list containing the data.
 

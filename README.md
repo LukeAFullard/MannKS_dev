@@ -6,7 +6,7 @@ This project provides a Python implementation of the Mann-Kendall test for trend
 
 The statistical methods used in this package, particularly for handling unequally spaced time series and seasonal aggregation, are inspired by the LWP-TRENDS R package developed by Land & Water People in New Zealand. Their robust implementation has served as an excellent reference for this work.
 
-For more information on the original R functions, please see: [LWPTrends_v2502.zip](https://landwaterpeople.co.nz/wp-content/uploads/2025/03/LWPTrends_v2502.zip)
+Note: The statistical methods in this package are based on the LWP-TRENDS R script. The original source link is no longer active.
 
 ## Installation
 
@@ -82,7 +82,7 @@ print(result)
 
 The `MannKenSen` package provides modified versions of the Mann-Kendall test and Sen's slope estimator to handle unequally spaced time series data.
 
-### `original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='lwp', tau_method='b', agg_method='none', min_size=10)`
+### `original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='nan', tau_method='b', agg_method='none', min_size=10)`
 
 This function performs the Mann-Kendall test on unequally spaced time series data.
 
@@ -116,7 +116,7 @@ A named tuple with the following fields:
 - `Cd`: The confidence that the trend is decreasing.
 
 
-### `seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='month', hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='lwp', tau_method='b', time_method='absolute', min_size_per_season=5)`
+### `seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='month', hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='nan', tau_method='b', time_method='absolute', min_size_per_season=5)`
 
 This function performs the seasonal Mann-Kendall test on unequally spaced time series data.
 

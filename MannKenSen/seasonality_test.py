@@ -6,6 +6,7 @@ from collections import namedtuple
 import numpy as np
 import pandas as pd
 from scipy.stats import kruskal
+import warnings
 from ._datetime import _get_season_func, _is_datetime_like
 
 def seasonality_test(x_old, t_old, period=12, alpha=0.05, season_type='month'):
@@ -75,16 +76,20 @@ def seasonality_test(x_old, t_old, period=12, alpha=0.05, season_type='month'):
     if len(unique_seasons) < 2:
         return res(np.nan, np.nan, False)
 
-    seasonal_data = [x[seasons == s] for s in unique_seasons]
-
-    # LWP-TRENDS script checks for data sufficiency within each season.
-    for group in seasonal_data:
-        # 1. Each season must have at least 3 non-NA values.
+    seasonal_data = []
+    for s in unique_seasons:
+        group = x[seasons == s]
         if len(group) < 3:
-            return res(np.nan, np.nan, False)
-        # 2. Each season must have at least 2 unique values.
+            warnings.warn(f"Some seasons have less than 3 samples and will be skipped.", UserWarning)
+            continue
         if len(np.unique(group)) < 2:
-            return res(np.nan, np.nan, False)
+            warnings.warn(f"Some seasons have less than 2 unique values and will be skipped.", UserWarning)
+            continue
+        seasonal_data.append(group)
+
+
+    if len(seasonal_data) < 2:
+        return res(np.nan, np.nan, False)
 
     h_statistic, p_value = kruskal(*seasonal_data)
 
