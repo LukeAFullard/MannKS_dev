@@ -5,7 +5,7 @@ the user about potential issues with their data that could affect
 trend analysis results.
 """
 import numpy as np
-from ._utils import _rle_lengths
+from ._stats import _rle_lengths
 
 
 def get_analysis_note(data, values_col='value', censored_col='censored',

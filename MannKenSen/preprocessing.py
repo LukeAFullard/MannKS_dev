@@ -39,14 +39,14 @@ def prepare_censored_data(x):
                     censored_flags.append(True)
                     cen_types.append('lt')
                 except (ValueError, IndexError):
-                    raise ValueError(f"Invalid left-censored value format: '{item}'")
+                    raise ValueError(f"Invalid left-censored value format: '{item}'. Expected a number after the '<' symbol.")
             elif item_stripped.startswith('>'):
                 try:
                     values.append(float(item_stripped[1:]))
                     censored_flags.append(True)
                     cen_types.append('gt')
                 except (ValueError, IndexError):
-                    raise ValueError(f"Invalid right-censored value format: '{item}'")
+                    raise ValueError(f"Invalid right-censored value format: '{item}'. Expected a number after the '>' symbol.")
             else:
                 try:
                     values.append(float(item_stripped))

@@ -40,10 +40,15 @@ def test_prepare_censored_data_invalid_string():
         prepare_censored_data(['abc'])
 
 def test_prepare_censored_data_invalid_censored_format():
-    with pytest.raises(ValueError, match="Invalid left-censored value format: '<'"):
+    with pytest.raises(ValueError, match="Invalid left-censored value format: '<'. Expected a number after the '<' symbol."):
         prepare_censored_data(['<'])
-    with pytest.raises(ValueError, match="Invalid right-censored value format: '>a'"):
+    with pytest.raises(ValueError, match="Invalid right-censored value format: '>a'. Expected a number after the '>' symbol."):
         prepare_censored_data(['>a'])
+
+def test_prepare_censored_data_malformed_strings():
+    """Test `prepare_censored_data` with other malformed strings."""
+    with pytest.raises(ValueError):
+        prepare_censored_data(['<>5'])
 
 def test_prepare_censored_data_non_iterable():
     with pytest.raises(TypeError):
@@ -95,3 +100,31 @@ def test_original_test_string_input_error():
     t = np.arange(len(x))
     with pytest.raises(TypeError, match="Input data `x` contains strings. Please pre-process it with `prepare_censored_data` first."):
         original_test(x=x, t=t)
+
+def test_hicensor_rule_seasonal_test():
+    """Test the hicensor rule in seasonal_test."""
+    # Data spanning two years, with a clear seasonal trend without hicensor
+    t = pd.to_datetime(['2020-01-15', '2020-07-15', '2021-01-15', '2021-07-15'])
+    x = ['<10', 20, '<5', 22] # Jan values are censored, July values increase
+    data = prepare_censored_data(x)
+
+    # Without hicensor, the July trend should be detected
+    result_no_hicensor = seasonal_test(x=data, t=t, period=12)
+
+    # With hicensor, the max censor limit is 10.
+    # The data becomes:
+    # Jan 2020: <10
+    # Jul 2020: 20
+    # Jan 2021: <10 (originally <5, now censored at 10)
+    # Jul 2021: 22
+    # The trend in July is still increasing, but the overall s-score
+    # might be affected. The key is to ensure it runs and weakens the trend.
+    result_hicensor = seasonal_test(x=data, t=t, period=12, hicensor=True)
+
+    # The hicensor rule correctly weakens the trend to "no trend" in this case,
+    # as the Mann-Kendall score `s` becomes 1, which results in a z-score of 0
+    # after the continuity correction.
+    assert result_hicensor.trend == 'no trend'
+    # The absolute s-score should be less than the original, demonstrating
+    # that the trend has been weakened or remained the same.
+    assert abs(result_hicensor.s) <= abs(result_no_hicensor.s)

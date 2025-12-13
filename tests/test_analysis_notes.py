@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 import warnings
 from MannKenSen.analysis_notes import get_analysis_note, get_sens_slope_analysis_note
-from MannKenSen._utils import _sens_estimator_censored
+from MannKenSen._stats import _sens_estimator_censored
 from MannKenSen.preprocessing import prepare_censored_data
 from MannKenSen.original_test import original_test
 from MannKenSen.seasonal_test import seasonal_test

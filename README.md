@@ -16,6 +16,13 @@ To install the necessary dependencies for this package, run the following comman
 pip install -r requirements.txt
 ```
 
+## Limitations
+
+This package is a partial implementation of the LWP-TRENDS R script and currently has the following limitations:
+
+*   **Covariate Adjustment**: The package does not currently support covariate adjustment (e.g., for flow).
+*   **Data Imputation**: The package does not perform data imputation using methods like Regression on Order Statistics (ROS).
+
 ## Working with Censored Data
 
 The `MannKenSen` package is designed to work with censored data, where some measurements are only known to be above or below a certain detection limit.

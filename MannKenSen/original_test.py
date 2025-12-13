@@ -7,11 +7,10 @@ import numpy as np
 import pandas as pd
 import warnings
 from collections import namedtuple
-from ._utils import (__mk_score, __variance_s, _z_score,
-                   __p_value, __sens_estimator_unequal_spacing,
-                   __confidence_intervals, __mk_probability,
-                   _mk_score_and_var_censored, _sens_estimator_censored,
-                   _prepare_data, _aggregate_by_group)
+from ._stats import (_z_score, _p_value, _sens_estimator_unequal_spacing,
+                     _confidence_intervals, _mk_probability,
+                     _mk_score_and_var_censored, _sens_estimator_censored)
+from ._helpers import (_prepare_data, _aggregate_by_group)
 from .plotting import plot_trend
 
 
@@ -29,17 +28,21 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
                                    is saved to this file path.
         lt_mult (float): The multiplier for left-censored data (default 0.5).
         gt_mult (float): The multiplier for right-censored data (default 1.1).
-        sens_slope_method (str): The method to use for handling ambiguous slopes
-                                 in censored data. See `_sens_estimator_censored`
-                                 for details.
+        sens_slope_method (str): The method for handling ambiguous slopes in censored data.
+            - 'nan' (default): Sets ambiguous slopes (e.g., between two left-censored
+                               values) to `np.nan`, effectively removing them from the
+                               median slope calculation. This is a statistically neutral
+                               approach.
+            - 'lwp': Sets ambiguous slopes to 0, mimicking the LWP-TRENDS R script.
+                     This may bias the slope towards zero.
         tau_method (str): The method for calculating Kendall's Tau ('a' or 'b').
                           Default is 'b', which accounts for ties.
         agg_method (str): The method for aggregating data at tied timestamps.
-                          'none' (default): No aggregation is performed. A warning
-                                            is issued if ties are present, as this
-                                            can affect the Sen's slope calculation.
-                          'median', 'robust_median', 'middle': See `seasonal_test`
-                                                              for descriptions.
+            - 'none' (default): No aggregation. A warning is issued if ties are present.
+            - 'median': Use the median of values and times. For censored data, this
+                        is a simple heuristic.
+            - 'robust_median': A more statistically robust median for censored data.
+            - 'middle': Use the observation closest to the middle of the time period.
         min_size (int): Minimum sample size. Warnings issued if n < min_size.
                        Set to None to disable check.
     Output:
@@ -86,6 +89,19 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
         of the trend, and the confidence intervals are based on this assumption.
     """
     res = namedtuple('Mann_Kendall_Test', ['trend', 'h', 'p', 'z', 'Tau', 's', 'var_s', 'slope', 'intercept', 'lower_ci', 'upper_ci', 'C', 'Cd'])
+
+    # --- Input Validation ---
+    valid_sens_slope_methods = ['nan', 'lwp']
+    if sens_slope_method not in valid_sens_slope_methods:
+        raise ValueError(f"Invalid `sens_slope_method`. Must be one of {valid_sens_slope_methods}.")
+
+    valid_tau_methods = ['a', 'b']
+    if tau_method not in valid_tau_methods:
+        raise ValueError(f"Invalid `tau_method`. Must be one of {valid_tau_methods}.")
+
+    valid_agg_methods = ['none', 'median', 'robust_median', 'middle']
+    if agg_method not in valid_agg_methods:
+        raise ValueError(f"Invalid `agg_method`. Must be one of {valid_agg_methods}.")
 
     data_filtered, is_datetime = _prepare_data(x, t, hicensor)
 
@@ -136,8 +152,8 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
     )
 
     z = _z_score(s, var_s)
-    p, h, trend = __p_value(z, alpha)
-    C, Cd = __mk_probability(p, s)
+    p, h, trend = _p_value(z, alpha)
+    C, Cd = _mk_probability(p, s)
 
     if np.any(censored_filtered):
         slopes = _sens_estimator_censored(
@@ -145,7 +161,7 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
             lt_mult=lt_mult, gt_mult=gt_mult, method=sens_slope_method
         )
     else:
-        slopes = __sens_estimator_unequal_spacing(x_filtered, t_filtered)
+        slopes = _sens_estimator_unequal_spacing(x_filtered, t_filtered)
 
     slope = np.nanmedian(slopes) if len(slopes) > 0 else np.nan
 
@@ -154,7 +170,7 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
     else:
         intercept = np.nanmedian(x_filtered) - np.nanmedian(t_filtered) * slope
 
-    lower_ci, upper_ci = __confidence_intervals(slopes, var_s, alpha)
+    lower_ci, upper_ci = _confidence_intervals(slopes, var_s, alpha)
 
     results = res(trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd)
 

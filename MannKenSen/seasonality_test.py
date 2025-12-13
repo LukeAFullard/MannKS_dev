@@ -6,7 +6,7 @@ from collections import namedtuple
 import numpy as np
 import pandas as pd
 from scipy.stats import kruskal
-from ._utils import __preprocessing, _get_season_func, _is_datetime_like
+from ._datetime import _get_season_func, _is_datetime_like
 
 def seasonality_test(x_old, t_old, period=12, alpha=0.05, season_type='month'):
     """
