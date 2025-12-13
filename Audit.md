@@ -30,25 +30,27 @@ This document outlines a comprehensive audit of the `MannKenSen` Python package.
 
 - **`_utils.py`**:
     - **Issue**: This file is monolithic, containing over 500 lines of disparate functionality, including core statistics, data preparation, date handling, and aggregation logic. This makes the code hard to navigate, debug, and maintain.
-    - **Recommendation**: Break `_utils.py` into smaller, more focused internal modules:
-        - `_stats.py`: For core statistical calculations (`_mk_score_and_var_censored`, `_sens_estimator_censored`, `__confidence_intervals`, etc.).
-        - `_helpers.py`: For data manipulation and aggregation helpers (`_prepare_data`, `_aggregate_by_group`, etc.).
-        - `_datetime.py`: For time- and season-related functions (`_get_season_func`, `_get_cycle_identifier`, etc.).
+    - **Status**: **Resolved**
+    - **Resolution**: The `_utils.py` file was broken down into three smaller, more focused internal modules: `_stats.py` for core statistical calculations, `_helpers.py` for data manipulation, and `_datetime.py` for time- and season-related functions.
 - **Function Naming**:
     - **Issue**: Several internal functions use a double-underscore prefix (e.g., `__p_value`, `__sens_estimator_unequal_spacing`), which is typically reserved for name mangling in classes, not for private module functions.
-    - **Recommendation**: Rename all internal helper functions to use a single leading underscore (e.g., `_p_value`, `_sens_estimator_unequal_spacing`) to follow standard Python conventions for "internal use" functions.
+    - **Status**: **Resolved**
+    - **Resolution**: All internal helper functions were renamed to use a single leading underscore (e.g., `_p_value`) to follow standard Python conventions for "internal use" functions.
 - **Dead Code**:
     - **Issue**: The functions `__mk_score` and `__variance_s` appear to be legacy code from a non-censored implementation. The main workflows use `_mk_score_and_var_censored`, which contains its own, more complex variance calculation. This dead code adds clutter and potential confusion.
-    - **Recommendation**: Remove the unused `__mk_score` and `__variance_s` functions to clean up the codebase.
+    - **Status**: **Resolved**
+    - **Resolution**: The unused `__mk_score` and `__variance_s` functions were removed from the codebase.
 
 ## 3. Error Handling & Validation
 
 - **Input Validation**:
     - **Issue**: User-facing functions like `original_test` and `seasonal_test` do not validate string-based enum parameters like `sens_slope_method`, `tau_method`, or `agg_method`. A user typo (e.g., `agg_method='medain'`) would not raise an immediate error but would cause the logic to default to the `'none'` case, leading to silent failure and incorrect results.
-    - **Recommendation**: Add explicit validation checks at the beginning of `original_test` and `seasonal_test` to ensure that these parameters are one of the accepted values. Raise a `ValueError` if an invalid option is provided.
+    - **Status**: **Resolved**
+    - **Resolution**: Added explicit validation checks at the beginning of `original_test` and `seasonal_test` to ensure that these parameters are one of the accepted values. A `ValueError` is now raised if an invalid option is provided.
 - **`prepare_censored_data`**:
     - **Issue**: The error messages for malformed censored strings are not very descriptive. For example, inputting `'<'` raises `ValueError: Invalid left-censored value format: '<'`, which doesn't explain *why* it's invalid (i.e., missing a number).
-    - **Recommendation**: Enhance the error messages to be more informative. For example: `ValueError: Invalid left-censored value format: '<'. Expected a number after the '<' symbol.`
+    - **Status**: **Resolved**
+    - **Resolution**: Enhanced the error messages to be more informative (e.g., `ValueError: Invalid left-censored value format: '<'. Expected a number after the '<' symbol.`).
 
 ## 4. Testing
 
