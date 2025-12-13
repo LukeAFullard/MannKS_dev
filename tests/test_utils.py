@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 # Internal functions to be tested
-from MannKenSen._utils import _mk_score_and_var_censored
+from MannKenSen._stats import _mk_score_and_var_censored
 
 def test_mk_score_and_var_censored_float_precision():
     """

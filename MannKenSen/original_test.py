@@ -7,11 +7,10 @@ import numpy as np
 import pandas as pd
 import warnings
 from collections import namedtuple
-from ._utils import (__mk_score, __variance_s, _z_score,
-                   __p_value, __sens_estimator_unequal_spacing,
-                   __confidence_intervals, __mk_probability,
-                   _mk_score_and_var_censored, _sens_estimator_censored,
-                   _prepare_data, _aggregate_by_group)
+from ._stats import (_z_score, _p_value, _sens_estimator_unequal_spacing,
+                     _confidence_intervals, _mk_probability,
+                     _mk_score_and_var_censored, _sens_estimator_censored)
+from ._helpers import (_prepare_data, _aggregate_by_group)
 from .plotting import plot_trend
 
 
@@ -136,8 +135,8 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
     )
 
     z = _z_score(s, var_s)
-    p, h, trend = __p_value(z, alpha)
-    C, Cd = __mk_probability(p, s)
+    p, h, trend = _p_value(z, alpha)
+    C, Cd = _mk_probability(p, s)
 
     if np.any(censored_filtered):
         slopes = _sens_estimator_censored(
@@ -145,7 +144,7 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
             lt_mult=lt_mult, gt_mult=gt_mult, method=sens_slope_method
         )
     else:
-        slopes = __sens_estimator_unequal_spacing(x_filtered, t_filtered)
+        slopes = _sens_estimator_unequal_spacing(x_filtered, t_filtered)
 
     slope = np.nanmedian(slopes) if len(slopes) > 0 else np.nan
 
@@ -154,7 +153,7 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
     else:
         intercept = np.nanmedian(x_filtered) - np.nanmedian(t_filtered) * slope
 
-    lower_ci, upper_ci = __confidence_intervals(slopes, var_s, alpha)
+    lower_ci, upper_ci = _confidence_intervals(slopes, var_s, alpha)
 
     results = res(trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd)
 

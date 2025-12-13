@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from ._utils import __preprocessing, _get_season_func, _is_datetime_like, _get_cycle_identifier
+from ._helpers import _preprocessing
+from ._datetime import _get_season_func, _is_datetime_like, _get_cycle_identifier
 
 def plot_seasonal_distribution(x_old, t_old, period=12, season_type='month', save_path='seasonal_distribution.png'):
     """

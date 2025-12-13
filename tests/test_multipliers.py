@@ -4,7 +4,7 @@ import pandas as pd
 from MannKenSen.original_test import original_test
 from MannKenSen.seasonal_test import seasonal_test
 from MannKenSen.preprocessing import prepare_censored_data
-from MannKenSen._utils import _sens_estimator_censored
+from MannKenSen._stats import _sens_estimator_censored
 
 def test_original_test_custom_multipliers():
     # Using non-monotonic data around the censored value
