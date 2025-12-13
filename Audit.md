@@ -70,7 +70,8 @@ This document outlines a comprehensive audit of the `MannKenSen` Python package.
 
 - **Docstrings**:
     - **Issue**: The docstrings for user-facing functions often refer to internal functions for implementation details. For example, the `sens_slope_method` parameter in `original_test` says "See `_sens_estimator_censored` for details." This is unhelpful for a user who should not need to read internal code.
-    - **Recommendation**: Update the docstrings of all public functions (`original_test`, `seasonal_test`, etc.) to be self-contained. The explanation for parameters like `sens_slope_method` should be copied into the user-facing docstring.
+    - **Status**: **Resolved**
+    - **Resolution**: The docstrings for the main public functions (`original_test` and `seasonal_test`) were updated to be self-contained. Detailed explanations for key parameters were added directly into the docstrings, so users no longer need to reference internal code or other documentation.
 - **`README.md`**:
     - **Issue**: The README lacks a "Limitations" section and a clear, prominent example of how to handle censored data, which is a key feature of the package.
     - **Recommendation**: Add a "Limitations" section that explicitly states which features from the LWP-TRENDS R script are *not* implemented (e.g., covariate adjustment). Add a dedicated "Censored Data Analysis" section with a clear code example using `prepare_censored_data`.

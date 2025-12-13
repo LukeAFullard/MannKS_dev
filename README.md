@@ -94,14 +94,10 @@ This function performs the Mann-Kendall test on unequally spaced time series dat
 - `plot_path` (str, optional): If a file path is provided, a plot of the trend analysis is saved. Default is `None`.
 - `lt_mult` (float): The multiplier for left-censored data in the Sen's slope calculation (default is 0.5).
 - `gt_mult` (float): The multiplier for right-censored data in the Sen's slope calculation (default is 1.1).
-- `sens_slope_method` (str): The method for handling ambiguous slopes in censored data.
-  - `'lwp'` (default): Sets ambiguous slopes to 0, mimicking the LWP-TRENDS R script.
-  - `'nan'`: Sets ambiguous slopes to `np.nan`, a more statistically neutral approach.
-- `tau_method` (str): The method for calculating Kendall's Tau ('a' or 'b'). Default is `'b'`, which accounts for ties in the data and is the recommended method.
-- `agg_method` (str): The method for aggregating data at tied timestamps.
-  - `'none'` (default): No aggregation is performed. A warning is issued if ties are present, as this can affect the Sen's slope calculation.
-  - `'median'`, `'robust_median'`, `'middle'`: See `seasonal_test` for descriptions. It is recommended to use an aggregation method when tied timestamps are present.
-- `min_size` (int): The minimum sample size required to perform the test. If the number of data points is below this value, a `UserWarning` is issued. Default is `10`. Set to `None` to disable this check.
+- `sens_slope_method` (str): The method for handling ambiguous slopes in censored data. See the function docstring for details.
+- `tau_method` (str): The method for calculating Kendall's Tau ('a' or 'b'). Default is `'b'`.
+- `agg_method` (str): The method for aggregating data at tied timestamps. It is recommended to use an aggregation method if tied timestamps are present. See the function docstring for options.
+- `min_size` (int): The minimum sample size required to perform the test (default is 10).
 
 **Output:**
 A named tuple with the following fields:
@@ -129,24 +125,16 @@ This function performs the seasonal Mann-Kendall test on unequally spaced time s
 - `t`: A vector of timestamps.
 - `period`: The seasonal period (default is 12).
 - `alpha`: The significance level (default is 0.05).
-- `agg_method`: The method for aggregating data within a season-cycle.
-  - `'none'` (default): No aggregation is performed.
-  - `'median'`: (LWP method) A simple median aggregation.
-  - `'robust_median'`: A more robust median for censored data.
-  - `'middle'`: Selects the observation closest to the middle of the time period.
+- `agg_method`: The method for aggregating data within a season-cycle. See the function docstring for options.
 - `season_type`: For datetime inputs, specifies how to define a season (default is `'month'`).
 - `hicensor` (bool): If `True`, applies the high-censor rule. Default is `False`.
 - `plot_path` (str, optional): If provided, saves a plot of the trend analysis.
 - `lt_mult` (float): Multiplier for left-censored data (default is 0.5).
 - `gt_mult` (float): Multiplier for right-censored data (default is 1.1).
-- `sens_slope_method` (str): The method for handling ambiguous slopes in censored data.
-  - `'lwp'` (default): Sets ambiguous slopes to 0.
-  - `'nan'`: Sets ambiguous slopes to `np.nan`.
-- `tau_method` (str): The method for calculating Kendall's Tau ('a' or 'b'). Default is `'b'`, which accounts for ties in the data and is the recommended method.
-- `time_method` (str): The method for handling timestamps in the seasonal test.
-  - `'absolute'` (default): Uses the precise numeric timestamps. This is statistically robust for unequally spaced data.
-  - `'rank'`: Uses cycle-based ranks (1, 2, 3,...) for time, matching the LWP-TRENDS R script's methodology.
-- `min_size_per_season` (int): The minimum number of observations required per season. If any season has fewer data points, a `UserWarning` is issued. Default is `5`. Set to `None` to disable this check.
+- `sens_slope_method` (str): The method for handling ambiguous slopes in censored data. See the function docstring for details.
+- `tau_method` (str): The method for calculating Kendall's Tau ('a' or 'b'). Default is `'b'`.
+- `time_method` (str): The method for handling timestamps in the seasonal test. See the function docstring for details.
+- `min_size_per_season` (int): The minimum number of observations required per season (default is 5).
 
 **Output:**
 A named tuple with the same fields as `original_test`.
