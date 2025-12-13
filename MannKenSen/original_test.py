@@ -86,6 +86,19 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
     """
     res = namedtuple('Mann_Kendall_Test', ['trend', 'h', 'p', 'z', 'Tau', 's', 'var_s', 'slope', 'intercept', 'lower_ci', 'upper_ci', 'C', 'Cd'])
 
+    # --- Input Validation ---
+    valid_sens_slope_methods = ['nan', 'lwp']
+    if sens_slope_method not in valid_sens_slope_methods:
+        raise ValueError(f"Invalid `sens_slope_method`. Must be one of {valid_sens_slope_methods}.")
+
+    valid_tau_methods = ['a', 'b']
+    if tau_method not in valid_tau_methods:
+        raise ValueError(f"Invalid `tau_method`. Must be one of {valid_tau_methods}.")
+
+    valid_agg_methods = ['none', 'median', 'robust_median', 'middle']
+    if agg_method not in valid_agg_methods:
+        raise ValueError(f"Invalid `agg_method`. Must be one of {valid_agg_methods}.")
+
     data_filtered, is_datetime = _prepare_data(x, t, hicensor)
 
     n = len(data_filtered)

@@ -100,8 +100,22 @@ def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='m
     """
     res = namedtuple('Seasonal_Mann_Kendall_Test', ['trend', 'h', 'p', 'z', 'Tau', 's', 'var_s', 'slope', 'intercept', 'lower_ci', 'upper_ci', 'C', 'Cd'])
 
-    if time_method not in ['absolute', 'rank']:
-        raise ValueError("`time_method` must be either 'absolute' or 'rank'.")
+    # --- Input Validation ---
+    valid_agg_methods = ['none', 'median', 'robust_median', 'middle']
+    if agg_method not in valid_agg_methods:
+        raise ValueError(f"Invalid `agg_method`. Must be one of {valid_agg_methods}.")
+
+    valid_sens_slope_methods = ['nan', 'lwp']
+    if sens_slope_method not in valid_sens_slope_methods:
+        raise ValueError(f"Invalid `sens_slope_method`. Must be one of {valid_sens_slope_methods}.")
+
+    valid_tau_methods = ['a', 'b']
+    if tau_method not in valid_tau_methods:
+        raise ValueError(f"Invalid `tau_method`. Must be one of {valid_tau_methods}.")
+
+    valid_time_methods = ['absolute', 'rank']
+    if time_method not in valid_time_methods:
+        raise ValueError(f"Invalid `time_method`. Must be one of {valid_time_methods}.")
 
     data_filtered, is_datetime = _prepare_data(x, t, hicensor)
 
