@@ -285,3 +285,33 @@ def test_tied_timestamp_warning():
     x = np.arange(len(t))
     with pytest.warns(UserWarning, match="Tied timestamps detected"):
         original_test(x, t)
+
+def test_empty_input():
+    """
+    Tests that the functions handle empty inputs without crashing.
+    """
+    result_orig = original_test([], [])
+    assert result_orig.trend == 'no trend'
+    assert not result_orig.h
+    assert np.isnan(result_orig.p)
+
+    result_seasonal = seasonal_test([], [])
+    assert result_seasonal.trend == 'no trend'
+    assert not result_seasonal.h
+    assert np.isnan(result_seasonal.p)
+
+def test_all_nan_input():
+    """
+    Tests that the functions handle inputs with only NaN values.
+    """
+    x = [np.nan, np.nan, np.nan]
+    t = [1, 2, 3]
+    result_orig = original_test(x, t)
+    assert result_orig.trend == 'no trend'
+    assert not result_orig.h
+    assert np.isnan(result_orig.p)
+
+    result_seasonal = seasonal_test(x, t)
+    assert result_seasonal.trend == 'no trend'
+    assert not result_seasonal.h
+    assert np.isnan(result_seasonal.p)
