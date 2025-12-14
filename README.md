@@ -10,6 +10,27 @@ Note: The statistical methods in this package are based on the LWP-TRENDS R scri
 
 **Recent Updates:** This package has undergone a comprehensive audit and update to improve its statistical robustness. Heuristics for handling censored data have been replaced with more conservative, non-parametric methods to ensure the reliability of the trend analysis results.
 
+## Comparison to LWP-TRENDS R Script
+
+While the `MannKenSen` package is heavily inspired by the LWP-TRENDS R script, it is not a 1:1 clone. Users should be aware of the following key differences:
+
+### Missing Features
+
+The following features from the LWP-TRENDS R script are **not** implemented in this package:
+
+- **Regression on Order Statistics (ROS):** The R script includes extensive functions for imputing censored data using ROS. This is a major feature that is not present in the Python package.
+- **Covariate Adjustment:** The R script has functionality to adjust for covariates (e.g., flow), which is not included in this package.
+- **Date Shifting:** The R script has a `ShiftTempDate` function to handle cases where a sample taken at the end of one month might be more representative of the next month. This is not implemented in the Python package.
+- **Additional Trend Aggregation:** The R script has additional trend aggregation functions (`AnalysePd`, `FaceValueCounter`) that are not in the Python package.
+
+### Methodological Differences
+
+- **Right-Censored Data:** The R script uses a specific heuristic for handling right-censored data, while this package now uses a more statistically robust, non-parametric approach.
+- **Time Handling:** The R script's core trend function uses a simple integer sequence for time (`TimeRank`), while this package uses the actual numeric timestamps. This is a deliberate design choice to make the Python package more suitable for unequally spaced time series data.
+- **Confidence Intervals:** The R script uses interpolation to calculate the confidence intervals for the Sen's slope, while this package uses rounding and direct indexing.
+
+Due to these differences, it is **not expected that the results from this package will exactly match the results from the LWP-TRENDS R script.**
+
 ## Installation
 
 To install the necessary dependencies for this package, run the following command:
