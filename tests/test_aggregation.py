@@ -1,12 +1,12 @@
 import pytest
 import numpy as np
 import pandas as pd
-from MannKenSen import seasonal_test
+from MannKenSen import seasonal_trend_test
 from MannKenSen.preprocessing import prepare_censored_data
 
-def test_seasonal_test_aggregation_methods():
+def test_seasonal_trend_test_aggregation_methods():
     """
-    Test the `agg_method` options in `seasonal_test` to ensure they
+    Test the `agg_method` options in `seasonal_trend_test` to ensure they
     correctly handle multiple observations within a single season-cycle.
     """
     # Create a dataset with multiple observations in January 2020 and July 2021
@@ -25,7 +25,7 @@ def test_seasonal_test_aggregation_methods():
 
     for method in agg_methods:
         # Run the seasonal test with the specified aggregation method
-        result = seasonal_test(x=data, t=t, period=12, agg_method=method)
+        result = seasonal_trend_test(x=data, t=t, period=12, agg_method=method)
 
         # Assert that the test returns a valid result without crashing.
         # For this small, synthetic dataset, we are primarily concerned with

@@ -2,9 +2,9 @@ import pytest
 import numpy as np
 import pandas as pd
 import os
-from MannKenSen.seasonality_test import seasonality_test
+from MannKenSen.check_seasonality import check_seasonality
 from MannKenSen.plotting import plot_seasonal_distribution
-from MannKenSen import original_test, seasonal_test
+from MannKenSen import trend_test, seasonal_trend_test
 
 @pytest.fixture
 def seasonal_data():
@@ -20,17 +20,17 @@ def non_seasonal_data():
     x = np.linspace(0, 10, 60) + np.random.rand(60)
     return x, t
 
-def test_seasonality_test_detects_seasonality(seasonal_data):
+def test_check_seasonality_detects_seasonality(seasonal_data):
     x, t = seasonal_data
-    result = seasonality_test(x, t)
+    result = check_seasonality(x, t)
     assert result.is_seasonal
     assert result.p_value < 0.05
     assert len(result.seasons_tested) == 12
     assert len(result.seasons_skipped) == 0
 
-def test_seasonality_test_rejects_non_seasonal(non_seasonal_data):
+def test_check_seasonality_rejects_non_seasonal(non_seasonal_data):
     x, t = non_seasonal_data
-    result = seasonality_test(x, t)
+    result = check_seasonality(x, t)
     assert not result.is_seasonal
     assert result.p_value > 0.05
     assert len(result.seasons_tested) == 12
@@ -54,27 +54,27 @@ def test_plot_seasonal_distribution(seasonal_data):
 
 def test_trend_plotting():
     """
-    Tests that the plotting functionality in original_test and
-    seasonal_test creates a file.
+    Tests that the plotting functionality in trend_test and
+    seasonal_trend_test creates a file.
     """
     t = pd.to_datetime(pd.date_range(start='2020-01-01', periods=20, freq='YE'))
     x = np.arange(20)
 
-    # Test original_test plotting
-    original_plot_path = "original_test_plot.png"
+    # Test trend_test plotting
+    original_plot_path = "trend_test_plot.png"
     if os.path.exists(original_plot_path):
         os.remove(original_plot_path)
 
-    original_test(x, t, plot_path=original_plot_path)
+    trend_test(x, t, plot_path=original_plot_path)
     assert os.path.exists(original_plot_path)
     os.remove(original_plot_path)
 
-    # Test seasonal_test plotting
-    seasonal_plot_path = "seasonal_test_plot.png"
+    # Test seasonal_trend_test plotting
+    seasonal_plot_path = "seasonal_trend_test_plot.png"
     if os.path.exists(seasonal_plot_path):
         os.remove(seasonal_plot_path)
 
-    seasonal_test(x, t, plot_path=seasonal_plot_path)
+    seasonal_trend_test(x, t, plot_path=seasonal_plot_path)
     assert os.path.exists(seasonal_plot_path)
     os.remove(seasonal_plot_path)
 
@@ -87,7 +87,7 @@ def test_biweekly_seasonality():
     t = pd.to_datetime(pd.date_range(start='2020-01-01', periods=104, freq='W'))
     x = np.array([i % 2 for i in range(104)]) # Alternating values every week, creating a biweekly pattern
 
-    result = seasonal_test(x, t, season_type='biweekly', period=26)
+    result = seasonal_trend_test(x, t, season_type='biweekly', period=26)
     assert result.trend == 'no trend'
 
 def test_biweekly_seasonality_53_week_year():
@@ -97,7 +97,7 @@ def test_biweekly_seasonality_53_week_year():
     t = pd.to_datetime(pd.date_range(start='2015-01-01', end='2015-12-31', freq='D'))
     x = np.arange(len(t))
 
-    result = seasonal_test(x, t, season_type='biweekly', period=27)
+    result = seasonal_trend_test(x, t, season_type='biweekly', period=27)
     assert result.trend == 'increasing'
 
 # Edge case tests based on code review feedback
@@ -111,7 +111,7 @@ def test_day_of_year_seasonality_leap_year():
     x = np.arange(len(t))
 
     # The function should dynamically determine the number of seasons
-    result = seasonal_test(x, t, season_type='day_of_year')
+    result = seasonal_trend_test(x, t, season_type='day_of_year')
     assert result.trend == 'increasing'
 
 def test_week_of_year_seasonality_53_week_year():
@@ -122,7 +122,7 @@ def test_week_of_year_seasonality_53_week_year():
     t = pd.to_datetime(pd.date_range(start='2015-01-01', end='2015-12-31', freq='D'))
     x = np.arange(len(t))
 
-    result = seasonal_test(x, t, season_type='week_of_year', period=53)
+    result = seasonal_trend_test(x, t, season_type='week_of_year', period=53)
     assert result.trend == 'increasing'
 
 
@@ -145,12 +145,12 @@ def test_general_season_types(season_type, period, freq, n_periods):
     t = pd.to_datetime(pd.date_range(start='2020-01-01', periods=n_periods, freq=freq))
     x = np.arange(len(t))
 
-    result = seasonal_test(x, t, season_type=season_type, period=period)
+    result = seasonal_trend_test(x, t, season_type=season_type, period=period)
     assert result.trend == 'increasing'
 
-def test_seasonal_test_aggregation_methods():
+def test_seasonal_trend_test_aggregation_methods():
     """
-    Test the 'median' and 'middle' aggregation methods in seasonal_test.
+    Test the 'median' and 'middle' aggregation methods in seasonal_trend_test.
     """
     # Create a dataset with multiple observations per season-year
     dates = pd.to_datetime(['2020-01-10', '2020-01-20', '2021-01-15', '2022-01-05', '2022-01-25',
@@ -160,19 +160,19 @@ def test_seasonal_test_aggregation_methods():
     values = np.arange(15) + np.random.normal(0, 2, 15) # Clear increasing trend with more noise
 
     # Test with no aggregation
-    result_none = seasonal_test(x=values, t=dates, period=12, season_type='month')
+    result_none = seasonal_trend_test(x=values, t=dates, period=12, season_type='month')
     assert result_none.trend == 'increasing'
 
     # Test with 'median' aggregation
     # The data for Jan 2020 will be aggregated to a single point with value 1.5
     # The data for Jan 2022 will be aggregated to a single point with value 4.5
-    result_median = seasonal_test(x=values, t=dates, period=12, season_type='month', agg_method='median')
+    result_median = seasonal_trend_test(x=values, t=dates, period=12, season_type='month', agg_method='median')
     assert result_median.trend == 'increasing'
 
     # Test with 'middle' aggregation
     # The data for Jan 2020 will be aggregated to the point on 2020-01-20 (value 2)
     # The data for Jan 2022 will be aggregated to the point on 2022-01-25 (value 5)
-    result_middle = seasonal_test(x=values, t=dates, period=12, season_type='month', agg_method='middle')
+    result_middle = seasonal_trend_test(x=values, t=dates, period=12, season_type='month', agg_method='middle')
     assert result_middle.trend == 'increasing'
 
     # The scores and slopes should be different for each aggregation method
@@ -181,12 +181,12 @@ def test_seasonal_test_aggregation_methods():
     assert result_none.slope != result_median.slope
     assert result_median.slope != result_middle.slope
 
-def test_seasonality_test_insufficient_data():
-    """Test seasonality_test with insufficient data."""
+def test_check_seasonality_insufficient_data():
+    """Test check_seasonality with insufficient data."""
     # Scenario: 3 seasons, each with only 1 data point.
     x = [1, 2, 3]
     t = pd.to_datetime(pd.date_range(start='2020-01-01', periods=3, freq='ME'))
-    result = seasonality_test(x, t)
+    result = check_seasonality(x, t)
     assert np.isnan(result.h_statistic)
     assert np.isnan(result.p_value)
     assert not result.is_seasonal
@@ -200,9 +200,9 @@ def test_plot_seasonal_distribution_insufficient_data():
     result = plot_seasonal_distribution(x, t, save_path='test.png')
     assert result is None
 
-def test_seasonality_test_insufficient_unique_values():
+def test_check_seasonality_insufficient_unique_values():
     """
-    Test seasonality_test returns no trend if a season has enough points
+    Test check_seasonality returns no trend if a season has enough points
     but not enough unique values.
     """
     # Create a dataset where one season has 5 identical points
@@ -217,12 +217,12 @@ def test_seasonality_test_insufficient_unique_values():
 
 
     with pytest.warns(UserWarning, match="Season '1' has less than 2 unique values and will be skipped."):
-        result = seasonality_test(x, t)
+        result = check_seasonality(x, t)
         assert not result.is_seasonal
         assert len(result.seasons_tested) == 11
         assert result.seasons_skipped == [1]
 
-def test_seasonality_test_only_one_valid_season():
+def test_check_seasonality_only_one_valid_season():
     """
     Test case where only one season has enough data for the test.
     The test should not run, but the tested/skipped lists should be correct.
@@ -236,7 +236,7 @@ def test_seasonality_test_only_one_valid_season():
     jan_mask = (t.month == 1)
     x[~jan_mask] = 1 # Force all other months to have only one unique value
 
-    result = seasonality_test(x, t)
+    result = check_seasonality(x, t)
 
     assert np.isnan(result.h_statistic)
     assert np.isnan(result.p_value)

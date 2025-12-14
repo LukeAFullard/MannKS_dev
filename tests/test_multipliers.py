@@ -1,12 +1,12 @@
 
 import numpy as np
 import pandas as pd
-from MannKenSen.original_test import original_test
-from MannKenSen.seasonal_test import seasonal_test
+from MannKenSen.trend_test import trend_test
+from MannKenSen.seasonal_trend_test import seasonal_trend_test
 from MannKenSen.preprocessing import prepare_censored_data
 from MannKenSen._stats import _sens_estimator_censored
 
-def test_original_test_custom_multipliers():
+def test_trend_test_custom_multipliers():
     # Using non-monotonic data around the censored value
     x = np.array([1, 5, '<3', 2, 4, 6, 7, 8, 9, 10])
     t = np.arange(10)
@@ -22,7 +22,7 @@ def test_original_test_custom_multipliers():
     # The different multiplier for the censored value should result in a different set of slopes
     assert not np.array_equal(default_slopes, custom_slopes)
 
-def test_seasonal_test_custom_multipliers():
+def test_seasonal_trend_test_custom_multipliers():
     # Using non-monotonic data and a period that groups data points into seasons
     x = np.array([1, 5, '<4', 2, 6, 10, '>8', 7, 9, 11, 12, 13])
     t = np.arange(12)
