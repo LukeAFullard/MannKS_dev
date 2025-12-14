@@ -27,7 +27,7 @@ The following features from the LWP-TRENDS R script are **not** implemented in t
 
 - **Right-Censored Data:** The default method in this package is a robust, non-parametric approach to handle right-censored data. However, the LWP-TRENDS R script's heuristic is available as a non-default option (`mk_test_method='lwp'`) for backward compatibility.
 - **Time Handling:** The default method in this package is to use the actual numeric timestamps for all calculations, which is the most statistically robust approach for unequally spaced data. However, the `seasonal_test` function includes a `time_method='rank'` option that mimics the LWP-TRENDS R script's method of using a simple integer sequence for time (`TimeRank`). This option is provided for users who need to replicate older analyses.
-- **Confidence Intervals:** The R script uses interpolation to calculate the confidence intervals for the Sen's slope, while this package uses rounding and direct indexing.
+- **Confidence Intervals:** The default method in this package is to use rounding and direct indexing to calculate the confidence intervals for the Sen's slope. However, the LWP-TRENDS R script's interpolation method is available as a non-default option (`ci_method='lwp'`) for backward compatibility.
 
 Due to these differences, it is **not expected that the results from this package will exactly match the results from the LWP-TRENDS R script.**
 

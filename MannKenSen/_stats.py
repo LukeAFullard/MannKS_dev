@@ -388,7 +388,7 @@ def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_m
 
     return slopes_final
 
-def _confidence_intervals(slopes, var_s, alpha):
+def _confidence_intervals(slopes, var_s, alpha, method='direct'):
     """
     Computes the confidence intervals for Sen's slope.
     """
@@ -408,21 +408,25 @@ def _confidence_intervals(slopes, var_s, alpha):
     M1 = (n - C) / 2
     M2 = (n + C) / 2
 
-    # Convert to 0-based integer indices
-    # Note: np.round uses "round half to even" which may differ from other
-    # statistical software. This is a deliberate choice for consistency
-    # with a standard, well-defined rounding method.
-    lower_idx = int(np.round(M1 - 1))
-    upper_idx = int(np.round(M2 - 1))
-
     sorted_slopes = np.sort(valid_slopes)
 
-    # Ensure indices are within bounds
-    if 0 <= lower_idx < n and 0 <= upper_idx < n:
-        lower_ci = sorted_slopes[lower_idx]
-        upper_ci = sorted_slopes[upper_idx]
+    if method == 'lwp':
+        # LWP-TRENDS R script method (interpolation)
+        ranks = np.arange(1, n + 1)
+        lower_ci, upper_ci = np.interp([M1, M2], ranks, sorted_slopes)
     else:
-        lower_ci, upper_ci = np.nan, np.nan
+        # Default method (direct indexing)
+        # Note: np.round uses "round half to even" which may differ from other
+        # statistical software. This is a deliberate choice for consistency
+        # with a standard, well-defined rounding method.
+        lower_idx = int(np.round(M1 - 1))
+        upper_idx = int(np.round(M2 - 1))
 
+        # Ensure indices are within bounds
+        if 0 <= lower_idx < n and 0 <= upper_idx < n:
+            lower_ci = sorted_slopes[lower_idx]
+            upper_ci = sorted_slopes[upper_idx]
+        else:
+            lower_ci, upper_ci = np.nan, np.nan
 
     return lower_ci, upper_ci
