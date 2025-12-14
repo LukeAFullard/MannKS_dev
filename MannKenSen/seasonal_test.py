@@ -35,7 +35,8 @@ def seasonal_test(
     tau_method: str = 'b',
     time_method: str = 'absolute',
     min_size_per_season: Optional[int] = 5,
-    mk_test_method: str = 'robust'
+    mk_test_method: str = 'robust',
+    ci_method: str = 'direct'
 ) -> namedtuple:
     """
     Seasonal Mann-Kendall test for unequally spaced time series.
@@ -103,6 +104,12 @@ def seasonal_test(
               right-censored values with a value slightly larger than the
               maximum observed right-censored value. Provided for backward
               compatibility.
+        ci_method (str): The method for calculating the confidence intervals
+                         for the Sen's slope.
+            - 'direct' (default): A direct indexing method that rounds the
+              ranks to the nearest integer.
+            - 'lwp': An interpolation method that mimics the LWP-TRENDS R
+              script's `approx` function.
     Output:
         A namedtuple containing the following fields:
         - trend: The trend of the data ('increasing', 'decreasing', or 'no trend').
@@ -163,6 +170,10 @@ def seasonal_test(
     valid_mk_test_methods = ['robust', 'lwp']
     if mk_test_method not in valid_mk_test_methods:
         raise ValueError(f"Invalid `mk_test_method`. Must be one of {valid_mk_test_methods}.")
+
+    valid_ci_methods = ['direct', 'lwp']
+    if ci_method not in valid_ci_methods:
+        raise ValueError(f"Invalid `ci_method`. Must be one of {valid_ci_methods}.")
 
     data_filtered, is_datetime = _prepare_data(x, t, hicensor)
 
@@ -311,7 +322,7 @@ def seasonal_test(
     else:
         slope = np.nanmedian(np.asarray(all_slopes))
         intercept = np.nanmedian(data_filtered['value']) - np.nanmedian(data_filtered['t']) * slope
-        lower_ci, upper_ci = _confidence_intervals(np.asarray(all_slopes), var_s, alpha)
+        lower_ci, upper_ci = _confidence_intervals(np.asarray(all_slopes), var_s, alpha, method=ci_method)
 
     results = res(trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd)
 
