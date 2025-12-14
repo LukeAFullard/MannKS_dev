@@ -54,6 +54,12 @@ def test_prepare_censored_data_non_iterable():
     with pytest.raises(TypeError):
         prepare_censored_data(123)
 
+def test_prepare_censored_data_mixed_censoring_warning():
+    """Test that a warning is issued for mixed censoring types on the same value."""
+    x = ['<5', '>5']
+    with pytest.warns(UserWarning, match="Value 5.0 has conflicting censoring types"):
+        prepare_censored_data(x)
+
 # New test for dynamic tie-breaking in censored data
 def test_dynamic_tie_breaking_right_censored():
     """
