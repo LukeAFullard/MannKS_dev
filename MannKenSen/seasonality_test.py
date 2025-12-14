@@ -26,6 +26,8 @@ def seasonality_test(x_old, t_old, period=12, alpha=0.05, season_type='month'):
         - h_statistic: The Kruskal-Wallis H-statistic.
         - p_value: The p-value of the test.
         - is_seasonal: A boolean indicating if seasonality was detected.
+        - seasons_tested: A list of the seasons included in the test.
+        - seasons_skipped: A list of the seasons that were skipped.
 
     Statistical Assumptions:
     ----------------------
@@ -47,7 +49,7 @@ def seasonality_test(x_old, t_old, period=12, alpha=0.05, season_type='month'):
         be reliable. This implementation checks for a minimum of 3, following
         the LWP-TRENDS script.
     """
-    res = namedtuple('Seasonality_Test', ['h_statistic', 'p_value', 'is_seasonal'])
+    res = namedtuple('Seasonality_Test', ['h_statistic', 'p_value', 'is_seasonal', 'seasons_tested', 'seasons_skipped'])
 
     x_raw = np.asarray(x_old)
     t_raw = np.asarray(t_old)
@@ -61,7 +63,7 @@ def seasonality_test(x_old, t_old, period=12, alpha=0.05, season_type='month'):
     x, t = x_raw[mask], t_raw[mask]
 
     if len(x) < 2:
-        return res(np.nan, np.nan, False)
+        return res(np.nan, np.nan, False, [], [])
 
     if is_datetime:
         seasons = season_func(pd.to_datetime(t))
@@ -74,25 +76,29 @@ def seasonality_test(x_old, t_old, period=12, alpha=0.05, season_type='month'):
     # Kruskal-Wallis H-test requires at least two groups
     unique_seasons = np.unique(seasons)
     if len(unique_seasons) < 2:
-        return res(np.nan, np.nan, False)
+        return res(np.nan, np.nan, False, [], list(unique_seasons))
 
     seasonal_data = []
+    skipped_seasons = []
+    tested_seasons = []
     for s in unique_seasons:
         group = x[seasons == s]
-        if len(group) < 3:
-            warnings.warn(f"Some seasons have less than 3 samples and will be skipped.", UserWarning)
-            continue
-        if len(np.unique(group)) < 2:
-            warnings.warn(f"Some seasons have less than 2 unique values and will be skipped.", UserWarning)
+        if len(group) < 3 or len(np.unique(group)) < 2:
+            if len(group) < 3:
+                warnings.warn(f"Season '{s}' has less than 3 samples and will be skipped.", UserWarning)
+            else:
+                warnings.warn(f"Season '{s}' has less than 2 unique values and will be skipped.", UserWarning)
+            skipped_seasons.append(s)
             continue
         seasonal_data.append(group)
+        tested_seasons.append(s)
 
 
     if len(seasonal_data) < 2:
-        return res(np.nan, np.nan, False)
+        return res(np.nan, np.nan, False, tested_seasons, skipped_seasons)
 
     h_statistic, p_value = kruskal(*seasonal_data)
 
     is_seasonal = p_value < alpha
 
-    return res(h_statistic, p_value, is_seasonal)
+    return res(h_statistic, p_value, is_seasonal, tested_seasons, skipped_seasons)
