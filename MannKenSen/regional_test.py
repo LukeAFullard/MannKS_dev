@@ -96,7 +96,8 @@ def regional_test(trend_results, time_series_data, site_col='site',
     s_signs = np.sign(results[s_col])
     modal_direction = np.sign(np.sum(s_signs) + np.sum(s_signs == 0) / 2)
     if modal_direction == 0:
-        modal_direction = 1  # Default to increasing if exactly tied
+        return RegionalTrendResult(M, 0.5, np.nan, np.nan,
+                                   'No Clear Direction', np.nan)
 
     DT = 'Increasing' if modal_direction == 1 else 'Decreasing'
 

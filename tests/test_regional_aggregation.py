@@ -99,5 +99,23 @@ class TestRegionalAggregation(unittest.TestCase):
         self.assertEqual(result.M, 0)
         self.assertEqual(result.DT, 'Insufficient Data')
 
+    def test_regional_test_tied_direction(self):
+        """Test regional_test with a tied modal direction."""
+        trend_results = pd.DataFrame({
+            'site': ['A', 'B'],
+            's': [1, -1],  # One increasing, one decreasing
+            'C': [0.9, 0.9]
+        })
+        time_series_data = pd.DataFrame({
+            'site': ['A', 'B'],
+            'value': [1, 1],
+            'time': [pd.to_datetime('2020-01-01'), pd.to_datetime('2020-01-01')]
+        })
+        result = regional_test(trend_results, time_series_data)
+        self.assertEqual(result.DT, 'No Clear Direction')
+        self.assertEqual(result.TAU, 0.5)
+        self.assertTrue(np.isnan(result.CT))
+
+
 if __name__ == '__main__':
     unittest.main()

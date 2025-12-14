@@ -71,12 +71,6 @@ def prepare_censored_data(x):
     # --- Mixed Censoring Validation ---
     value_censor_map = {}
     for val, cen_type in zip(values, cen_types):
-        # We only care about non-censored ('not') vs. censored ('lt'/'gt')
-        # and left vs. right censoring. The exact type ('lt', 'gt') matters.
-        if cen_type == 'not':
-            # Skip non-censored values for this check
-            continue
-
         if val in value_censor_map and value_censor_map[val] != cen_type:
             warnings.warn(
                 f"Value {val} has conflicting censoring types. "
