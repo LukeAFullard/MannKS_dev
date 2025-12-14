@@ -406,3 +406,12 @@ custom_category = classify_trend(result, category_map=custom_map)
 print(f"The custom category is: {custom_category}")
 # Possible output: "The custom category is: Extremely Likely Increasing"
 ```
+
+## References
+
+1. Helsel, D.R. (2012). *Statistics for Censored Environmental Data Using Minitab and R* (2nd ed.). Wiley.
+2. Gilbert, R.O. (1987). *Statistical Methods for Environmental Pollution Monitoring*. Wiley.
+3. Hirsch, R.M., Slack, J.R., & Smith, R.A. (1982). Techniques of trend analysis for monthly water quality data. *Water Resources Research*, 18(1), 107-121.
+4. van Belle, G., & Hughes, J.P. (1984). Nonparametric tests for trend in water quality. *Water Resources Research*, 20(1), 127-136.
+5. Mann, H.B. (1945). Nonparametric tests against trend. *Econometrica*, 13(3), 245-259.
+6. Sen, P.K. (1968). Estimates of the regression coefficient based on a particular kind of rank correlation. *Journal of the American Statistical Association*, 63(324), 1379-1389.
