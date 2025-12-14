@@ -402,7 +402,7 @@ def _confidence_intervals(slopes, var_s, alpha):
     valid_slopes = slopes[~np.isnan(slopes)]
     n = len(valid_slopes)
 
-    if n == 0 or var_s == 0:
+    if n == 0 or var_s < EPSILON:
         return np.nan, np.nan
 
     # For a two-sided confidence interval

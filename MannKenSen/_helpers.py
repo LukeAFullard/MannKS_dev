@@ -113,12 +113,25 @@ def _prepare_data(x, t, hicensor):
     data_filtered = data[mask].copy()
 
     # Apply HiCensor rule if requested
-    if hicensor and 'lt' in data_filtered['cen_type'].values:
-        max_lt_censor = data_filtered.loc[data_filtered['cen_type'] == 'lt', 'value'].max()
-        hi_censor_mask = data_filtered['value'] < max_lt_censor
-        data_filtered.loc[hi_censor_mask, 'censored'] = True
-        data_filtered.loc[hi_censor_mask, 'cen_type'] = 'lt'
-        data_filtered.loc[hi_censor_mask, 'value'] = max_lt_censor
+    if hicensor:
+        if isinstance(hicensor, bool):
+            if 'lt' in data_filtered['cen_type'].values:
+                max_lt_censor = data_filtered.loc[
+                    data_filtered['cen_type'] == 'lt', 'value'].max()
+            else:
+                max_lt_censor = None # No left-censored data, so do nothing
+        elif isinstance(hicensor, (int, float)):
+            natural_max = data_filtered.loc[
+                data_filtered['cen_type'] == 'lt', 'value'].max()
+            max_lt_censor = min(natural_max, hicensor) if pd.notna(natural_max) else hicensor
+        else:
+            raise ValueError("hicensor must be bool or numeric")
+
+        if max_lt_censor is not None:
+            hi_censor_mask = data_filtered['value'] < max_lt_censor
+            data_filtered.loc[hi_censor_mask, 'censored'] = True
+            data_filtered.loc[hi_censor_mask, 'cen_type'] = 'lt'
+            data_filtered.loc[hi_censor_mask, 'value'] = max_lt_censor
 
     return data_filtered, is_datetime
 

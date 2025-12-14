@@ -12,6 +12,7 @@ from ._stats import (_z_score, _p_value, _sens_estimator_unequal_spacing,
                      _mk_score_and_var_censored, _sens_estimator_censored)
 from ._helpers import (_prepare_data, _aggregate_by_group)
 from .plotting import plot_trend
+from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
 
 
 def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='nan', tau_method='b', agg_method='none', min_size=10):
@@ -109,6 +110,10 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
 
     data_filtered, is_datetime = _prepare_data(x, t, hicensor)
 
+    note = get_analysis_note(data_filtered, values_col='value', censored_col='censored')
+    if note != "ok":
+        warnings.warn(f"Data quality issue: {note}", UserWarning)
+
     n = len(data_filtered)
 
     # Sample size validation
@@ -117,7 +122,6 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
                   np.nan, np.nan, np.nan, np.nan)
 
     if min_size is not None and n < min_size:
-        import warnings
         warnings.warn(
             f"Sample size (n={n}) is below recommended minimum (n={min_size}). "
             f"Results may be unreliable. Consider using more data or setting "
@@ -146,6 +150,10 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
     censored_filtered = data_filtered['censored'].to_numpy()
     cen_type_filtered = data_filtered['cen_type'].to_numpy()
 
+    note = get_analysis_note(data_filtered, values_col='value', censored_col='censored', post_aggregation=True)
+    if note != "ok":
+        warnings.warn(f"Data quality issue: {note}", UserWarning)
+
 
     if len(x_filtered) < 2:
         return res('no trend', False, np.nan, 0, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan)
@@ -168,6 +176,10 @@ def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5,
         slopes = _sens_estimator_unequal_spacing(x_filtered, t_filtered)
 
     slope = np.nanmedian(slopes) if len(slopes) > 0 else np.nan
+
+    note = get_sens_slope_analysis_note(slopes, t_filtered, cen_type_filtered)
+    if note != "ok":
+        warnings.warn(note, UserWarning)
 
     if np.isnan(slope):
         intercept = np.nan

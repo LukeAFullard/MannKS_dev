@@ -3,6 +3,7 @@ This module provides utility functions for pre-processing data for trend analysi
 """
 import numpy as np
 import pandas as pd
+import warnings
 
 def prepare_censored_data(x):
     """
@@ -66,6 +67,17 @@ def prepare_censored_data(x):
                 cen_types.append('not')
             except (ValueError, TypeError):
                  raise ValueError(f"Could not convert non-string value '{item}' to a float.")
+
+    # --- Mixed Censoring Validation ---
+    value_censor_map = {}
+    for val, cen_type in zip(values, cen_types):
+        if val in value_censor_map and value_censor_map[val] != cen_type:
+            warnings.warn(
+                f"Value {val} has conflicting censoring types. "
+                f"This may indicate data quality issues.", UserWarning
+            )
+        value_censor_map[val] = cen_type
+
 
     return pd.DataFrame({
         'value': np.array(values, dtype=float),
