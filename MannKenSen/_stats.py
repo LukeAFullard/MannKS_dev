@@ -28,7 +28,7 @@ def _get_min_positive_diff(arr):
     return np.min(pos_diffs) if len(pos_diffs) > 0 else 0.0
 
 
-def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b'):
+def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test_method='robust'):
     """
     Calculates the Mann-Kendall S statistic and its variance for censored data.
     This is a Python translation of the GetKendal function from the LWP-TRENDS
@@ -50,19 +50,28 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b'):
         introduces ties. The method is adapted from the NADA R package and is
         designed to handle ties between censored-censored, censored-uncensored,
         and uncensored-uncensored data points.
-    4.  **Handling of Right-Censored Data**: To avoid ambiguity, right-censored
-        data is temporarily replaced with a value slightly larger than the
-        maximum observed value. This is a pragmatic choice to ensure such
-        points are ranked correctly but assumes they are indeed the largest
-        values.
+    4.  **Handling of Right-Censored Data**: The method for handling
+        right-censored data is determined by the `mk_test_method` parameter:
+        -   `'robust'` (default): A non-parametric approach that treats
+            right-censored values as having a rank greater than all observed
+            values, without modifying their actual values.
+        -   `'lwp'`: A heuristic from the LWP-TRENDS R script that replaces all
+            right-censored values with a value slightly larger than the maximum
+            observed right-censored value and treats them as non-censored.
     """
     x = np.asarray(x)
     t = np.asarray(t)
     censored = np.asarray(censored)
     cen_type = np.asarray(cen_type)
-    # 1. Prepare inputs (no special handling for right-censored data)
+    # 1. Prepare inputs
     xx = x.copy()
-    cx = censored.astype(bool)
+    cx = censored.copy().astype(bool)
+
+    if mk_test_method == 'lwp' and np.any(cen_type == 'gt'):
+        gt_mask = cen_type == 'gt'
+        max_gt_val = xx[gt_mask].max() + 0.1
+        xx[gt_mask] = max_gt_val
+        cx[gt_mask] = False
     # Time is treated as uncensored
     yy = rankdata(t, method='ordinal')
     cy = np.zeros_like(yy, dtype=bool)

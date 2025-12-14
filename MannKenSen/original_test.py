@@ -27,7 +27,8 @@ def original_test(
     sens_slope_method: str = 'nan',
     tau_method: str = 'b',
     agg_method: str = 'none',
-    min_size: Optional[int] = 10
+    min_size: Optional[int] = 10,
+    mk_test_method: str = 'robust'
 ) -> namedtuple:
     """
     Mann-Kendall test for unequally spaced time series.
@@ -68,6 +69,15 @@ def original_test(
             - 'middle': Use the observation closest to the middle of the time period.
         min_size (int): Minimum sample size. Warnings issued if n < min_size.
                        Set to None to disable check.
+        mk_test_method (str): The method for handling right-censored data in the
+                              Mann-Kendall test.
+            - 'robust' (default): A non-parametric approach that handles
+              right-censored data without value modification. Recommended for
+              most cases.
+            - 'lwp': A heuristic from the LWP-TRENDS R script that replaces all
+              right-censored values with a value slightly larger than the
+              maximum observed right-censored value. Provided for backward
+              compatibility.
     Output:
         trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd
 
@@ -125,6 +135,10 @@ def original_test(
     valid_agg_methods = ['none', 'median', 'robust_median', 'middle']
     if agg_method not in valid_agg_methods:
         raise ValueError(f"Invalid `agg_method`. Must be one of {valid_agg_methods}.")
+
+    valid_mk_test_methods = ['robust', 'lwp']
+    if mk_test_method not in valid_mk_test_methods:
+        raise ValueError(f"Invalid `mk_test_method`. Must be one of {valid_mk_test_methods}.")
 
     data_filtered, is_datetime = _prepare_data(x, t, hicensor)
 
@@ -185,7 +199,7 @@ def original_test(
 
     s, var_s, D, Tau = _mk_score_and_var_censored(
         x_filtered, t_filtered, censored_filtered, cen_type_filtered,
-        tau_method=tau_method
+        tau_method=tau_method, mk_test_method=mk_test_method
     )
 
     z = _z_score(s, var_s)
