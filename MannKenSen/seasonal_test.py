@@ -33,7 +33,6 @@ def seasonal_test(
     gt_mult: float = 1.1,
     sens_slope_method: str = 'nan',
     tau_method: str = 'b',
-    time_method: str = 'absolute',
     min_size_per_season: Optional[int] = 5,
     mk_test_method: str = 'robust',
     ci_method: str = 'direct'
@@ -83,16 +82,6 @@ def seasonal_test(
         tau_method (str): The method for calculating Kendall's Tau ('a' or 'b').
                           Default is 'b', which accounts for ties in the data and is
                           the recommended method.
-        time_method (str):
-            - 'absolute' (default, RECOMMENDED): Uses actual timestamps for
-              statistically robust analysis of unequally spaced data. Use this
-              unless you have a specific reason not to.
-
-            - 'rank': Uses cycle-based ranks (1, 2, 3,...), matching the
-              LWP-TRENDS R script methodology. Use only for:
-              * Replicating R script results
-              * Data with extreme spacing irregularities within seasons
-              * Comparison with historical LWP analyses
         min_size_per_season (int): Minimum observations per season.
                                    Warnings issued if any season < this.
         mk_test_method (str): The method for handling right-censored data in the
@@ -162,10 +151,6 @@ def seasonal_test(
     valid_tau_methods = ['a', 'b']
     if tau_method not in valid_tau_methods:
         raise ValueError(f"Invalid `tau_method`. Must be one of {valid_tau_methods}.")
-
-    valid_time_methods = ['absolute', 'rank']
-    if time_method not in valid_time_methods:
-        raise ValueError(f"Invalid `time_method`. Must be one of {valid_time_methods}.")
 
     valid_mk_test_methods = ['robust', 'lwp']
     if mk_test_method not in valid_mk_test_methods:
@@ -270,16 +255,7 @@ def seasonal_test(
         n = len(season_x)
 
         if n > 1:
-            # DEVELOPER NOTE:
-            # The 'absolute' time_method (default) uses true numeric timestamps,
-            # which is statistically robust for unequally spaced data.
-            # The 'rank' method uses cycle-based ranks (1, 2, 3,...) for time,
-            # matching the LWP-TRENDS R script's methodology.
-            if time_method == 'rank':
-                season_cycles = season_data['cycle'].to_numpy()
-                season_t = _get_time_ranks(season_t_raw, season_cycles)
-            else: # 'absolute'
-                season_t = season_t_raw
+            season_t = season_t_raw
 
             s_season, var_s_season, d_season, tau_season = _mk_score_and_var_censored(
                 season_x, season_t, season_censored, season_cen_type,
