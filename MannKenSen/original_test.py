@@ -27,7 +27,8 @@ def original_test(
     sens_slope_method: str = 'nan',
     tau_method: str = 'b',
     agg_method: str = 'none',
-    min_size: Optional[int] = 10
+    min_size: Optional[int] = 10,
+    mk_test_method: str = 'robust'
 ) -> namedtuple:
     """
     Mann-Kendall test for unequally spaced time series.
@@ -63,6 +64,15 @@ def original_test(
             - 'middle': Use the observation closest to the middle of the time period.
         min_size (int): Minimum sample size. Warnings issued if n < min_size.
                        Set to None to disable check.
+        mk_test_method (str): The method for handling right-censored data in the
+                              Mann-Kendall test S and variance calculation.
+            - 'robust' (default): A statistically robust method that handles
+                                  right-censored data by rank without value
+                                  modification. Recommended for scientific use.
+            - 'lwp': A heuristic method that replicates the behavior of the
+                     LWP-TRENDS R script by replacing right-censored values
+                     with a single, large, tied value. Use for consistency
+                     with the original R script.
     Output:
         trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd
 
@@ -121,6 +131,10 @@ def original_test(
     if agg_method not in valid_agg_methods:
         raise ValueError(f"Invalid `agg_method`. Must be one of {valid_agg_methods}.")
 
+    valid_mk_test_methods = ['robust', 'lwp']
+    if mk_test_method not in valid_mk_test_methods:
+        raise ValueError(f"Invalid `mk_test_method`. Must be one of {valid_mk_test_methods}.")
+
     data_filtered, is_datetime = _prepare_data(x, t, hicensor)
 
     note = get_analysis_note(data_filtered, values_col='value', censored_col='censored')
@@ -173,7 +187,7 @@ def original_test(
 
     s, var_s, D, Tau = _mk_score_and_var_censored(
         x_filtered, t_filtered, censored_filtered, cen_type_filtered,
-        tau_method=tau_method
+        tau_method=tau_method, mk_test_method=mk_test_method
     )
 
     z = _z_score(s, var_s)

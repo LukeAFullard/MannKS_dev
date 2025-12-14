@@ -98,6 +98,7 @@ This function performs the Mann-Kendall test on unequally spaced time series dat
 - `tau_method` (str): The method for calculating Kendall's Tau ('a' or 'b'). Default is `'b'`.
 - `agg_method` (str): The method for aggregating data at tied timestamps. It is recommended to use an aggregation method if tied timestamps are present. See the function docstring for options.
 - `min_size` (int): The minimum sample size required to perform the test (default is 10).
+- `mk_test_method` (str): The method for handling right-censored data in the Mann-Kendall test. Default is `'robust'`. See the function docstring for details.
 
 **Output:**
 A named tuple with the following fields:
@@ -135,6 +136,7 @@ This function performs the seasonal Mann-Kendall test on unequally spaced time s
 - `tau_method` (str): The method for calculating Kendall's Tau ('a' or 'b'). Default is `'b'`.
 - `time_method` (str): The method for handling timestamps in the seasonal test. See the function docstring for details.
 - `min_size_per_season` (int): The minimum number of observations required per season (default is 5).
+- `mk_test_method` (str): The method for handling right-censored data in the Mann-Kendall test. Default is `'robust'`. See the function docstring for details.
 
 **Output:**
 A named tuple with the same fields as `original_test`.

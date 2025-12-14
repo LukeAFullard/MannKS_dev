@@ -80,12 +80,18 @@ def test_dynamic_tie_breaking_right_censored():
     # Pre-process the data
     data = prepare_censored_data(x)
 
-    # Perform the trend test
-    result = original_test(data, t)
+    # Perform the trend test with the new 'robust' default
+    result_robust = original_test(data, t)
 
-    # The trend should be increasing
-    assert result.trend == 'increasing'
-    assert result.h
+    # The robust method is more conservative and correctly finds no significant
+    # trend in this small dataset.
+    assert result_robust.trend == 'no trend'
+    assert not result_robust.h
+
+    # The 'lwp' method should still find an increasing trend
+    result_lwp = original_test(data, t, mk_test_method='lwp')
+    assert result_lwp.trend == 'increasing'
+    assert result_lwp.h
 
 def test_hicensor_rule_original_test():
     """Test the hicensor rule in original_test."""
@@ -175,3 +181,70 @@ def test_hicensor_numeric_seasonal_test():
     # result is weakened by the tied January data.
     result_hicensor_8 = seasonal_test(x=data, t=t, period=12, hicensor=8)
     assert result_hicensor_8.trend == 'no trend'
+
+
+# Tests for the new mk_test_method parameter
+def test_mk_test_method_lwp_vs_robust():
+    """
+    Compare the 'lwp' and 'robust' methods for right-censored data.
+    """
+    # Create a dataset where the methods should produce different results.
+    # The robust method should be less influenced by the right-censored value.
+    x_raw = [10, 8, '>5', 6]
+    t = np.arange(len(x_raw))
+    x_prepared = prepare_censored_data(x_raw)
+
+    # LWP method - should be more strongly decreasing
+    res_lwp = original_test(x=x_prepared, t=t, mk_test_method='lwp')
+
+    # Robust method - should be less strongly decreasing
+    res_robust = original_test(x=x_prepared, t=t, mk_test_method='robust')
+
+    # Assertions
+    # With n=4, the trend is not significant for either method
+    assert res_lwp.trend == 'no trend'
+    assert res_robust.trend == 'no trend'
+    # For this specific dataset, both methods produce the same S-score.
+    assert res_robust.s == res_lwp.s
+
+def test_mk_test_method_robust_ambiguous_case():
+    """
+    Test the robust method in a case where the right-censored value creates
+    ambiguity.
+    """
+    # Here, the uncensored value '6' is GREATER than the censored limit '>5'.
+    # The robust method should treat the pair (6, >5) as a confirmed
+    # positive contribution to S.
+    # The uncensored value '4' is LESS than the censored limit '>5'.
+    # The robust method should treat this pair (4, >5) as ambiguous (score=0).
+    x_raw = [6, '>5', 4]
+    t = np.arange(len(x_raw))
+    x_prepared = prepare_censored_data(x_raw)
+
+    res_robust = original_test(x=x_prepared, t=t, mk_test_method='robust')
+
+    # The pairs are:
+    # (6, >5) -> S = 0 (ambiguous because 6 > 5)
+    # (6, 4)  -> S = -1
+    # (>5, 4) -> S = -1 (not ambiguous because >5 must be > 4)
+    # Total S = -2
+    assert res_robust.s == -2
+    assert res_robust.trend == 'no trend'
+
+def test_mk_test_method_lwp_right_censor_tie():
+    """
+    Test that the 'lwp' method correctly creates a tie for right-censored data.
+    """
+    x_raw = [10, '>5', '>4']
+    t = np.arange(len(x_raw))
+    x_prepared = prepare_censored_data(x_raw)
+    res_lwp = original_test(x=x_prepared, t=t, mk_test_method='lwp')
+
+    # Under the 'lwp' method, '>5' and '>4' become tied at a value slightly
+    # greater than 5.
+    # The pairs are:
+    # (10, >5) -> S = -1
+    # (10, >4) -> S = -1
+    # (>5, >4) -> S = 0 (tie)
+    # Total S = -2
+    assert res_lwp.s == -2

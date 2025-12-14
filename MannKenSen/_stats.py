@@ -28,7 +28,7 @@ def _get_min_positive_diff(arr):
     return np.min(pos_diffs) if len(pos_diffs) > 0 else 0.0
 
 
-def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b'):
+def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test_method='robust'):
     """
     Calculates the Mann-Kendall S statistic and its variance for censored data.
     This is a Python translation of the GetKendal function from the LWP-TRENDS
@@ -50,11 +50,13 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b'):
         introduces ties. The method is adapted from the NADA R package and is
         designed to handle ties between censored-censored, censored-uncensored,
         and uncensored-uncensored data points.
-    4.  **Handling of Right-Censored Data**: To avoid ambiguity, right-censored
-        data is temporarily replaced with a value slightly larger than the
-        maximum observed value. This is a pragmatic choice to ensure such
-        points are ranked correctly but assumes they are indeed the largest
-        values.
+    4.  **Handling of Right-Censored Data**: Two methods are provided:
+        - 'robust': Right-censored data are handled by rank without value
+          modification. Ambiguous comparisons (e.g., uncensored vs. right-
+          censored) contribute 0 to the S-statistic.
+        - 'lwp': Replicates the LWP-TRENDS R script by replacing all right-
+          censored values with a single value slightly larger than the max
+          detection limit, treating them as a tie.
     """
     x = np.asarray(x)
     t = np.asarray(t)
@@ -63,22 +65,15 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b'):
     # 1. Special handling for right-censored ('gt') data
     x_mod = x.copy()
     censored_mod = censored.copy()
-    if np.any(cen_type == 'gt'):
-        gt_mask = cen_type == 'gt'
+    gt_mask = cen_type == 'gt'
 
-        # Calculate a small, data-relative value to break ties
-        unique_vals = np.unique(x_mod)
-        if len(unique_vals) > 1:
-            min_diff = np.min(np.diff(unique_vals))
-            # Use a small fraction of the minimum difference, or a default small number
-            tie_break_value = min_diff * 0.01 if min_diff > 0 else 1e-9
-        else:
-            tie_break_value = 1e-9 # Fallback for data with no variance
-
-        # Add the small amount to break ties, treat as uncensored
-        max_gt_val = x_mod[gt_mask].max() + tie_break_value
+    if mk_test_method == 'lwp' and np.any(gt_mask):
+        # LWP-Consistent Method: Replicate R script's heuristic
+        max_gt_val = np.max(x_mod[gt_mask]) + 1e-6  # Use a small, fixed constant
         x_mod[gt_mask] = max_gt_val
         censored_mod[gt_mask] = False
+    # For the 'robust' method, no value modification is done here.
+    # The logic is handled in the S-statistic calculation.
 
     # 2. Prepare inputs
     xx = x_mod
@@ -128,6 +123,17 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b'):
     cix[cix <= 0] = 0
     signyx *= (1 - cix)
 
+    # Robust method for right-censored data: Ambiguous pairs get a score of 0
+    if mk_test_method == 'robust' and np.any(gt_mask):
+        cen_type_outer = cen_type[:, np.newaxis] + cen_type
+        # Pairs of (uncensored vs. right-censored) are ambiguous if the
+        # uncensored value is less than the right-censored detection limit.
+        ambiguous_mask = ((cen_type_outer == 'notgt') & (diffx < 0)) | \
+                         ((cen_type_outer == 'gtnot') & (diffx > 0)) | \
+                         (cen_type_outer == 'gtgt')
+        signyx[ambiguous_mask] = 0
+
+
     xplus = (cx[:, np.newaxis].astype(int) + cx.astype(int))
     xplus[xplus <= 1] = 0
     xplus[xplus > 1] = 1
@@ -167,9 +173,11 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b'):
     varS = n * (n - 1) * (2 * n + 5) / 18.0
 
     # Add tie correction for x variable (previously in __variance_s)
-    unique_x, tp = np.unique(x, return_counts=True)
-    if n != len(unique_x):
-        varS -= np.sum(tp * (tp - 1) * (2 * tp + 5)) / 18.0
+    # Note: This is now removed as per audit findings. The specialized
+    # corrections below (delc, deluc, delu) are sufficient.
+    # unique_x, tp = np.unique(x, return_counts=True)
+    # if n != len(unique_x):
+    #     varS -= np.sum(tp * (tp - 1) * (2 * tp + 5)) / 18.0
 
     intg = np.arange(1, n + 1)
 

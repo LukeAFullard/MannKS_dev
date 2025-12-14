@@ -34,7 +34,8 @@ def seasonal_test(
     sens_slope_method: str = 'nan',
     tau_method: str = 'b',
     time_method: str = 'absolute',
-    min_size_per_season: Optional[int] = 5
+    min_size_per_season: Optional[int] = 5,
+    mk_test_method: str = 'robust'
 ) -> namedtuple:
     """
     Seasonal Mann-Kendall test for unequally spaced time series.
@@ -74,6 +75,15 @@ def seasonal_test(
         tau_method (str): The method for calculating Kendall's Tau ('a' or 'b').
                           Default is 'b', which accounts for ties in the data and is
                           the recommended method.
+        mk_test_method (str): The method for handling right-censored data in the
+                              Mann-Kendall test S and variance calculation.
+            - 'robust' (default): A statistically robust method that handles
+                                  right-censored data by rank without value
+                                  modification. Recommended for scientific use.
+            - 'lwp': A heuristic method that replicates the behavior of the
+                     LWP-TRENDS R script by replacing right-censored values
+                     with a single, large, tied value. Use for consistency
+                     with the original R script.
         time_method (str):
             - 'absolute' (default, RECOMMENDED): Uses actual timestamps for
               statistically robust analysis of unequally spaced data. Use this
@@ -142,6 +152,10 @@ def seasonal_test(
     valid_time_methods = ['absolute', 'rank']
     if time_method not in valid_time_methods:
         raise ValueError(f"Invalid `time_method`. Must be one of {valid_time_methods}.")
+
+    valid_mk_test_methods = ['robust', 'lwp']
+    if mk_test_method not in valid_mk_test_methods:
+        raise ValueError(f"Invalid `mk_test_method`. Must be one of {valid_mk_test_methods}.")
 
     data_filtered, is_datetime = _prepare_data(x, t, hicensor)
 
@@ -244,7 +258,7 @@ def seasonal_test(
 
             s_season, var_s_season, d_season, tau_season = _mk_score_and_var_censored(
                 season_x, season_t, season_censored, season_cen_type,
-                tau_method=tau_method
+                tau_method=tau_method, mk_test_method=mk_test_method
             )
             s += s_season
             var_s += var_s_season
