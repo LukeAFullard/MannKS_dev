@@ -26,7 +26,7 @@ The following features from the LWP-TRENDS R script are **not** implemented in t
 ### Methodological Differences
 
 - **Right-Censored Data:** The default method in this package is a robust, non-parametric approach to handle right-censored data. However, the LWP-TRENDS R script's heuristic is available as a non-default option (`mk_test_method='lwp'`) for backward compatibility.
-- **Time Handling:** The default method in this package is to use the actual numeric timestamps for all calculations, which is the most statistically robust approach for unequally spaced data. However, the `seasonal_test` function includes a `time_method='rank'` option that mimics the LWP-TRENDS R script's method of using a simple integer sequence for time (`TimeRank`). This option is provided for users who need to replicate older analyses.
+- **Time Handling:** This package exclusively uses numeric timestamps for all calculations, which is the most statistically robust approach for unequally spaced data. Previously, a `'rank'` method was available to mimic other tools, but it has been removed. The difference between the two methods only manifested when multiple, unaggregated measurements existed within the same season.
 - **Confidence Intervals:** The default method in this package is to use rounding and direct indexing to calculate the confidence intervals for the Sen's slope. However, the LWP-TRENDS R script's interpolation method is available as a non-default option (`ci_method='lwp'`) for backward compatibility.
 
 Due to these differences, it is **not expected that the results from this package will exactly match the results from the LWP-TRENDS R script.**
@@ -157,7 +157,6 @@ This function performs the seasonal Mann-Kendall test on unequally spaced time s
 - `gt_mult` (float): Multiplier for right-censored data (default is 1.1).
 - `sens_slope_method` (str): The method for handling ambiguous slopes in censored data. See the function docstring for details.
 - `tau_method` (str): The method for calculating Kendall's Tau ('a' or 'b'). Default is `'b'`.
-- `time_method` (str): The method for handling timestamps in the seasonal test. See the function docstring for details.
 - `min_size_per_season` (int): The minimum number of observations required per season (default is 5).
 
 **Output:**
