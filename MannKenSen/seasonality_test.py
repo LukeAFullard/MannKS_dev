@@ -9,7 +9,15 @@ from scipy.stats import kruskal
 import warnings
 from ._datetime import _get_season_func, _is_datetime_like
 
-def seasonality_test(x_old, t_old, period=12, alpha=0.05, season_type='month'):
+from typing import Union
+
+def seasonality_test(
+    x_old: np.ndarray,
+    t_old: np.ndarray,
+    period: int = 12,
+    alpha: float = 0.05,
+    season_type: str = 'month'
+) -> namedtuple:
     """
     Performs a Kruskal-Wallis H-test to determine if there is a statistically
     significant difference between the distributions of seasons in a time series.

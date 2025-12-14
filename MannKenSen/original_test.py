@@ -6,7 +6,6 @@ from collections import namedtuple
 import numpy as np
 import pandas as pd
 import warnings
-from collections import namedtuple
 from ._stats import (_z_score, _p_value, _sens_estimator_unequal_spacing,
                      _confidence_intervals, _mk_probability,
                      _mk_score_and_var_censored, _sens_estimator_censored)
@@ -15,7 +14,21 @@ from .plotting import plot_trend
 from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
 
 
-def original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='nan', tau_method='b', agg_method='none', min_size=10):
+from typing import Union, Tuple, Optional
+
+def original_test(
+    x: Union[np.ndarray, pd.DataFrame],
+    t: np.ndarray,
+    alpha: float = 0.05,
+    hicensor: Union[bool, float] = False,
+    plot_path: Optional[str] = None,
+    lt_mult: float = 0.5,
+    gt_mult: float = 1.1,
+    sens_slope_method: str = 'nan',
+    tau_method: str = 'b',
+    agg_method: str = 'none',
+    min_size: Optional[int] = 10
+) -> namedtuple:
     """
     Mann-Kendall test for unequally spaced time series.
     Input:

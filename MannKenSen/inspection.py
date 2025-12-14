@@ -9,10 +9,21 @@ import numpy as np
 from collections import namedtuple
 from .plotting import plot_inspection_data
 
-def inspect_trend_data(data, trend_period=None, end_year=None,
-                     prop_year_tol=0.9, prop_incr_tol=0.9,
-                     return_summary=False, value_col='value', time_col='t',
-                     custom_increments=None, plot=False, plot_path=None):
+from typing import Optional, Dict, Union
+
+def inspect_trend_data(
+    data: pd.DataFrame,
+    trend_period: Optional[int] = None,
+    end_year: Optional[int] = None,
+    prop_year_tol: float = 0.9,
+    prop_incr_tol: float = 0.9,
+    return_summary: bool = False,
+    value_col: str = 'value',
+    time_col: str = 't',
+    custom_increments: Optional[Dict[str, int]] = None,
+    plot: bool = False,
+    plot_path: Optional[str] = None
+) -> Union[pd.DataFrame, namedtuple]:
     """
     Inspects data availability over a trend period and determines the best time
     increment for trend analysis.

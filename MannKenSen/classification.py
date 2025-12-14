@@ -10,7 +10,9 @@ DEFAULT_CATEGORY_MAP = {
     0.0:  "As Likely as Not"
 }
 
-def classify_trend(result, category_map=None):
+from typing import Optional, Dict, NamedTuple
+
+def classify_trend(result: NamedTuple, category_map: Optional[Dict[float, str]] = None) -> str:
     """
     Classifies a trend result into a descriptive category.
 
