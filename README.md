@@ -8,6 +8,8 @@ The statistical methods used in this package, particularly for handling unequall
 
 Note: The statistical methods in this package are based on the LWP-TRENDS R script. The original source link is no longer active.
 
+**Recent Updates:** This package has undergone a comprehensive audit and update to improve its statistical robustness. Heuristics for handling censored data have been replaced with more conservative, non-parametric methods to ensure the reliability of the trend analysis results.
+
 ## Installation
 
 To install the necessary dependencies for this package, run the following command:
