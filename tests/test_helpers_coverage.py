@@ -46,6 +46,7 @@ def test_aggregate_censored_median_empty_group():
     df = pd.DataFrame(columns=['value', 'censored', 'cen_type', 't_original', 't'])
     result = _aggregate_censored_median(df, is_datetime=False)
     assert result.empty
+    assert list(result.columns) == ['value', 'censored', 'cen_type', 't_original', 't']
 
 def test_aggregate_by_group_middle_method():
     """Test _aggregate_by_group with the 'middle' method."""
