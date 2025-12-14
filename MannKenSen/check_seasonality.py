@@ -11,7 +11,7 @@ from ._datetime import _get_season_func, _is_datetime_like
 
 from typing import Union
 
-def seasonality_test(
+def check_seasonality(
     x_old: np.ndarray,
     t_old: np.ndarray,
     period: int = 12,

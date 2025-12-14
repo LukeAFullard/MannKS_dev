@@ -26,7 +26,7 @@ The following features from the LWP-TRENDS R script are **not** implemented in t
 ### Methodological Differences
 
 - **Right-Censored Data (MK Test):** The default method in this package for the Mann-Kendall test is a robust, non-parametric approach to handle right-censored data (`mk_test_method='robust'`). The LWP-TRENDS R script uses a heuristic that replaces all right-censored values with a value slightly larger than the maximum detection limit; this method is available as a non-default option (`mk_test_method='lwp'`) for backward compatibility.
-- **Time Handling (MK Test):** A core methodological difference exists in how the time vector is used. The LWP-TRENDS R script internally converts the time vector into a simple integer sequence (i.e., ranks) for calculating the S-statistic and its variance. In contrast, this Python package uses the actual numeric timestamps for these calculations in both `original_test` and `seasonal_test`. This approach is more robust for unequally spaced data but means the S-statistic, variance, and p-value may differ from the R script.
+- **Time Handling (MK Test):** A core methodological difference exists in how the time vector is used. The LWP-TRENDS R script internally converts the time vector into a simple integer sequence (i.e., ranks) for calculating the S-statistic and its variance. In contrast, this Python package uses the actual numeric timestamps for these calculations in both `trend_test` and `seasonal_trend_test`. This approach is more robust for unequally spaced data but means the S-statistic, variance, and p-value may differ from the R script.
 - **Ambiguous Slopes (Sen's Slope):** When calculating the Sen's slope with censored data, some slopes between pairs of points are ambiguous (e.g., between two left-censored values). The LWP-TRENDS R script handles this by setting these ambiguous slopes to 0. This package defaults to a more statistically neutral approach of setting them to `np.nan` so they are excluded from the median calculation (`sens_slope_method='nan'`). The R script's behavior can be replicated by setting `sens_slope_method='lwp'`.
 - **Confidence Intervals (Sen's Slope):** The default method in this package is to use rounding and direct indexing to calculate the confidence intervals for the Sen's slope (`ci_method='direct'`). The LWP-TRENDS R script's interpolation method is available as a non-default option (`ci_method='lwp'`) for backward compatibility.
 
@@ -66,13 +66,13 @@ A `pandas.DataFrame` with the following columns:
 - `'censored'`: A boolean, `True` if the value was censored.
 - `'cen_type'`: The type of censoring (`'lt'`, `'gt'`, or `'not'`).
 
-This pre-processed DataFrame can be passed directly to the `original_test` and `seasonal_test` functions.
+This pre-processed DataFrame can be passed directly to the `trend_test` and `seasonal_trend_test` functions.
 
 **Example: Preparing Censored Data**
 ```python
 import numpy as np
 import pandas as pd
-from MannKenSen import prepare_censored_data, original_test
+from MannKenSen import prepare_censored_data, trend_test
 
 # Create a time vector
 t = pd.to_datetime(pd.date_range(start='2010-01-01', periods=10, freq='YE'))
@@ -98,7 +98,7 @@ print(x_prepared)
 # 9    2.1     False      not
 
 # The prepared DataFrame can now be used in the trend test
-result = original_test(x=x_prepared, t=t)
+result = trend_test(x=x_prepared, t=t)
 print(result)
 ```
 
@@ -106,7 +106,7 @@ print(result)
 
 The `MannKenSen` package provides modified versions of the Mann-Kendall test and Sen's slope estimator to handle unequally spaced time series data.
 
-### `original_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='nan', tau_method='b', agg_method='none', min_size=10)`
+### `trend_test(x, t, alpha=0.05, hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='nan', tau_method='b', agg_method='none', min_size=10)`
 
 This function performs the Mann-Kendall test on unequally spaced time series data.
 
@@ -141,7 +141,7 @@ A named tuple with the following fields:
 - `Cd`: The confidence that the trend is decreasing.
 
 
-### `seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='month', hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='nan', tau_method='b', time_method='absolute', min_size_per_season=5)`
+### `seasonal_trend_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='month', hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='nan', tau_method='b', min_size_per_season=5)`
 
 This function performs the seasonal Mann-Kendall test on unequally spaced time series data.
 
@@ -161,7 +161,7 @@ This function performs the seasonal Mann-Kendall test on unequally spaced time s
 - `min_size_per_season` (int): The minimum number of observations required per season (default is 5).
 
 **Output:**
-A named tuple with the same fields as `original_test`.
+A named tuple with the same fields as `trend_test`.
 
 #### Understanding the `period` Parameter
 
@@ -201,7 +201,7 @@ The `period` parameter is crucial for correct seasonal analysis, and its meaning
 ```python
 import numpy as np
 import pandas as pd
-from MannKenSen import seasonal_test
+from MannKenSen import seasonal_trend_test
 
 # Create 4 years of weekly data
 t = pd.to_datetime(pd.date_range(start='2020-01-01', periods=208, freq='W'))
@@ -212,11 +212,11 @@ tenth_week_mask = t.isocalendar().week == 10
 x[tenth_week_mask] = [10, 20, 30, 40]
 
 # Perform the test for weekly seasonality
-result = seasonal_test(x, t, period=52, season_type='week_of_year')
+result = seasonal_trend_test(x, t, period=52, season_type='week_of_year')
 print(result)
 ```
 
-### `seasonality_test(x, t, period=12, alpha=0.05, season_type='month')`
+### `check_seasonality(x, t, period=12, alpha=0.05, season_type='month')`
 
 Performs a Kruskal-Wallis H-test to determine if there is a statistically significant difference between the distributions of data across seasons. This is a common way to test for the presence of seasonality.
 
@@ -233,19 +233,19 @@ A named tuple with the fields: `h_statistic`, `p_value`, and `is_seasonal` (a bo
 **Example: Testing for Seasonality**
 ```python
 # Using the same seasonal data from the previous example
-is_seasonal_result = seasonality_test(x, t, period=52, season_type='week_of_year')
+is_seasonal_result = check_seasonality(x, t, period=52, season_type='week_of_year')
 print(is_seasonal_result)
 # Returns: Seasonality_Test(h_statistic=..., p_value=..., is_seasonal=True)
 ```
 
 ### Visualizing Trend Analysis
 
-Both the `original_test` and `seasonal_test` functions include a `plot_path` parameter that allows you to generate and save a visualization of the trend analysis.
+Both the `trend_test` and `seasonal_trend_test` functions include a `plot_path` parameter that allows you to generate and save a visualization of the trend analysis.
 
 **Example: Generating a Trend Plot**
 ```python
-# Using the data from the original_test example
-result = original_test(x=x_prepared, t=t, plot_path='trend_analysis.png')
+# Using the data from the trend_test example
+result = trend_test(x=x_prepared, t=t, plot_path='trend_analysis.png')
 print("Trend plot saved to trend_analysis.png")
 ```
 
@@ -260,7 +260,7 @@ print("Trend plot saved to trend_analysis.png")
 Generates and saves a box plot to visually compare the distribution of values across different seasons. This is a helpful utility for visually inspecting seasonality.
 
 **Input:**
-- Accepts the same `x`, `t`, `period`, and `season_type` parameters as `seasonal_test`.
+- Accepts the same `x`, `t`, `period`, and `season_type` parameters as `seasonal_trend_test`.
 - `save_path`: The file path where the plot image will be saved.
 
 **Output:**
@@ -326,7 +326,7 @@ Inspects data availability over a trend period and determines the best time incr
 Performs a regional trend aggregation analysis on the results of multiple single-site trend tests. This is useful for determining if there is a consistent, statistically significant trend across a network of monitoring sites. The methodology corrects for inter-site correlation, providing a more robust regional assessment.
 
 **Input:**
-- `trend_results`: A pandas DataFrame containing the results from running `original_test` or `seasonal_test` on multiple sites. Must contain columns for the site identifier, the Mann-Kendall score `s`, and the confidence `C`.
+- `trend_results`: A pandas DataFrame containing the results from running `trend_test` or `seasonal_trend_test` on multiple sites. Must contain columns for the site identifier, the Mann-Kendall score `s`, and the confidence `C`.
 - `time_series_data`: A pandas DataFrame containing the original time series data for all sites. This is used to calculate the inter-site correlation.
 - `site_col`: The name of the site identifier column in both DataFrames.
 - `value_col`: The name of the value column in `time_series_data`.
@@ -347,7 +347,7 @@ A named tuple with the following fields:
 ```python
 import pandas as pd
 import numpy as np
-from MannKenSen import original_test, regional_test
+from MannKenSen import trend_test, regional_test
 
 # 1. Create synthetic data for three sites
 dates = pd.to_datetime(pd.date_range(start='2000-01-01', periods=20, freq='YE'))
@@ -369,7 +369,7 @@ time_series_data = pd.concat(all_ts_data, ignore_index=True)
 trend_results = []
 for site in sites:
     site_data = time_series_data[time_series_data['site'] == site]
-    res = original_test(x=site_data['value'], t=site_data['time'])
+    res = trend_test(x=site_data['value'], t=site_data['time'])
     res_dict = res._asdict()
     res_dict['site'] = site
     trend_results.append(res_dict)
@@ -390,7 +390,7 @@ print(regional_res)
 Classifies a trend result into a descriptive, human-readable category based on its statistical significance and confidence. This is useful for interpreting and communicating trend analysis results.
 
 **Input:**
-- `result`: The namedtuple returned by `original_test` or `seasonal_test`.
+- `result`: The namedtuple returned by `trend_test` or `seasonal_trend_test`.
 - `category_map` (dict, optional): A dictionary mapping confidence thresholds (float) to descriptive category labels (str). If `None`, a default IPCC-style mapping is used:
   ```python
   {
@@ -407,14 +407,14 @@ A string describing the trend category (e.g., "Highly Likely Increasing", "No Tr
 **Example: Classifying a Trend**
 ```python
 import numpy as np
-from MannKenSen import original_test, classify_trend
+from MannKenSen import trend_test, classify_trend
 
 # Create synthetic data with a clear trend
 t = np.arange(20)
 x = 0.1 * t + np.random.normal(0, 0.5, 20)
 
 # Perform the trend test
-result = original_test(x, t)
+result = trend_test(x, t)
 
 # Classify the result
 category = classify_trend(result)

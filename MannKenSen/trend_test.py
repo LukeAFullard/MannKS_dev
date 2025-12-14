@@ -16,7 +16,7 @@ from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
 
 from typing import Union, Tuple, Optional
 
-def original_test(
+def trend_test(
     x: Union[np.ndarray, pd.DataFrame],
     t: np.ndarray,
     alpha: float = 0.05,

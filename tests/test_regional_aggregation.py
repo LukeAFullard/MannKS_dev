@@ -4,7 +4,7 @@ Tests for the regional_test function.
 import unittest
 import pandas as pd
 import numpy as np
-from MannKenSen import original_test, regional_test
+from MannKenSen import trend_test, regional_test
 
 class TestRegionalAggregation(unittest.TestCase):
     def test_regional_test_basic(self):
@@ -40,7 +40,7 @@ class TestRegionalAggregation(unittest.TestCase):
         trend_results = []
         for site in sites:
             site_data = time_series_data[time_series_data['site'] == site]
-            res = original_test(x=site_data['value'], t=site_data['time'], min_size=None)
+            res = trend_test(x=site_data['value'], t=site_data['time'], min_size=None)
 
             # Convert namedtuple to a dictionary and add site
             res_dict = res._asdict()

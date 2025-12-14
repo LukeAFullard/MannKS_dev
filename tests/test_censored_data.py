@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import pandas as pd
-from MannKenSen import original_test, seasonal_test
+from MannKenSen import trend_test, seasonal_trend_test
 from MannKenSen.preprocessing import prepare_censored_data
 
 # Unit tests for the new `prepare_censored_data` function
@@ -66,41 +66,41 @@ def test_prepare_censored_data_mixed_censoring_warning():
     with pytest.warns(UserWarning, match="Value 5.0 has conflicting censoring types"):
         prepare_censored_data(x2)
 
-def test_hicensor_rule_original_test():
-    """Test the hicensor rule in original_test."""
+def test_hicensor_rule_trend_test():
+    """Test the hicensor rule in trend_test."""
     x = ['<5', 3, 2, '<10', 8, 1] # More sensitive to hicensor
     t = np.arange(len(x))
     data = prepare_censored_data(x)
 
     # Without hicensor, trend should be present
-    result_no_hicensor = original_test(x=data, t=t)
+    result_no_hicensor = trend_test(x=data, t=t)
 
     # With hicensor, all values < 10 become censored at 10.
     # The data effectively becomes ['<10', '<10', '<10', '<10', '<10', '<10']
     # This should result in no trend.
-    result_hicensor = original_test(x=data, t=t, hicensor=True)
+    result_hicensor = trend_test(x=data, t=t, hicensor=True)
     assert result_hicensor.trend == 'no trend'
     assert abs(result_hicensor.s) < abs(result_no_hicensor.s)
 
-def test_original_test_string_input_error():
+def test_trend_test_string_input_error():
     """
-    Test that original_test raises a TypeError if the input contains
+    Test that trend_test raises a TypeError if the input contains
     strings but is not a DataFrame from prepare_censored_data.
     """
     x = ['1', '2', '<3']
     t = np.arange(len(x))
     with pytest.raises(TypeError, match="Input data `x` contains strings. Please pre-process it with `prepare_censored_data` first."):
-        original_test(x=x, t=t)
+        trend_test(x=x, t=t)
 
-def test_hicensor_rule_seasonal_test():
-    """Test the hicensor rule in seasonal_test."""
+def test_hicensor_rule_seasonal_trend_test():
+    """Test the hicensor rule in seasonal_trend_test."""
     # Data spanning two years, with a clear seasonal trend without hicensor
     t = pd.to_datetime(['2020-01-15', '2020-07-15', '2021-01-15', '2021-07-15'])
     x = ['<10', 20, '<5', 22] # Jan values are censored, July values increase
     data = prepare_censored_data(x)
 
     # Without hicensor, the July trend should be detected
-    result_no_hicensor = seasonal_test(x=data, t=t, period=12)
+    result_no_hicensor = seasonal_trend_test(x=data, t=t, period=12)
 
     # With hicensor, the max censor limit is 10.
     # The data becomes:
@@ -110,7 +110,7 @@ def test_hicensor_rule_seasonal_test():
     # Jul 2021: 22
     # The trend in July is still increasing, but the overall s-score
     # might be affected. The key is to ensure it runs and weakens the trend.
-    result_hicensor = seasonal_test(x=data, t=t, period=12, hicensor=True)
+    result_hicensor = seasonal_trend_test(x=data, t=t, period=12, hicensor=True)
 
     # The hicensor rule correctly weakens the trend to "no trend" in this case,
     # as the Mann-Kendall score `s` becomes 1, which results in a z-score of 0
@@ -120,19 +120,19 @@ def test_hicensor_rule_seasonal_test():
     # that the trend has been weakened or remained the same.
     assert abs(result_hicensor.s) <= abs(result_no_hicensor.s)
 
-def test_hicensor_numeric_original_test():
-    """Test numeric hicensor support in original_test."""
+def test_hicensor_numeric_trend_test():
+    """Test numeric hicensor support in trend_test."""
     x = ['<5', 3, 2, '<10', 8, 1]
     t = np.arange(len(x))
     data = prepare_censored_data(x)
 
     # With hicensor=8, all values < 8 become censored at 8.
-    result_hicensor_8 = original_test(x=data, t=t, hicensor=8)
+    result_hicensor_8 = trend_test(x=data, t=t, hicensor=8)
     assert result_hicensor_8.trend == 'no trend'
 
     # With hicensor=12 (higher than max censor), it should behave like hicensor=True
-    result_hicensor_12 = original_test(x=data, t=t, hicensor=12)
-    result_hicensor_true = original_test(x=data, t=t, hicensor=True)
+    result_hicensor_12 = trend_test(x=data, t=t, hicensor=12)
+    result_hicensor_true = trend_test(x=data, t=t, hicensor=True)
     assert result_hicensor_12.s == result_hicensor_true.s
     assert result_hicensor_12.trend == result_hicensor_true.trend
 
@@ -141,10 +141,10 @@ def test_hicensor_invalid_type_error():
     x = [1, 2, 3]
     t = np.arange(len(x))
     with pytest.raises(ValueError, match="hicensor must be bool or numeric"):
-        original_test(x=x, t=t, hicensor="invalid")
+        trend_test(x=x, t=t, hicensor="invalid")
 
-def test_hicensor_numeric_seasonal_test():
-    """Test numeric hicensor support in seasonal_test."""
+def test_hicensor_numeric_seasonal_trend_test():
+    """Test numeric hicensor support in seasonal_trend_test."""
     t = pd.to_datetime(['2020-01-15', '2020-07-15', '2021-01-15', '2021-07-15'])
     x = ['<10', 20, '<5', 22]
     data = prepare_censored_data(x)
@@ -152,7 +152,7 @@ def test_hicensor_numeric_seasonal_test():
     # With hicensor=8, the Jan data becomes [<8, <8], which has no trend.
     # The July data [20, 22] has an increasing trend, but the overall
     # result is weakened by the tied January data.
-    result_hicensor_8 = seasonal_test(x=data, t=t, period=12, hicensor=8)
+    result_hicensor_8 = seasonal_trend_test(x=data, t=t, period=12, hicensor=8)
     assert result_hicensor_8.trend == 'no trend'
 
 def test_mk_test_method_lwp():
@@ -163,9 +163,9 @@ def test_mk_test_method_lwp():
     data = prepare_censored_data(x)
 
     # The robust method should find no trend
-    result_robust = original_test(x=data, t=t, mk_test_method='robust', min_size=None)
+    result_robust = trend_test(x=data, t=t, mk_test_method='robust', min_size=None)
     assert result_robust.trend == 'no trend'
 
     # The LWP method should find an increasing trend
-    result_lwp = original_test(x=data, t=t, mk_test_method='lwp', min_size=None)
+    result_lwp = trend_test(x=data, t=t, mk_test_method='lwp', min_size=None)
     assert result_lwp.trend == 'increasing'
