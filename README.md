@@ -8,6 +8,8 @@ The statistical methods used in this package, particularly for handling unequall
 
 Note: The statistical methods in this package are based on the LWP-TRENDS R script. The original source link is no longer active.
 
+**Recent Updates:** This package has undergone a comprehensive audit and update to improve its statistical robustness. Heuristics for handling censored data have been replaced with more conservative, non-parametric methods to ensure the reliability of the trend analysis results.
+
 ## Installation
 
 To install the necessary dependencies for this package, run the following command:
@@ -92,11 +94,12 @@ This function performs the Mann-Kendall test on unequally spaced time series dat
 - `alpha`: The significance level (default is 0.05).
 - `hicensor` (bool): If `True`, applies the high-censor rule, where all values below the highest left-censor limit are treated as censored at that limit. Default is `False`.
 - `plot_path` (str, optional): If a file path is provided, a plot of the trend analysis is saved. Default is `None`.
-- `lt_mult` (float): The multiplier for left-censored data in the Sen's slope calculation (default is 0.5).
-- `gt_mult` (float): The multiplier for right-censored data in the Sen's slope calculation (default is 1.1).
+- `lt_mult` (float): The multiplier for left-censored data, **used only for the Sen's slope calculation** (default is 0.5). This does not affect the Mann-Kendall test itself.
+- `gt_mult` (float): The multiplier for right-censored data, **used only for the Sen's slope calculation** (default is 1.1). This does not affect the Mann-Kendall test itself.
 - `sens_slope_method` (str): The method for handling ambiguous slopes in censored data. See the function docstring for details.
 - `tau_method` (str): The method for calculating Kendall's Tau ('a' or 'b'). Default is `'b'`.
-- `agg_method` (str): The method for aggregating data at tied timestamps. It is recommended to use an aggregation method if tied timestamps are present. See the function docstring for options.
+- `agg_method` (str): The method for aggregating data at tied timestamps. See the function docstring for options.
+  - **Caution**: Using aggregation methods (`median`, `robust_median`, `middle`) with censored data is not statistically robust and may produce biased results. A `UserWarning` will be issued.
 - `min_size` (int): The minimum sample size required to perform the test (default is 10).
 
 **Output:**

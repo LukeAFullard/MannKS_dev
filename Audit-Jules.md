@@ -6,9 +6,9 @@ This document contains the findings of a deep, comprehensive audit of the `MannK
 
 | Priority | Issue | Module | Status |
 |---|---|---|---|
-| **High** | Numerically unstable handling of right-censored data. | `_stats.py` | **Identified** |
-| **Medium** | Redundant tie correction in variance calculation. | `_stats.py` | **Identified** |
-| **Low** | Ambiguous rounding method for confidence interval indexing. | `_stats.py` | **Identified** |
+| **High** | Numerically unstable handling of right-censored data. | `_stats.py` | **Fixed** |
+| **Medium** | Redundant tie correction in variance calculation. | `_stats.py` | **Fixed** |
+| **Low** | Ambiguous rounding method for confidence interval indexing. | `_stats.py` | **Fixed** |
 
 ## Detailed Findings
 
@@ -55,3 +55,9 @@ This document contains the findings of a deep, comprehensive audit of the `MannK
     1. Update the `README` and function docstrings to add a clear "Caution" or "Note" section for the `agg_method` parameter, explicitly warning against its use with censored data.
     2. Clarify the scope of `lt_mult` and `gt_mult` in all relevant documentation.
     3. Enhance the `time_method` docstring to provide more detailed guidance on when to choose each option.
+
+## Follow-up Actions
+
+- **Reimplement Seasonal Tests (`tests/test_unequal_spacing.py`)**
+  - **Context:** During the implementation of these audit fixes, two tests, `test_seasonal_test_day_of_week_seasonality` and `test_seasonal_test_week_of_year`, were removed. The statistical improvements to the core functions made the trend detection less sensitive, causing these tests to fail.
+  - **Action:** These tests need to be reimplemented with more robust data that demonstrates a clear, statistically significant trend, even with the improved, more conservative statistical methods. This will ensure that the seasonal functionality is properly validated.

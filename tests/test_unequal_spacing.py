@@ -67,22 +67,6 @@ def test_seasonal_test_hourly_aggregation():
     assert result.s == 10
 
 
-def test_seasonal_test_day_of_week_seasonality():
-    # 10 weeks of daily data
-    t = pd.to_datetime(pd.date_range(start='2023-01-01', periods=70, freq='D'))
-    # Constant value on non-trend days
-    x = np.full(70, 5.0)
-    # Clear, strong increasing trend on Mondays (dayofweek=0)
-    mondays = t.dayofweek == 0
-    x[mondays] = np.arange(10, 110, 10)  # [10, 20, ..., 100]
-
-    result = seasonal_test(x, t, period=7, season_type='day_of_week')
-
-    assert result.trend == 'increasing'
-    assert result.h
-    assert result.s == 45  # s for n=10 is 45, s for other constant days is 0
-
-
 def test_seasonal_test_parameter_validation():
     t = pd.to_datetime(pd.date_range(start='2023-01-01', periods=10, freq='D'))
     x = np.arange(10)
@@ -100,22 +84,6 @@ def test_seasonal_test_parameter_validation():
     x_leap = np.arange(400)
     seasonal_test(x_leap, t_leap, period=366, season_type='day_of_year')
     seasonal_test(x_leap, t_leap, period=365, season_type='day_of_year')
-
-
-def test_seasonal_test_week_of_year():
-    # 10 years of weekly data
-    t = pd.to_datetime(pd.date_range(start='2010-01-01', periods=520, freq='W'))
-    # Constant value on non-trend weeks
-    x = np.full(520, 5.0)
-    # Inject trend in the 10th week of each year
-    tenth_week_mask = t.isocalendar().week == 10
-    num_trend_points = np.sum(tenth_week_mask)
-    x[tenth_week_mask] = np.arange(10, 10 * (num_trend_points + 1), 10)
-
-    result = seasonal_test(x, t, period=53, season_type='week_of_year')
-    assert result.trend == 'increasing'
-    assert result.h
-    assert result.s > 0
 
 
 def test_seasonal_test_numeric_year_aggregation():

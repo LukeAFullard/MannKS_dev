@@ -49,6 +49,9 @@ def seasonal_test(
         plot_path (str, optional): If provided, saves a plot of the trend
                                    analysis to this file path.
         agg_method: method for aggregating multiple data points within a season-year.
+            - **Caution**: Using aggregation methods with censored data is not
+              statistically robust and may produce biased results. A `UserWarning`
+              will be issued in this case.
             - 'none' (default): performs analysis on all data points.
             - 'median': (LWP method) uses the median of values and times.
             - 'robust_median': uses a more statistically robust median for
@@ -61,8 +64,12 @@ def seasonal_test(
         season_type: For datetime inputs, specifies the type of seasonality.
                      'year', 'month', 'day_of_week', 'quarter', 'hour', 'week_of_year',
                      'day_of_year', 'minute', 'second'.
-        lt_mult (float): The multiplier for left-censored data (default 0.5).
-        gt_mult (float): The multiplier for right-censored data (default 1.1).
+        lt_mult (float): The multiplier for left-censored data, **used only
+                         for the Sen's slope calculation** (default 0.5).
+                         This does not affect the Mann-Kendall test itself.
+        gt_mult (float): The multiplier for right-censored data, **used only
+                         for the Sen's slope calculation** (default 1.1).
+                         This does not affect the Mann-Kendall test itself.
         sens_slope_method (str): The method for handling ambiguous slopes in censored data.
             - 'nan' (default): Sets ambiguous slopes (e.g., between two left-censored
                                values) to `np.nan`, effectively removing them from the
@@ -157,6 +164,13 @@ def seasonal_test(
 
     # --- Aggregation Logic ---
     if agg_method != 'none':
+        if data_filtered['censored'].any():
+            warnings.warn(
+                f"The '{agg_method}' aggregation method is not statistically robust "
+                "for censored data. The result is a heuristic and may be biased. "
+                "Consider using `agg_method='none'` for censored data.",
+                UserWarning
+            )
         if is_datetime:
             t_pd = pd.to_datetime(data_filtered['t_original'])
             cycles = _get_cycle_identifier(t_pd, season_type)

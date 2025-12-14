@@ -60,27 +60,27 @@ def test_get_analysis_note_post_agg_non_seasonal_long_run():
 
 def test_get_sens_slope_analysis_note_two_censored():
     """Test Sen's slope note for slope based on two censored values."""
-    slopes = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+    slopes = np.array([3.5, 3.5, 3.5, 3.5, 3.5, 3.5])
     t = np.array([1, 2, 3, 4])
     cen_type = np.array(['lt', 'gt', 'lt', 'gt'])
     note = get_sens_slope_analysis_note(slopes, t, cen_type)
-    assert note == "WARNING: Sen slope based on two censored values"
+    assert note == "CRITICAL: Sen slope is based on a pair of two censored values."
 
 def test_get_sens_slope_analysis_note_left_right_censored():
     """Test Sen's slope note for influence from left- and right-censored values."""
-    slopes = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+    slopes = np.array([3.5, 3.5, 3.5, 3.5, 3.5, 3.5])
     t = np.array([1, 2, 3, 4])
     cen_type = np.array(['lt', 'not', 'not', 'gt'])
     note = get_sens_slope_analysis_note(slopes, t, cen_type)
-    assert note == "WARNING: Sen slope influenced by left- and right-censored values"
+    assert note == "WARNING: Sen slope influenced by left- and right-censored values."
 
 def test_get_sens_slope_analysis_note_right_censored():
     """Test Sen's slope note for influence from right-censored values."""
-    slopes = np.array([1.0, 2.0, 3.0])
+    slopes = np.array([2.0, 2.0, 2.0])
     t = np.array([1, 2, 3])
     cen_type = np.array(['not', 'not', 'gt'])
     note = get_sens_slope_analysis_note(slopes, t, cen_type)
-    assert note == "WARNING: Sen slope influenced by right-censored values"
+    assert note == "WARNING: Sen slope influenced by right-censored values."
 
 def test_get_sens_slope_analysis_note_nan_median():
     """Test that get_sens_slope_analysis_note returns 'ok' if median slope is NaN."""
