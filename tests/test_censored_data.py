@@ -140,3 +140,38 @@ def test_hicensor_rule_seasonal_test():
     # The absolute s-score should be less than the original, demonstrating
     # that the trend has been weakened or remained the same.
     assert abs(result_hicensor.s) <= abs(result_no_hicensor.s)
+
+def test_hicensor_numeric_original_test():
+    """Test numeric hicensor support in original_test."""
+    x = ['<5', 3, 2, '<10', 8, 1]
+    t = np.arange(len(x))
+    data = prepare_censored_data(x)
+
+    # With hicensor=8, all values < 8 become censored at 8.
+    result_hicensor_8 = original_test(x=data, t=t, hicensor=8)
+    assert result_hicensor_8.trend == 'no trend'
+
+    # With hicensor=12 (higher than max censor), it should behave like hicensor=True
+    result_hicensor_12 = original_test(x=data, t=t, hicensor=12)
+    result_hicensor_true = original_test(x=data, t=t, hicensor=True)
+    assert result_hicensor_12.s == result_hicensor_true.s
+    assert result_hicensor_12.trend == result_hicensor_true.trend
+
+def test_hicensor_invalid_type_error():
+    """Test that an invalid type for hicensor raises a ValueError."""
+    x = [1, 2, 3]
+    t = np.arange(len(x))
+    with pytest.raises(ValueError, match="hicensor must be bool or numeric"):
+        original_test(x=x, t=t, hicensor="invalid")
+
+def test_hicensor_numeric_seasonal_test():
+    """Test numeric hicensor support in seasonal_test."""
+    t = pd.to_datetime(['2020-01-15', '2020-07-15', '2021-01-15', '2021-07-15'])
+    x = ['<10', 20, '<5', 22]
+    data = prepare_censored_data(x)
+
+    # With hicensor=8, the Jan data becomes [<8, <8], which has no trend.
+    # The July data [20, 22] has an increasing trend, but the overall
+    # result is weakened by the tied January data.
+    result_hicensor_8 = seasonal_test(x=data, t=t, period=12, hicensor=8)
+    assert result_hicensor_8.trend == 'no trend'
