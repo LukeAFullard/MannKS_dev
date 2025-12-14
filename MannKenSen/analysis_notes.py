@@ -7,6 +7,11 @@ trend analysis results.
 import numpy as np
 from ._stats import _rle_lengths
 
+# --- Module-level Constants for Data Quality Checks ---
+MIN_UNIQUE_VALUES = 3
+MIN_NON_CENSORED = 5
+MIN_UNIQUE_PER_SEASON = 2
+MAX_RUN_LENGTH_RATIO = 0.75  # Maximum ratio of identical values
 
 def get_analysis_note(data, values_col='value', censored_col='censored',
                         is_seasonal=False, post_aggregation=False, season_col='season'):
@@ -24,9 +29,6 @@ def get_analysis_note(data, values_col='value', censored_col='censored',
     Returns:
         str: An analysis note string. "ok" if no issues are found.
     """
-    no_unique = 3
-    no_non_cen = 5
-    no_unique_seas = 2
 
     # --- First round of filtering (pre-aggregation) ---
     if not post_aggregation:
@@ -35,11 +37,11 @@ def get_analysis_note(data, values_col='value', censored_col='censored',
 
         non_censored_values = data.loc[~data[censored_col] & ~data[values_col].isnull(), values_col]
 
-        if len(non_censored_values.unique()) < no_unique:
-            return f"< {no_unique} unique values"
+        if len(non_censored_values.unique()) < MIN_UNIQUE_VALUES:
+            return f"< {MIN_UNIQUE_VALUES} unique values"
 
-        if len(non_censored_values) < no_non_cen:
-            return f"< {no_non_cen} Non-censored values"
+        if len(non_censored_values) < MIN_NON_CENSORED:
+            return f"< {MIN_NON_CENSORED} Non-censored values"
 
         return "ok"
 
@@ -52,13 +54,13 @@ def get_analysis_note(data, values_col='value', censored_col='censored',
             # Order of checks matters here, mirroring the R script's logic.
             # 1. Check for sufficient non-NA values in each season
             season_counts = data.groupby(season_col)[values_col].count()
-            if not season_counts.empty and season_counts.min() < no_unique:
-                 return f"< {no_unique} non-NA values in Season"
+            if not season_counts.empty and season_counts.min() < MIN_UNIQUE_VALUES:
+                 return f"< {MIN_UNIQUE_VALUES} non-NA values in Season"
 
             # 2. Check for sufficient unique values in each season
             season_unique_counts = data.groupby(season_col)[values_col].nunique()
-            if not season_unique_counts.empty and season_unique_counts.min() < no_unique_seas:
-                return f"< {no_unique_seas} unique values in Season"
+            if not season_unique_counts.empty and season_unique_counts.min() < MIN_UNIQUE_PER_SEASON:
+                return f"< {MIN_UNIQUE_PER_SEASON} unique values in Season"
 
             # 3. Check for long runs of identical values within each season
             def check_run_length_seasonal(series):
@@ -67,7 +69,7 @@ def get_analysis_note(data, values_col='value', censored_col='censored',
                     return False
                 rle_res = _rle_lengths(series.to_numpy())
                 if not rle_res.any(): return False
-                return rle_res.max() / len(series) > 0.75
+                return rle_res.max() / len(series) > MAX_RUN_LENGTH_RATIO
 
             long_run_in_season = data.groupby(season_col)[values_col].apply(check_run_length_seasonal).any()
             if long_run_in_season:

@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 import warnings
 
-def prepare_censored_data(x):
+from typing import Union, List
+
+def prepare_censored_data(x: Union[List, np.ndarray, pd.Series]) -> pd.DataFrame:
     """
     Pre-processes a 1D array-like object containing censored data.
 

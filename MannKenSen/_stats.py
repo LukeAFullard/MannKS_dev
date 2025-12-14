@@ -1,6 +1,9 @@
 import numpy as np
 from scipy.stats import norm, rankdata
 
+# --- Module-level Constants ---
+DEFAULT_LT_MULTIPLIER = 0.5  # Half detection limit for left-censored
+DEFAULT_GT_MULTIPLIER = 1.1  # 110% detection limit for right-censored
 EPSILON = 1e-10
 
 def _rle_lengths(a):
@@ -84,6 +87,14 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b'):
     yy = rankdata(t, method='ordinal')
     cy = np.zeros_like(yy, dtype=bool)
     n = len(xx)
+
+    if n > 5000:
+        import warnings
+        warnings.warn(
+            f"Large sample size (n={n}) may require significant memory "
+            f"(~{(n**2 * 8 / 1e9):.1f} GB). Consider using smaller datasets "
+            f"or regional aggregation.", UserWarning
+        )
 
     if n < 2:
         return 0, 0, 0, 0
@@ -303,7 +314,7 @@ def _sens_estimator_unequal_spacing(x, t):
     return x_diff[valid_mask] / t_diff[valid_mask]
 
 
-def _sens_estimator_censored(x, t, cen_type, lt_mult=0.5, gt_mult=1.1, method='nan'):
+def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_mult=DEFAULT_GT_MULTIPLIER, method='nan'):
     """
     Computes Sen's slope for censored, unequally spaced data.
 

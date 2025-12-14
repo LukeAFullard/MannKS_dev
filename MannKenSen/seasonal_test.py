@@ -18,7 +18,24 @@ from .plotting import plot_trend
 from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
 
 
-def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='month', hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='nan', tau_method='b', time_method='absolute', min_size_per_season=5):
+from typing import Union, Optional
+
+def seasonal_test(
+    x: Union[np.ndarray, pd.DataFrame],
+    t: np.ndarray,
+    period: int = 12,
+    alpha: float = 0.05,
+    agg_method: str = 'none',
+    season_type: str = 'month',
+    hicensor: Union[bool, float] = False,
+    plot_path: Optional[str] = None,
+    lt_mult: float = 0.5,
+    gt_mult: float = 1.1,
+    sens_slope_method: str = 'nan',
+    tau_method: str = 'b',
+    time_method: str = 'absolute',
+    min_size_per_season: Optional[int] = 5
+) -> namedtuple:
     """
     Seasonal Mann-Kendall test for unequally spaced time series.
     Input:
@@ -57,14 +74,16 @@ def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='m
         tau_method (str): The method for calculating Kendall's Tau ('a' or 'b').
                           Default is 'b', which accounts for ties in the data and is
                           the recommended method.
-        time_method (str): The method for handling timestamps in the seasonal test.
-            - 'absolute' (default): Uses the precise numeric timestamps for the
-                                    variance calculation. This approach is more
-                                    statistically precise for unequally spaced
-                                    data, though it differs from the LWP-TRENDS script.
-            - 'rank': Uses cycle-based ranks (1, 2, 3,...) for time, matching the
-                      LWP-TRENDS R script's methodology. This is useful for
-                      replicating results from that script.
+        time_method (str):
+            - 'absolute' (default, RECOMMENDED): Uses actual timestamps for
+              statistically robust analysis of unequally spaced data. Use this
+              unless you have a specific reason not to.
+
+            - 'rank': Uses cycle-based ranks (1, 2, 3,...), matching the
+              LWP-TRENDS R script methodology. Use only for:
+              * Replicating R script results
+              * Data with extreme spacing irregularities within seasons
+              * Comparison with historical LWP analyses
         min_size_per_season (int): Minimum observations per season.
                                    Warnings issued if any season < this.
     Output:

@@ -8,8 +8,15 @@ from scipy.stats import norm
 from collections import namedtuple
 
 
-def regional_test(trend_results, time_series_data, site_col='site',
-                  value_col='value', time_col='time', s_col='s', c_col='C'):
+def regional_test(
+    trend_results: pd.DataFrame,
+    time_series_data: pd.DataFrame,
+    site_col: str = 'site',
+    value_col: str = 'value',
+    time_col: str = 'time',
+    s_col: str = 's',
+    c_col: str = 'C'
+) -> namedtuple:
     """
     Performs a regional trend aggregation analysis on the results of
     multiple single-site trend tests.

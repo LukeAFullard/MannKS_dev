@@ -25,12 +25,16 @@ def test_seasonality_test_detects_seasonality(seasonal_data):
     result = seasonality_test(x, t)
     assert result.is_seasonal
     assert result.p_value < 0.05
+    assert len(result.seasons_tested) == 12
+    assert len(result.seasons_skipped) == 0
 
 def test_seasonality_test_rejects_non_seasonal(non_seasonal_data):
     x, t = non_seasonal_data
     result = seasonality_test(x, t)
     assert not result.is_seasonal
     assert result.p_value > 0.05
+    assert len(result.seasons_tested) == 12
+    assert len(result.seasons_skipped) == 0
 
 def test_plot_seasonal_distribution(seasonal_data):
     x, t = seasonal_data
@@ -179,12 +183,15 @@ def test_seasonal_test_aggregation_methods():
 
 def test_seasonality_test_insufficient_data():
     """Test seasonality_test with insufficient data."""
+    # Scenario: 3 seasons, each with only 1 data point.
     x = [1, 2, 3]
     t = pd.to_datetime(pd.date_range(start='2020-01-01', periods=3, freq='ME'))
     result = seasonality_test(x, t)
     assert np.isnan(result.h_statistic)
     assert np.isnan(result.p_value)
     assert not result.is_seasonal
+    assert result.seasons_tested == []
+    assert sorted(result.seasons_skipped) == [1, 2, 3]
 
 def test_plot_seasonal_distribution_insufficient_data():
     """Test plot_seasonal_distribution with insufficient data."""
@@ -209,9 +216,11 @@ def test_seasonality_test_insufficient_unique_values():
     x[t.month != 1] = np.random.rand(len(x[t.month != 1]))
 
 
-    with pytest.warns(UserWarning, match="Some seasons have less than 2 unique values and will be skipped."):
+    with pytest.warns(UserWarning, match="Season '1' has less than 2 unique values and will be skipped."):
         result = seasonality_test(x, t)
         assert not result.is_seasonal
+        assert len(result.seasons_tested) == 11
+        assert result.seasons_skipped == [1]
 
 def test_seasonal_time_method():
     """
@@ -260,3 +269,26 @@ def test_seasonal_time_method():
     # Test that an invalid method raises an error
     with pytest.raises(ValueError):
         seasonal_test(x=values, t=dates, season_type='month', time_method='invalid_method')
+
+def test_seasonality_test_only_one_valid_season():
+    """
+    Test case where only one season has enough data for the test.
+    The test should not run, but the tested/skipped lists should be correct.
+    """
+    # Create a dataset spanning 3 years
+    t = pd.to_datetime(pd.date_range(start='2020-01-01', periods=36, freq='ME'))
+    x = np.random.rand(36)
+
+    # Make only January (month=1) have sufficient, valid data
+    # All other months will have less than 3 samples or less than 2 unique values
+    jan_mask = (t.month == 1)
+    x[~jan_mask] = 1 # Force all other months to have only one unique value
+
+    result = seasonality_test(x, t)
+
+    assert np.isnan(result.h_statistic)
+    assert np.isnan(result.p_value)
+    assert not result.is_seasonal
+    assert result.seasons_tested == [1]
+    # Check that all other months were skipped
+    assert all(s in result.seasons_skipped for s in range(2, 13))
