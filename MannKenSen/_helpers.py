@@ -44,7 +44,10 @@ def _aggregate_censored_median(group, is_datetime):
     """
     n = len(group)
     if n == 0:
-        return pd.DataFrame()  # Changed from None
+        return pd.DataFrame({
+            'value': [], 'censored': [], 'cen_type': [],
+            't_original': [], 't': []
+        })
 
     # Compute median value
     median_val = group['value'].median()
