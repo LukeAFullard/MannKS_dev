@@ -60,29 +60,9 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b'):
     t = np.asarray(t)
     censored = np.asarray(censored)
     cen_type = np.asarray(cen_type)
-    # 1. Special handling for right-censored ('gt') data
-    x_mod = x.copy()
-    censored_mod = censored.copy()
-    if np.any(cen_type == 'gt'):
-        gt_mask = cen_type == 'gt'
-
-        # Calculate a small, data-relative value to break ties
-        unique_vals = np.unique(x_mod)
-        if len(unique_vals) > 1:
-            min_diff = np.min(np.diff(unique_vals))
-            # Use a small fraction of the minimum difference, or a default small number
-            tie_break_value = min_diff * 0.01 if min_diff > 0 else 1e-9
-        else:
-            tie_break_value = 1e-9 # Fallback for data with no variance
-
-        # Add the small amount to break ties, treat as uncensored
-        max_gt_val = x_mod[gt_mask].max() + tie_break_value
-        x_mod[gt_mask] = max_gt_val
-        censored_mod[gt_mask] = False
-
-    # 2. Prepare inputs
-    xx = x_mod
-    cx = censored_mod.astype(bool)
+    # 1. Prepare inputs (no special handling for right-censored data)
+    xx = x.copy()
+    cx = censored.astype(bool)
     # Time is treated as uncensored
     yy = rankdata(t, method='ordinal')
     cy = np.zeros_like(yy, dtype=bool)
@@ -165,11 +145,6 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b'):
 
     # 6. Variance Calculation (adapted from NADA::cenken)
     varS = n * (n - 1) * (2 * n + 5) / 18.0
-
-    # Add tie correction for x variable (previously in __variance_s)
-    unique_x, tp = np.unique(x, return_counts=True)
-    if n != len(unique_x):
-        varS -= np.sum(tp * (tp - 1) * (2 * tp + 5)) / 18.0
 
     intg = np.arange(1, n + 1)
 
@@ -425,7 +400,9 @@ def _confidence_intervals(slopes, var_s, alpha):
     M2 = (n + C) / 2
 
     # Convert to 0-based integer indices
-    # Round to nearest integer for rank
+    # Note: np.round uses "round half to even" which may differ from other
+    # statistical software. This is a deliberate choice for consistency
+    # with a standard, well-defined rounding method.
     lower_idx = int(np.round(M1 - 1))
     upper_idx = int(np.round(M2 - 1))
 

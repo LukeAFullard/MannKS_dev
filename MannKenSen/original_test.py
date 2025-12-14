@@ -40,8 +40,12 @@ def original_test(
                          treated as censored at that limit.
         plot_path (str, optional): If provided, a plot of the trend analysis
                                    is saved to this file path.
-        lt_mult (float): The multiplier for left-censored data (default 0.5).
-        gt_mult (float): The multiplier for right-censored data (default 1.1).
+        lt_mult (float): The multiplier for left-censored data, **used only
+                         for the Sen's slope calculation** (default 0.5).
+                         This does not affect the Mann-Kendall test itself.
+        gt_mult (float): The multiplier for right-censored data, **used only
+                         for the Sen's slope calculation** (default 1.1).
+                         This does not affect the Mann-Kendall test itself.
         sens_slope_method (str): The method for handling ambiguous slopes in censored data.
             - 'nan' (default): Sets ambiguous slopes (e.g., between two left-censored
                                values) to `np.nan`, effectively removing them from the
@@ -53,9 +57,10 @@ def original_test(
         tau_method (str): The method for calculating Kendall's Tau ('a' or 'b').
                           Default is 'b', which accounts for ties in the data and is
                           the recommended method.
-        agg_method (str): The method for aggregating data at tied timestamps. It is
-                          recommended to use an aggregation method if tied timestamps
-                          are present, as this can affect the Sen's slope calculation.
+        agg_method (str): The method for aggregating data at tied timestamps.
+            - **Caution**: Using aggregation methods with censored data is not
+              statistically robust and may produce biased results. A `UserWarning`
+              will be issued in this case.
             - 'none' (default): No aggregation is performed. A warning is issued if
                                 ties are present.
             - 'median': Use the median of values and times.
@@ -152,6 +157,13 @@ def original_test(
                 UserWarning
             )
         else:
+            if data_filtered['censored'].any():
+                warnings.warn(
+                    f"The '{agg_method}' aggregation method is not statistically robust "
+                    "for censored data. The result is a heuristic and may be biased. "
+                    "Consider using `agg_method='none'` for censored data.",
+                    UserWarning
+                )
             agg_data_list = [
                 _aggregate_by_group(group, agg_method, is_datetime)
                 for _, group in data_filtered.groupby('t')
