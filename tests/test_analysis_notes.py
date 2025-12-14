@@ -106,25 +106,34 @@ def test_get_sens_slope_analysis_note_tied_non_censored():
 
 def test_original_test_min_size_warning():
     """Test that original_test issues a warning for small sample sizes."""
-    x = [1, 2, 3]
-    t = [1, 2, 3]
+    # Use 5 data points to pass the get_analysis_note pre-check
+    x = [1, 2, 3, 4, 5]
+    t = [1, 2, 3, 4, 5]
     with pytest.warns(UserWarning, match="Sample size .* is below recommended minimum"):
-        original_test(x, t, min_size=4)
+        # Set min_size > len(x) to trigger the warning
+        original_test(x, t, min_size=6)
 
-    # Test that no warning is issued when min_size is None
+    # Test that no warning is issued when min_size is None and data is sufficient
     with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
         original_test(x, t, min_size=None)
-        assert len(record) == 0
+        user_warnings = [w for w in record if issubclass(w.category, UserWarning)]
+        assert len(user_warnings) == 0
+
 
 def test_seasonal_test_min_size_warning():
     """Test that seasonal_test issues a warning for small seasonal sample sizes."""
-    # Season 1 has 3 values, Season 2 has 2
-    x = [1, 2, 3, 4, 5]
-    t = [1, 2, 3, 13, 14] # Using numeric time for simplicity
+    # Construct data that passes initial analysis_notes checks (>=3 values per season)
+    # but fails the min_size_per_season check.
+    x = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    t = [1, 13, 25, 2, 14, 26, 3, 15, 27]  # 3 seasons, each with 3 values
     with pytest.warns(UserWarning, match="Minimum season size .* is below recommended minimum"):
-        seasonal_test(x, t, period=12, min_size_per_season=3)
+        # min_size_per_season=4 should trigger warning as min season size is 3
+        seasonal_test(x, t, period=12, min_size_per_season=4)
 
     # Test that no warning is issued when min_size_per_season is None
     with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
         seasonal_test(x, t, period=12, min_size_per_season=None)
-        assert len(record) == 0
+        user_warnings = [w for w in record if issubclass(w.category, UserWarning)]
+        assert len(user_warnings) == 0

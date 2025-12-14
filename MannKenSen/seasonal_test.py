@@ -15,6 +15,7 @@ from ._stats import (_z_score, _p_value,
 from ._datetime import (_get_season_func, _get_cycle_identifier, _get_time_ranks)
 from ._helpers import (_prepare_data, _aggregate_by_group)
 from .plotting import plot_trend
+from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
 
 
 def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='month', hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='nan', tau_method='b', time_method='absolute', min_size_per_season=5):
@@ -125,6 +126,10 @@ def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='m
 
     data_filtered, is_datetime = _prepare_data(x, t, hicensor)
 
+    note = get_analysis_note(data_filtered, values_col='value', censored_col='censored')
+    if note != "ok":
+        warnings.warn(f"Data quality issue: {note}", UserWarning)
+
     if is_datetime:
         season_func = _get_season_func(season_type, period)
 
@@ -173,13 +178,17 @@ def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='m
     data_filtered['season'] = seasons
     data_filtered['cycle'] = cycles
 
+    note = get_analysis_note(data_filtered, values_col='value', censored_col='censored',
+                             is_seasonal=True, post_aggregation=True, season_col='season')
+    if note != "ok":
+        warnings.warn(f"Data quality issue: {note}", UserWarning)
+
     # Sample size validation per season
     if min_size_per_season is not None:
         season_counts = data_filtered.groupby('season').size()
         min_season_n = season_counts.min()
 
         if min_season_n < min_size_per_season:
-            import warnings
             warnings.warn(
                 f"Minimum season size (n={min_season_n}) is below recommended "
                 f"minimum (n={min_size_per_season}). Results may be unreliable.",
@@ -190,6 +199,7 @@ def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='m
     all_slopes = []
     tau_weighted_sum = 0
     denom_sum = 0
+    sens_slope_notes = set()
 
 
     for i in season_range:
@@ -227,12 +237,22 @@ def seasonal_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='m
 
 
             if np.any(season_censored):
-                all_slopes.extend(_sens_estimator_censored(
+                slopes = _sens_estimator_censored(
                     season_x, season_t, season_cen_type,
                     lt_mult=lt_mult, gt_mult=gt_mult, method=sens_slope_method
-                ))
+                )
             else:
-                all_slopes.extend(_sens_estimator_unequal_spacing(season_x, season_t))
+                slopes = _sens_estimator_unequal_spacing(season_x, season_t)
+
+            note = get_sens_slope_analysis_note(slopes, season_t, season_cen_type)
+            if note != "ok":
+                sens_slope_notes.add(note)
+
+            all_slopes.extend(slopes)
+
+    if sens_slope_notes:
+        warnings.warn("One or more seasons triggered Sen's slope quality warnings: "
+                      + ", ".join(sorted(list(sens_slope_notes))), UserWarning)
 
     Tau = tau_weighted_sum / denom_sum if denom_sum > 0 else 0
     z = _z_score(s, var_s)
