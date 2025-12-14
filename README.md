@@ -18,15 +18,15 @@ While the `MannKenSen` package is heavily inspired by the LWP-TRENDS R script, i
 
 The following features from the LWP-TRENDS R script are **not** implemented in this package:
 
-- **Regression on Order Statistics (ROS):** The R script includes extensive functions for imputing censored data using ROS. This is a major feature that is not present in the Python package.
-- **Covariate Adjustment:** The R script has functionality to adjust for covariates (e.g., flow), which is not included in this package.
-- **Date Shifting:** The R script has a `ShiftTempDate` function to handle cases where a sample taken at the end of one month might be more representative of the next month. This is not implemented in the Python package.
-- **Additional Trend Aggregation:** The R script has additional trend aggregation functions (`AnalysePd`, `FaceValueCounter`) that are not in the Python package.
+- **Regression on Order Statistics (ROS):** The R script uses ROS to impute (i.e., estimate) values for censored data points. This package does not provide imputation, focusing instead on non-parametric methods that can handle censored data directly.
+- **Covariate Adjustment:** The R script can adjust the data to remove the influence of a covariate (e.g., river flow) before trend analysis. This feature is not implemented in this package.
+- **Date Shifting:** The R script includes a `ShiftTempDate` function to handle cases where a sample taken at the end of one month might be more representative of the next. This package does not perform any automatic date shifting.
+- **Additional Trend Aggregation:** The R script has additional functions for trend aggregation (`AnalysePd`, `FaceValueCounter`) that are not available in this package.
 
 ### Methodological Differences
 
 - **Right-Censored Data:** The R script uses a specific heuristic for handling right-censored data, while this package now uses a more statistically robust, non-parametric approach.
-- **Time Handling:** The R script's core trend function uses a simple integer sequence for time (`TimeRank`), while this package uses the actual numeric timestamps. This is a deliberate design choice to make the Python package more suitable for unequally spaced time series data.
+- **Time Handling:** The default method in this package is to use the actual numeric timestamps for all calculations, which is the most statistically robust approach for unequally spaced data. However, the `seasonal_test` function includes a `time_method='rank'` option that mimics the LWP-TRENDS R script's method of using a simple integer sequence for time (`TimeRank`). This option is provided for users who need to replicate older analyses.
 - **Confidence Intervals:** The R script uses interpolation to calculate the confidence intervals for the Sen's slope, while this package uses rounding and direct indexing.
 
 Due to these differences, it is **not expected that the results from this package will exactly match the results from the LWP-TRENDS R script.**
