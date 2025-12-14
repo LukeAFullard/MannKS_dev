@@ -154,3 +154,18 @@ def test_hicensor_numeric_seasonal_test():
     # result is weakened by the tied January data.
     result_hicensor_8 = seasonal_test(x=data, t=t, period=12, hicensor=8)
     assert result_hicensor_8.trend == 'no trend'
+
+def test_mk_test_method_lwp():
+    """Test the 'lwp' method for the Mann-Kendall test."""
+    # Data where the LWP method should produce a different result
+    x = [1, 2, 3, 4, '>5']
+    t = np.arange(len(x))
+    data = prepare_censored_data(x)
+
+    # The robust method should find no trend
+    result_robust = original_test(x=data, t=t, mk_test_method='robust', min_size=None)
+    assert result_robust.trend == 'no trend'
+
+    # The LWP method should find an increasing trend
+    result_lwp = original_test(x=data, t=t, mk_test_method='lwp', min_size=None)
+    assert result_lwp.trend == 'increasing'
