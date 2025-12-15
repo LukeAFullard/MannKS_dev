@@ -1,0 +1,33 @@
+import numpy as np
+from MannKenSen import trend_test
+
+def main():
+    """
+    Generate a simple linear time series with noise and perform a trend analysis.
+    """
+    # 1. Generate Synthetic Data
+    # Create a time series of 20 years of annual data
+    t = np.arange(2000, 2020, dtype=float)
+
+    # Generate a linear trend with a known slope and some random noise
+    slope = 2.5 # The slope is in units per year
+    intercept = 10
+    noise = np.random.normal(0, 5, len(t))
+    x = slope * (t - t[0]) + intercept + noise
+
+    # 2. Perform Trend Analysis
+    # The plot_path will save the visualization to a file
+    plot_path = "Examples/01_Basic_Trend_Analysis/basic_trend_plot.png"
+    result = trend_test(x, t, plot_path=plot_path)
+
+    # 3. Print the Results
+    # Since the time vector `t` is in years, the resulting slope is already an annual slope.
+    print("Basic Trend Analysis Results:")
+    print(f"  Trend: {result.trend}")
+    print(f"  P-value: {result.p:.4f}")
+    print(f"  Annual Sen's Slope: {result.slope:.4f}")
+    print(f"  Kendall's Tau: {result.Tau:.4f}")
+    print(f"  Plot saved to: {plot_path}")
+
+if __name__ == "__main__":
+    main()
