@@ -167,4 +167,16 @@ def _aggregate_by_group(group, agg_method, is_datetime):
         t_numeric_group = group['t'].to_numpy()
         closest_idx = np.argmin(np.abs(t_numeric_group - np.mean(t_numeric_group)))
         return group.iloc[[closest_idx]]
+    elif agg_method == 'middle_lwp':
+        if not is_datetime:
+            # For numeric time, 'middle_lwp' is equivalent to 'middle'
+            t_numeric_group = group['t'].to_numpy()
+            closest_idx = np.argmin(np.abs(t_numeric_group - np.mean(t_numeric_group)))
+            return group.iloc[[closest_idx]]
+        else:
+            # Use theoretical midpoint for datetime
+            from ._datetime import _get_theoretical_midpoint
+            theoretical_mid = _get_theoretical_midpoint(group['t_original'])
+            closest_idx = np.argmin(np.abs(group['t_original'] - theoretical_mid))
+            return group.iloc[[closest_idx]]
     return group
