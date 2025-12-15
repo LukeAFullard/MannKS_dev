@@ -118,6 +118,13 @@ def seasonal_trend_test(
         - C: The confidence of the trend direction.
         - Cd: The confidence that the trend is decreasing.
 
+    **Important Implementation Note:**
+    Unlike the LWP-TRENDS R script which converts time to integer ranks,
+    this implementation uses actual numeric timestamps in the Mann-Kendall
+    calculation. This provides better accuracy for unequally spaced data
+    but means S-statistic, variance, and p-values will differ numerically
+    from the R script even with identical data.
+
     Statistical Assumptions:
     ----------------------
     The Seasonal Mann-Kendall test extends the standard test by accounting for
@@ -138,13 +145,28 @@ def seasonal_trend_test(
         trends in each season are homogeneous (i.e., in the same direction).
         If some seasons have increasing trends while others have decreasing
         trends, the test may fail to detect a significant overall trend.
+
+    **Multiple Testing Consideration:**
+    This test performs trend analysis on each season independently and
+    combines results. With many seasons, consider the multiple testing
+    issue. The p-value is not adjusted for multiple comparisons; for
+    conservative testing with k seasons, consider using alpha/k
+    (Bonferroni correction) or be aware of increased Type I error risk.
     """
+    # --- Basic Input Validation ---
+    x_arr = np.asarray(x) if not isinstance(x, pd.DataFrame) else x
+    t_arr = np.asarray(t)
+    if len(x_arr) != len(t_arr):
+        raise ValueError(f"Input vectors `x` and `t` must have the same length. Got {len(x_arr)} and {len(t_arr)}.")
+    if not 0 < alpha < 1:
+        raise ValueError(f"Significance level `alpha` must be between 0 and 1. Got {alpha}.")
+
     res = namedtuple('Seasonal_Mann_Kendall_Test', [
         'trend', 'h', 'p', 'z', 'Tau', 's', 'var_s', 'slope', 'intercept',
         'lower_ci', 'upper_ci', 'C', 'Cd', 'classification', 'analysis_notes'
     ])
 
-    # --- Input Validation ---
+    # --- Method String Validation ---
     valid_agg_methods = ['none', 'median', 'robust_median', 'middle']
     if agg_method not in valid_agg_methods:
         raise ValueError(f"Invalid `agg_method`. Must be one of {valid_agg_methods}.")
@@ -180,8 +202,11 @@ def seasonal_trend_test(
 
     # --- Aggregation Logic ---
     if agg_method != 'none':
-        if data_filtered['censored'].any():
-            analysis_notes.append(f"'{agg_method}' aggregation used with censored data")
+        if data_filtered['censored'].any() and agg_method != 'robust_median':
+             analysis_notes.append(
+                f"WARNING: '{agg_method}' aggregation with censored data may produce "
+                f"biased results. Consider using agg_method='robust_median'."
+            )
         if is_datetime:
             t_pd = pd.to_datetime(data_filtered['t_original'])
             cycles = _get_cycle_identifier(t_pd, season_type)

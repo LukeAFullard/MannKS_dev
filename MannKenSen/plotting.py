@@ -194,6 +194,8 @@ def plot_trend(data, results, save_path, alpha):
         trend_line = results.slope * np.array([t_min, t_max]) + results.intercept
 
         # Confidence interval lines, pivoted around the median data point
+        # Note: These represent the confidence interval for the slope at x=tmed,
+        # which is mathematically equivalent to parallel CI lines but more interpretable
         ymed = np.nanmedian(data['value'])
         tmed = np.nanmedian(data['t'])
 

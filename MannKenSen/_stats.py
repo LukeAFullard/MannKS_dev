@@ -77,12 +77,23 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
     cy = np.zeros_like(yy, dtype=bool)
     n = len(xx)
 
+    # Add a hard limit to prevent integer overflow on large n*n arrays
+    MAX_SAFE_N = 46340
+    if n > MAX_SAFE_N:
+        raise ValueError(
+            f"Sample size n={n} exceeds maximum safe size of {MAX_SAFE_N}. "
+            f"This would cause an integer overflow during pairwise calculations. "
+            f"Consider using the regional_test() function for aggregation or subsampling your data."
+        )
+
     if n > 5000:
         import warnings
+        mem_gb = (n**2 * 8 / 1e9)
         warnings.warn(
-            f"Large sample size (n={n}) may require significant memory "
-            f"(~{(n**2 * 8 / 1e9):.1f} GB). Consider using smaller datasets "
-            f"or regional aggregation.", UserWarning
+            f"Large sample size (n={n}) requires ~{mem_gb:.1f} GB memory "
+            f"for pairwise calculations. Maximum safe n is {MAX_SAFE_N}. "
+            f"Consider using regional_test() for aggregating multiple smaller sites.",
+            UserWarning
         )
 
     if n < 2:
@@ -292,8 +303,8 @@ def _sens_estimator_unequal_spacing(x, t):
     x_diff = x[j] - x[i]
     t_diff = t[j] - t[i]
 
-    # Avoid division by zero
-    valid_mask = t_diff != 0
+    # Avoid division by zero using a tolerance for float comparison
+    valid_mask = np.abs(t_diff) > 1e-10
 
     return x_diff[valid_mask] / t_diff[valid_mask]
 
@@ -354,8 +365,8 @@ def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_m
     x_diff_raw = x[j_indices] - x[i_indices]
     t_diff = t[j_indices] - t[i_indices]
 
-    # Avoid division by zero
-    valid_t_mask = t_diff != 0
+    # Avoid division by zero using a tolerance for float comparison
+    valid_t_mask = np.abs(t_diff) > 1e-10
     x_diff_raw = x_diff_raw[valid_t_mask]
     t_diff = t_diff[valid_t_mask]
     i_indices = i_indices[valid_t_mask]
@@ -427,6 +438,13 @@ def _confidence_intervals(slopes, var_s, alpha, method='direct'):
             lower_ci = sorted_slopes[lower_idx]
             upper_ci = sorted_slopes[upper_idx]
         else:
+            import warnings
+            warnings.warn(
+                f"Confidence interval calculation failed: calculated indices "
+                f"({lower_idx}, {upper_idx}) were out of bounds for the {n} valid slopes. "
+                f"This is typically due to insufficient data or extremely high variance.",
+                UserWarning
+            )
             lower_ci, upper_ci = np.nan, np.nan
 
     return lower_ci, upper_ci

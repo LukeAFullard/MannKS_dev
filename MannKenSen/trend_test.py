@@ -115,6 +115,12 @@ def trend_test(
     1.  **Independence**: The data points are serially independent. The presence
         of autocorrelation (serial correlation) can violate this assumption and
         affect the significance of the results.
+
+        **Autocorrelation Warning:**
+        This test assumes independent observations. If your data has significant
+        autocorrelation (serial correlation), the test may show spurious
+        significance. For environmental time series, consider pre-whitening or
+        block bootstrap methods if autocorrelation is present.
     2.  **Monotonic Trend**: The trend is assumed to be monotonic, meaning it is
         consistently in one direction (either increasing or decreasing) over
         the time period. The test is not suitable for detecting non-monotonic
@@ -130,12 +136,20 @@ def trend_test(
     6.  **Linear Trend (for Sen's Slope)**: Sen's slope provides a linear estimate
         of the trend, and the confidence intervals are based on this assumption.
     """
+    # --- Basic Input Validation ---
+    x_arr = np.asarray(x) if not isinstance(x, pd.DataFrame) else x
+    t_arr = np.asarray(t)
+    if len(x_arr) != len(t_arr):
+        raise ValueError(f"Input vectors `x` and `t` must have the same length. Got {len(x_arr)} and {len(t_arr)}.")
+    if not 0 < alpha < 1:
+        raise ValueError(f"Significance level `alpha` must be between 0 and 1. Got {alpha}.")
+
     res = namedtuple('Mann_Kendall_Test', [
     'trend', 'h', 'p', 'z', 'Tau', 's', 'var_s', 'slope', 'intercept',
     'lower_ci', 'upper_ci', 'C', 'Cd', 'classification', 'analysis_notes'
     ])
 
-    # --- Input Validation ---
+    # --- Method String Validation ---
     valid_sens_slope_methods = ['nan', 'lwp']
     if sens_slope_method not in valid_sens_slope_methods:
         raise ValueError(f"Invalid `sens_slope_method`. Must be one of {valid_sens_slope_methods}.")
