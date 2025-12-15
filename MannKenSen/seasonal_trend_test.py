@@ -11,7 +11,7 @@ import warnings
 from ._stats import (_z_score, _p_value,
                    _sens_estimator_unequal_spacing, _confidence_intervals,
                    _mk_probability, _mk_score_and_var_censored,
-                   _sens_estimator_censored)
+                   _sens_estimator_censored, _sen_probability)
 from ._datetime import (_get_season_func, _get_cycle_identifier, _get_time_ranks)
 from ._helpers import (_prepare_data, _aggregate_by_group)
 from .plotting import plot_trend
@@ -62,8 +62,8 @@ def seasonal_trend_test(
                                if the result is censored is a heuristic
                                from the LWP-TRENDS R script and may not be
                                universally robust.
-            - 'middle': uses the observation closest to the middle of the
-                        time period.
+            - 'middle': uses the observation closest to the mean of the actual timestamps in the period.
+            - 'middle_lwp': uses the observation closest to the theoretical midpoint of the time period (to match R).
         season_type: For datetime inputs, specifies the type of seasonality.
                      'year', 'month', 'day_of_week', 'quarter', 'hour', 'week_of_year',
                      'day_of_year', 'minute', 'second'.
@@ -163,11 +163,13 @@ def seasonal_trend_test(
 
     res = namedtuple('Seasonal_Mann_Kendall_Test', [
         'trend', 'h', 'p', 'z', 'Tau', 's', 'var_s', 'slope', 'intercept',
-        'lower_ci', 'upper_ci', 'C', 'Cd', 'classification', 'analysis_notes'
+        'lower_ci', 'upper_ci', 'C', 'Cd', 'classification', 'analysis_notes',
+        'sen_probability', 'sen_probability_max', 'sen_probability_min',
+        'prop_censored', 'prop_unique', 'n_censor_levels'
     ])
 
     # --- Method String Validation ---
-    valid_agg_methods = ['none', 'median', 'robust_median', 'middle']
+    valid_agg_methods = ['none', 'median', 'robust_median', 'middle', 'middle_lwp']
     if agg_method not in valid_agg_methods:
         raise ValueError(f"Invalid `agg_method`. Must be one of {valid_agg_methods}.")
 
@@ -198,7 +200,8 @@ def seasonal_trend_test(
 
     if len(data_filtered) < 2:
         return res('no trend', False, np.nan, 0, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
-                   'insufficient data', analysis_notes)
+                   'insufficient data', analysis_notes,
+                   np.nan, np.nan, np.nan, 0, 0, 0)
 
     # --- Aggregation Logic ---
     if agg_method != 'none':
@@ -318,13 +321,24 @@ def seasonal_trend_test(
 
     if not all_slopes:
         slope, intercept, lower_ci, upper_ci = np.nan, np.nan, np.nan, np.nan
+        sen_prob, sen_prob_max, sen_prob_min = np.nan, np.nan, np.nan
     else:
-        slope = np.nanmedian(np.asarray(all_slopes))
+        all_slopes_arr = np.asarray(all_slopes)
+        slope = np.nanmedian(all_slopes_arr)
         intercept = np.nanmedian(data_filtered['value']) - np.nanmedian(data_filtered['t']) * slope
-        lower_ci, upper_ci = _confidence_intervals(np.asarray(all_slopes), var_s, alpha, method=ci_method)
+        lower_ci, upper_ci = _confidence_intervals(all_slopes_arr, var_s, alpha, method=ci_method)
+        sen_prob, sen_prob_max, sen_prob_min = _sen_probability(all_slopes_arr, var_s)
+
+    # Calculate metadata fields
+    n_total = len(data_filtered)
+    prop_censored = np.sum(data_filtered['censored']) / n_total if n_total > 0 else 0
+    prop_unique = len(data_filtered['value'].unique()) / n_total if n_total > 0 else 0
+    censored_values = data_filtered['value'][data_filtered['censored']]
+    n_censor_levels = len(censored_values.unique()) if not censored_values.empty else 0
 
     results = res(trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd,
-                  '', []) # Placeholder
+                  '', [], sen_prob, sen_prob_max, sen_prob_min,
+                  prop_censored, prop_unique, n_censor_levels) # Placeholder
 
     # Final Classification and Notes
     classification = classify_trend(results, category_map=category_map)

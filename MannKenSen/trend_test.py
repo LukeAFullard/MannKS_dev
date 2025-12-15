@@ -8,7 +8,8 @@ import pandas as pd
 import warnings
 from ._stats import (_z_score, _p_value, _sens_estimator_unequal_spacing,
                      _confidence_intervals, _mk_probability,
-                     _mk_score_and_var_censored, _sens_estimator_censored)
+                     _mk_score_and_var_censored, _sens_estimator_censored,
+                     _sen_probability)
 from ._helpers import (_prepare_data, _aggregate_by_group)
 from .plotting import plot_trend
 from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
@@ -31,6 +32,7 @@ def trend_test(
     min_size: Optional[int] = 10,
     mk_test_method: str = 'robust',
     ci_method: str = 'direct',
+    tie_break_method: str = 'robust',
     category_map: Optional[dict] = None
 ) -> namedtuple:
     """
@@ -69,7 +71,8 @@ def trend_test(
                                 ties are present.
             - 'median': Use the median of values and times.
             - 'robust_median': A more statistically robust median for censored data.
-            - 'middle': Use the observation closest to the middle of the time period.
+            - 'middle': Use the observation closest to the mean of the actual timestamps in the period.
+            - 'middle_lwp': Use the observation closest to the theoretical midpoint of the time period (to match R).
         min_size (int): Minimum sample size. Warnings issued if n < min_size.
                        Set to None to disable check.
         mk_test_method (str): The method for handling right-censored data in the
@@ -87,6 +90,11 @@ def trend_test(
               ranks to the nearest integer.
             - 'lwp': An interpolation method that mimics the LWP-TRENDS R
               script's `approx` function.
+        tie_break_method (str): The method for tie-breaking in the Mann-Kendall test.
+            - 'robust' (default): Uses a small epsilon based on half the minimum
+              difference between unique values. Robust and recommended.
+            - 'lwp': Divides the minimum difference by 1000 to closely replicate
+              the behavior of the LWP-TRENDS R script. Use for compatibility.
     Output:
         trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd
 
@@ -145,8 +153,10 @@ def trend_test(
         raise ValueError(f"Significance level `alpha` must be between 0 and 1. Got {alpha}.")
 
     res = namedtuple('Mann_Kendall_Test', [
-    'trend', 'h', 'p', 'z', 'Tau', 's', 'var_s', 'slope', 'intercept',
-    'lower_ci', 'upper_ci', 'C', 'Cd', 'classification', 'analysis_notes'
+        'trend', 'h', 'p', 'z', 'Tau', 's', 'var_s', 'slope', 'intercept',
+        'lower_ci', 'upper_ci', 'C', 'Cd', 'classification', 'analysis_notes',
+        'sen_probability', 'sen_probability_max', 'sen_probability_min',
+        'prop_censored', 'prop_unique', 'n_censor_levels'
     ])
 
     # --- Method String Validation ---
@@ -158,7 +168,7 @@ def trend_test(
     if tau_method not in valid_tau_methods:
         raise ValueError(f"Invalid `tau_method`. Must be one of {valid_tau_methods}.")
 
-    valid_agg_methods = ['none', 'median', 'robust_median', 'middle']
+    valid_agg_methods = ['none', 'median', 'robust_median', 'middle', 'middle_lwp']
     if agg_method not in valid_agg_methods:
         raise ValueError(f"Invalid `agg_method`. Must be one of {valid_agg_methods}.")
 
@@ -169,6 +179,10 @@ def trend_test(
     valid_ci_methods = ['direct', 'lwp']
     if ci_method not in valid_ci_methods:
         raise ValueError(f"Invalid `ci_method`. Must be one of {valid_ci_methods}.")
+
+    valid_tie_break_methods = ['robust', 'lwp']
+    if tie_break_method not in valid_tie_break_methods:
+        raise ValueError(f"Invalid `tie_break_method`. Must be one of {valid_tie_break_methods}.")
 
     analysis_notes = []
     data_filtered, is_datetime = _prepare_data(x, t, hicensor)
@@ -181,7 +195,8 @@ def trend_test(
     # Sample size validation
     if n < 2:
         return res('no trend', False, np.nan, 0, 0, 0, 0, np.nan, np.nan,
-                  np.nan, np.nan, np.nan, np.nan, 'insufficient data', analysis_notes)
+                   np.nan, np.nan, np.nan, np.nan, 'insufficient data', analysis_notes,
+                   np.nan, np.nan, np.nan, 0, 0, 0)
 
     if min_size is not None and n < min_size:
         analysis_notes.append(f'sample size ({n}) below minimum ({min_size})')
@@ -212,11 +227,13 @@ def trend_test(
 
     if len(x_filtered) < 2:
         return res('no trend', False, np.nan, 0, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
-                   'insufficient data post-aggregation', analysis_notes)
+                   'insufficient data post-aggregation', analysis_notes,
+                   np.nan, np.nan, np.nan, 0, 0, 0)
 
     s, var_s, D, Tau = _mk_score_and_var_censored(
         x_filtered, t_filtered, censored_filtered, cen_type_filtered,
-        tau_method=tau_method, mk_test_method=mk_test_method
+        tau_method=tau_method, mk_test_method=mk_test_method,
+        tie_break_method=tie_break_method
     )
 
     z = _z_score(s, var_s)
@@ -244,8 +261,18 @@ def trend_test(
 
     lower_ci, upper_ci = _confidence_intervals(slopes, var_s, alpha, method=ci_method)
 
+    # Sen's slope probability
+    sen_prob, sen_prob_max, sen_prob_min = _sen_probability(slopes, var_s)
+
+    # Calculate metadata fields
+    prop_censored = np.sum(censored_filtered) / n if n > 0 else 0
+    prop_unique = len(np.unique(x_filtered)) / n if n > 0 else 0
+    n_censor_levels = len(np.unique(x_filtered[censored_filtered])) if np.sum(censored_filtered) > 0 else 0
+
     results = res(trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd,
-                  '', []) # Placeholder for classification and notes
+                  '', [], sen_prob, sen_prob_max, sen_prob_min,
+                  prop_censored, prop_unique, n_censor_levels) # Placeholder for classification and notes
+
 
     # Final Classification and Notes
     classification = classify_trend(results, category_map=category_map)

@@ -79,3 +79,29 @@ def _get_time_ranks(t_values, cycles):
         ranks[mask] = i
 
     return ranks
+
+
+def _get_theoretical_midpoint(datetime_series):
+    """
+    Calculates the theoretical midpoint of a time period for a series of datetimes.
+    This is used for the 'middle_lwp' aggregation method to replicate R's logic.
+    """
+    if not isinstance(datetime_series, pd.Series):
+        datetime_series = pd.Series(datetime_series)
+
+    # All dates in the group should be in the same period (e.g., month, week)
+    first_date = datetime_series.iloc[0]
+
+    # Determine the period (month, week, etc.)
+    # This is a simplification; a more robust version would take period as an arg
+    if first_date.day == 1 and first_date.month != 2:
+        # Likely start of a month, find end of month
+        start_of_period = first_date.replace(day=1)
+        end_of_period = (start_of_period + pd.DateOffset(months=1)) - pd.Timedelta(nanoseconds=1)
+    else:
+        # Assume weekly or other, and just use the range of the data in the group
+        start_of_period = datetime_series.min()
+        end_of_period = datetime_series.max()
+
+    midpoint = start_of_period + (end_of_period - start_of_period) / 2
+    return midpoint

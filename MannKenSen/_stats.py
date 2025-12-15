@@ -28,7 +28,7 @@ def _get_min_positive_diff(arr):
     return np.min(pos_diffs) if len(pos_diffs) > 0 else 0.0
 
 
-def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test_method='robust'):
+def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test_method='robust', tie_break_method='robust'):
     """
     Calculates the Mann-Kendall S statistic and its variance for censored data.
     This is a Python translation of the GetKendal function from the LWP-TRENDS
@@ -103,7 +103,10 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
     unique_xx = np.unique(xx)
     min_diff_x = _get_min_positive_diff(unique_xx)
     if min_diff_x > 0:
-        delx = min_diff_x / 2.0
+        if tie_break_method == 'lwp':
+            delx = min_diff_x / 1000.0
+        else: # robust
+            delx = min_diff_x / 2.0
     else:
         # Default to 1.0 if no difference, to separate censored/uncensored
         delx = 1.0
@@ -111,7 +114,10 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
     unique_yy = np.unique(yy)
     min_diff_y = _get_min_positive_diff(unique_yy)
     if min_diff_y > 0:
-        dely = min_diff_y / 2.0
+        if tie_break_method == 'lwp':
+            dely = min_diff_y / 1000.0
+        else: # robust
+            dely = min_diff_y / 2.0
     else:
         dely = 1.0
 
@@ -448,3 +454,42 @@ def _confidence_intervals(slopes, var_s, alpha, method='direct'):
             lower_ci, upper_ci = np.nan, np.nan
 
     return lower_ci, upper_ci
+
+
+def _sen_probability(slopes, var_s):
+    """
+    Calculates the probability that the Sen's slope is > 0.
+    """
+    # Filter out NaN values from slopes
+    valid_slopes = slopes[~np.isnan(slopes)]
+    n_slopes = len(valid_slopes)
+
+    if n_slopes == 0 or var_s < EPSILON:
+        return np.nan, np.nan, np.nan
+
+    sorted_slopes = np.sort(valid_slopes)
+    ranks = np.arange(1, n_slopes + 1)
+
+    # Replicate R's approx function with different tie methods
+    R0_median = np.interp(0, sorted_slopes, ranks)
+    R0_max = np.interp(0, sorted_slopes, ranks, right=n_slopes) # ties='max'
+    R0_min = np.interp(0, sorted_slopes, ranks, left=1) # ties='min
+
+    # Handle edge cases where all slopes are on one side of zero
+    if np.all(valid_slopes < 0):
+        R0_median = R0_max = n_slopes
+        R0_min = 1 # R behavior is complex here, this is a simplification
+    elif np.all(valid_slopes > 0):
+        R0_median = R0_min = 1
+        R0_max = n_slopes # R behavior
+
+    # Calculate probabilities
+    z_median = (2 * R0_median - n_slopes) / np.sqrt(var_s) if var_s > 0 else 0
+    z_max = (2 * R0_max - n_slopes) / np.sqrt(var_s) if var_s > 0 else 0
+    z_min = (2 * R0_min - n_slopes) / np.sqrt(var_s) if var_s > 0 else 0
+
+    sen_prob = norm.cdf(z_median)
+    sen_prob_max = norm.cdf(z_max)
+    sen_prob_min = norm.cdf(z_min)
+
+    return sen_prob, sen_prob_max, sen_prob_min
