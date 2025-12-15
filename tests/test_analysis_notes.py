@@ -105,35 +105,24 @@ def test_get_sens_slope_analysis_note_tied_non_censored():
     assert note == "WARNING: Sen slope based on tied non-censored values"
 
 def test_trend_test_min_size_warning():
-    """Test that trend_test issues a warning for small sample sizes."""
-    # Use 5 data points to pass the get_analysis_note pre-check
+    """Test that trend_test returns a note for small sample sizes."""
     x = [1, 2, 3, 4, 5]
     t = [1, 2, 3, 4, 5]
-    with pytest.warns(UserWarning, match="Sample size .* is below recommended minimum"):
-        # Set min_size > len(x) to trigger the warning
-        trend_test(x, t, min_size=6)
+    result = trend_test(x, t, min_size=6)
+    assert 'sample size (5) below minimum (6)' in result.analysis_notes
 
-    # Test that no warning is issued when min_size is None and data is sufficient
-    with warnings.catch_warnings(record=True) as record:
-        warnings.simplefilter("always")
-        trend_test(x, t, min_size=None)
-        user_warnings = [w for w in record if issubclass(w.category, UserWarning)]
-        assert len(user_warnings) == 0
+    # Test that no note is issued when min_size is None
+    result_none = trend_test(x, t, min_size=None)
+    assert 'sample size' not in ' '.join(result_none.analysis_notes)
 
 
 def test_seasonal_trend_test_min_size_warning():
-    """Test that seasonal_trend_test issues a warning for small seasonal sample sizes."""
-    # Construct data that passes initial analysis_notes checks (>=3 values per season)
-    # but fails the min_size_per_season check.
+    """Test that seasonal_trend_test returns a note for small seasonal sample sizes."""
     x = [1, 2, 3, 4, 5, 6, 7, 8, 9]
     t = [1, 13, 25, 2, 14, 26, 3, 15, 27]  # 3 seasons, each with 3 values
-    with pytest.warns(UserWarning, match="Minimum season size .* is below recommended minimum"):
-        # min_size_per_season=4 should trigger warning as min season size is 3
-        seasonal_trend_test(x, t, period=12, min_size_per_season=4)
+    result = seasonal_trend_test(x, t, period=12, min_size_per_season=4)
+    assert 'minimum season size (3) below minimum (4)' in result.analysis_notes
 
-    # Test that no warning is issued when min_size_per_season is None
-    with warnings.catch_warnings(record=True) as record:
-        warnings.simplefilter("always")
-        seasonal_trend_test(x, t, period=12, min_size_per_season=None)
-        user_warnings = [w for w in record if issubclass(w.category, UserWarning)]
-        assert len(user_warnings) == 0
+    # Test that no note is issued when min_size_per_season is None
+    result_none = seasonal_trend_test(x, t, period=12, min_size_per_season=None)
+    assert 'minimum season size' not in ' '.join(result_none.analysis_notes)

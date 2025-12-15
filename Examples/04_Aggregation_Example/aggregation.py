@@ -8,16 +8,13 @@ def main():
     when multiple observations exist within the same season.
     """
     # 1. Generate Synthetic Data with Duplicates
-    # We will create 15 years of seasonal data.
     n_years = 15
     base_time = np.linspace(2000, 2000 + n_years, n_years * 12, endpoint=False)
     base_x = 1.5 * (base_time - base_time[0]) + np.random.normal(0, 5, len(base_time))
 
-    # Add extra observations in some seasons
     extra_time = np.array([2002.1, 2005.5, 2005.55, 2010.8])
     extra_x = 1.5 * (extra_time - base_time[0]) + np.random.normal(0, 5, len(extra_time))
 
-    # Combine and sort the data
     t = np.sort(np.concatenate([base_time, extra_time]))
     x = np.concatenate([base_x, extra_x])[np.argsort(np.concatenate([base_time, extra_time]))]
 
@@ -25,16 +22,22 @@ def main():
     print("--- Running Analysis with Different Aggregation Methods ---")
 
     # Method 1: No Aggregation ('none')
-    # This analyzes all data points independently.
     result_none = seasonal_trend_test(x, t, period=1, agg_method='none')
     print("\nResult with agg_method='none':")
-    print(f"  Slope: {result_none.slope:.4f}, S-statistic: {result_none.s}")
+    print(f"  Classification: {result_none.classification}")
+    print(f"  Slope: {result_none.slope:.2f} ({result_none.lower_ci:.2f}, {result_none.upper_ci:.2f})")
+    print(f"  S-statistic: {result_none.s}")
+    print(f"  Analysis Notes: {result_none.analysis_notes if result_none.analysis_notes else 'None'}")
+
 
     # Method 2: Median Aggregation ('median')
-    # This calculates the median value for any season with multiple data points.
     result_median = seasonal_trend_test(x, t, period=1, agg_method='median')
     print("\nResult with agg_method='median':")
-    print(f"  Slope: {result_median.slope:.4f}, S-statistic: {result_median.s}")
+    print(f"  Classification: {result_median.classification}")
+    print(f"  Slope: {result_median.slope:.2f} ({result_median.lower_ci:.2f}, {result_median.upper_ci:.2f})")
+    print(f"  S-statistic: {result_median.s}")
+    print(f"  Analysis Notes: {result_median.analysis_notes if result_median.analysis_notes else 'None'}")
+
 
     # 3. Save a Plot for the Median Aggregation Case
     plot_path = "Examples/04_Aggregation_Example/aggregation_plot.png"

@@ -16,6 +16,7 @@ from ._datetime import (_get_season_func, _get_cycle_identifier, _get_time_ranks
 from ._helpers import (_prepare_data, _aggregate_by_group)
 from .plotting import plot_trend
 from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
+from .classification import classify_trend
 
 
 from typing import Union, Optional
@@ -35,7 +36,8 @@ def seasonal_trend_test(
     tau_method: str = 'b',
     min_size_per_season: Optional[int] = 5,
     mk_test_method: str = 'robust',
-    ci_method: str = 'direct'
+    ci_method: str = 'direct',
+    category_map: Optional[dict] = None
 ) -> namedtuple:
     """
     Seasonal Mann-Kendall test for unequally spaced time series.
@@ -137,7 +139,10 @@ def seasonal_trend_test(
         If some seasons have increasing trends while others have decreasing
         trends, the test may fail to detect a significant overall trend.
     """
-    res = namedtuple('Seasonal_Mann_Kendall_Test', ['trend', 'h', 'p', 'z', 'Tau', 's', 'var_s', 'slope', 'intercept', 'lower_ci', 'upper_ci', 'C', 'Cd'])
+    res = namedtuple('Seasonal_Mann_Kendall_Test', [
+        'trend', 'h', 'p', 'z', 'Tau', 's', 'var_s', 'slope', 'intercept',
+        'lower_ci', 'upper_ci', 'C', 'Cd', 'classification', 'analysis_notes'
+    ])
 
     # --- Input Validation ---
     valid_agg_methods = ['none', 'median', 'robust_median', 'middle']
@@ -160,27 +165,23 @@ def seasonal_trend_test(
     if ci_method not in valid_ci_methods:
         raise ValueError(f"Invalid `ci_method`. Must be one of {valid_ci_methods}.")
 
+    analysis_notes = []
     data_filtered, is_datetime = _prepare_data(x, t, hicensor)
 
     note = get_analysis_note(data_filtered, values_col='value', censored_col='censored')
-    if note != "ok":
-        warnings.warn(f"Data quality issue: {note}", UserWarning)
+    analysis_notes.append(note)
 
     if is_datetime:
         season_func = _get_season_func(season_type, period)
 
     if len(data_filtered) < 2:
-        return res('no trend', False, np.nan, 0, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan)
+        return res('no trend', False, np.nan, 0, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
+                   'insufficient data', analysis_notes)
 
     # --- Aggregation Logic ---
     if agg_method != 'none':
         if data_filtered['censored'].any():
-            warnings.warn(
-                f"The '{agg_method}' aggregation method is not statistically robust "
-                "for censored data. The result is a heuristic and may be biased. "
-                "Consider using `agg_method='none'` for censored data.",
-                UserWarning
-            )
+            analysis_notes.append(f"'{agg_method}' aggregation used with censored data")
         if is_datetime:
             t_pd = pd.to_datetime(data_filtered['t_original'])
             cycles = _get_cycle_identifier(t_pd, season_type)
@@ -223,20 +224,17 @@ def seasonal_trend_test(
 
     note = get_analysis_note(data_filtered, values_col='value', censored_col='censored',
                              is_seasonal=True, post_aggregation=True, season_col='season')
-    if note != "ok":
-        warnings.warn(f"Data quality issue: {note}", UserWarning)
+    analysis_notes.append(note)
+
 
     # Sample size validation per season
     if min_size_per_season is not None:
         season_counts = data_filtered.groupby('season').size()
-        min_season_n = season_counts.min()
+        if not season_counts.empty:
+            min_season_n = season_counts.min()
+            if min_season_n < min_size_per_season:
+                analysis_notes.append(f'minimum season size ({min_season_n}) below minimum ({min_size_per_season})')
 
-        if min_season_n < min_size_per_season:
-            warnings.warn(
-                f"Minimum season size (n={min_season_n}) is below recommended "
-                f"minimum (n={min_size_per_season}). Results may be unreliable.",
-                UserWarning
-            )
 
     s, var_s, denom = 0, 0, 0
     all_slopes = []
@@ -285,8 +283,8 @@ def seasonal_trend_test(
             all_slopes.extend(slopes)
 
     if sens_slope_notes:
-        warnings.warn("One or more seasons triggered Sen's slope quality warnings: "
-                      + ", ".join(sorted(list(sens_slope_notes))), UserWarning)
+        analysis_notes.extend(list(sens_slope_notes))
+
 
     Tau = tau_weighted_sum / denom_sum if denom_sum > 0 else 0
     z = _z_score(s, var_s)
@@ -300,9 +298,15 @@ def seasonal_trend_test(
         intercept = np.nanmedian(data_filtered['value']) - np.nanmedian(data_filtered['t']) * slope
         lower_ci, upper_ci = _confidence_intervals(np.asarray(all_slopes), var_s, alpha, method=ci_method)
 
-    results = res(trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd)
+    results = res(trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd,
+                  '', []) # Placeholder
+
+    # Final Classification and Notes
+    classification = classify_trend(results, category_map=category_map)
+    final_notes = [note for note in analysis_notes if note != 'ok']
+    final_results = results._replace(classification=classification, analysis_notes=final_notes)
 
     if plot_path:
-        plot_trend(data_filtered, results, plot_path, alpha)
+        plot_trend(data_filtered, final_results, plot_path, alpha)
 
-    return results
+    return final_results

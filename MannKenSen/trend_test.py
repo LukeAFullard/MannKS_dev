@@ -12,6 +12,7 @@ from ._stats import (_z_score, _p_value, _sens_estimator_unequal_spacing,
 from ._helpers import (_prepare_data, _aggregate_by_group)
 from .plotting import plot_trend
 from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
+from .classification import classify_trend
 
 
 from typing import Union, Tuple, Optional
@@ -29,7 +30,8 @@ def trend_test(
     agg_method: str = 'none',
     min_size: Optional[int] = 10,
     mk_test_method: str = 'robust',
-    ci_method: str = 'direct'
+    ci_method: str = 'direct',
+    category_map: Optional[dict] = None
 ) -> namedtuple:
     """
     Mann-Kendall test for unequally spaced time series.
@@ -128,7 +130,10 @@ def trend_test(
     6.  **Linear Trend (for Sen's Slope)**: Sen's slope provides a linear estimate
         of the trend, and the confidence intervals are based on this assumption.
     """
-    res = namedtuple('Mann_Kendall_Test', ['trend', 'h', 'p', 'z', 'Tau', 's', 'var_s', 'slope', 'intercept', 'lower_ci', 'upper_ci', 'C', 'Cd'])
+    res = namedtuple('Mann_Kendall_Test', [
+    'trend', 'h', 'p', 'z', 'Tau', 's', 'var_s', 'slope', 'intercept',
+    'lower_ci', 'upper_ci', 'C', 'Cd', 'classification', 'analysis_notes'
+    ])
 
     # --- Input Validation ---
     valid_sens_slope_methods = ['nan', 'lwp']
@@ -151,44 +156,31 @@ def trend_test(
     if ci_method not in valid_ci_methods:
         raise ValueError(f"Invalid `ci_method`. Must be one of {valid_ci_methods}.")
 
+    analysis_notes = []
     data_filtered, is_datetime = _prepare_data(x, t, hicensor)
 
     note = get_analysis_note(data_filtered, values_col='value', censored_col='censored')
-    if note != "ok":
-        warnings.warn(f"Data quality issue: {note}", UserWarning)
+    analysis_notes.append(note)
 
     n = len(data_filtered)
 
     # Sample size validation
     if n < 2:
         return res('no trend', False, np.nan, 0, 0, 0, 0, np.nan, np.nan,
-                  np.nan, np.nan, np.nan, np.nan)
+                  np.nan, np.nan, np.nan, np.nan, 'insufficient data', analysis_notes)
 
     if min_size is not None and n < min_size:
-        warnings.warn(
-            f"Sample size (n={n}) is below recommended minimum (n={min_size}). "
-            f"Results may be unreliable. Consider using more data or setting "
-            f"min_size=None to suppress this warning.",
-            UserWarning
-        )
+        analysis_notes.append(f'sample size ({n}) below minimum ({min_size})')
+
 
     # Handle tied timestamps
     if len(data_filtered['t']) != len(np.unique(data_filtered['t'])):
         if agg_method == 'none':
-            warnings.warn(
-                "Tied timestamps detected in the time vector `t`. "
-                "The Sen's slope calculation may be affected. "
-                "Consider using an aggregation method via the `agg_method` parameter.",
-                UserWarning
-            )
+            analysis_notes.append('tied timestamps present without aggregation')
         else:
             if data_filtered['censored'].any():
-                warnings.warn(
-                    f"The '{agg_method}' aggregation method is not statistically robust "
-                    "for censored data. The result is a heuristic and may be biased. "
-                    "Consider using `agg_method='none'` for censored data.",
-                    UserWarning
-                )
+                analysis_notes.append(f"'{agg_method}' aggregation used with censored data")
+
             agg_data_list = [
                 _aggregate_by_group(group, agg_method, is_datetime)
                 for _, group in data_filtered.groupby('t')
@@ -201,12 +193,12 @@ def trend_test(
     cen_type_filtered = data_filtered['cen_type'].to_numpy()
 
     note = get_analysis_note(data_filtered, values_col='value', censored_col='censored', post_aggregation=True)
-    if note != "ok":
-        warnings.warn(f"Data quality issue: {note}", UserWarning)
+    analysis_notes.append(note)
 
 
     if len(x_filtered) < 2:
-        return res('no trend', False, np.nan, 0, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan)
+        return res('no trend', False, np.nan, 0, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
+                   'insufficient data post-aggregation', analysis_notes)
 
     s, var_s, D, Tau = _mk_score_and_var_censored(
         x_filtered, t_filtered, censored_filtered, cen_type_filtered,
@@ -228,8 +220,8 @@ def trend_test(
     slope = np.nanmedian(slopes) if len(slopes) > 0 else np.nan
 
     note = get_sens_slope_analysis_note(slopes, t_filtered, cen_type_filtered)
-    if note != "ok":
-        warnings.warn(note, UserWarning)
+    analysis_notes.append(note)
+
 
     if np.isnan(slope):
         intercept = np.nan
@@ -238,9 +230,16 @@ def trend_test(
 
     lower_ci, upper_ci = _confidence_intervals(slopes, var_s, alpha, method=ci_method)
 
-    results = res(trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd)
+    results = res(trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd,
+                  '', []) # Placeholder for classification and notes
+
+    # Final Classification and Notes
+    classification = classify_trend(results, category_map=category_map)
+    final_notes = [note for note in analysis_notes if note != 'ok']
+
+    final_results = results._replace(classification=classification, analysis_notes=final_notes)
 
     if plot_path:
-        plot_trend(data_filtered, results, plot_path, alpha)
+        plot_trend(data_filtered, final_results, plot_path, alpha)
 
-    return results
+    return final_results
