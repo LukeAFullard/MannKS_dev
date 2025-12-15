@@ -1,0 +1,9 @@
+--- Python Basic Trend Analysis (LWP-Compatible) ---
+  Trend: increasing
+  P-value: 0.0000
+  Z-statistic: 5.0938
+  S-statistic: 158.0
+  Variance of S: 950.0000
+  Slope: 2.0384
+  Lower CI: 1.6612
+  Upper CI: 2.3360

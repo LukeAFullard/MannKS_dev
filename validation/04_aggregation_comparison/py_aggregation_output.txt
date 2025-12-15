@@ -1,0 +1,9 @@
+--- Python Aggregation Trend Analysis (LWP-Compatible) ---
+  Trend: no trend
+  P-value: 0.2482
+  Z-statistic: 1.1547
+  S-statistic: 3.0
+  Variance of S: 3.0000
+  Slope: 1.7213
+  Lower CI: 1.6970
+  Upper CI: 1.7637

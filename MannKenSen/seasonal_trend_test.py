@@ -37,6 +37,7 @@ def seasonal_trend_test(
     min_size_per_season: Optional[int] = 5,
     mk_test_method: str = 'robust',
     ci_method: str = 'direct',
+    tie_break_method: str = 'robust',
     category_map: Optional[dict] = None
 ) -> namedtuple:
     """
@@ -101,6 +102,11 @@ def seasonal_trend_test(
               ranks to the nearest integer.
             - 'lwp': An interpolation method that mimics the LWP-TRENDS R
               script's `approx` function.
+        tie_break_method (str): The method for tie-breaking in the Mann-Kendall test.
+            - 'robust' (default): Uses a small epsilon based on half the minimum
+              difference between unique values. Robust and recommended.
+            - 'lwp': Divides the minimum difference by 1000 to closely replicate
+              the behavior of the LWP-TRENDS R script. Use for compatibility.
     Output:
         A namedtuple containing the following fields:
         - trend: The trend of the data ('increasing', 'decreasing', or 'no trend').
@@ -188,6 +194,10 @@ def seasonal_trend_test(
     valid_ci_methods = ['direct', 'lwp']
     if ci_method not in valid_ci_methods:
         raise ValueError(f"Invalid `ci_method`. Must be one of {valid_ci_methods}.")
+
+    valid_tie_break_methods = ['robust', 'lwp']
+    if tie_break_method not in valid_tie_break_methods:
+        raise ValueError(f"Invalid `tie_break_method`. Must be one of {valid_tie_break_methods}.")
 
     analysis_notes = []
     data_filtered, is_datetime = _prepare_data(x, t, hicensor)
@@ -285,7 +295,8 @@ def seasonal_trend_test(
 
             s_season, var_s_season, d_season, tau_season = _mk_score_and_var_censored(
                 season_x, season_t, season_censored, season_cen_type,
-                tau_method=tau_method, mk_test_method=mk_test_method
+                tau_method=tau_method, mk_test_method=mk_test_method,
+                tie_break_method=tie_break_method
             )
             s += s_season
             var_s += var_s_season

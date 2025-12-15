@@ -1,0 +1,9 @@
+--- Python Weekly Seasonal Trend Analysis (LWP-Compatible) ---
+  Trend: no trend
+  P-value: 0.2465
+  Z-statistic: 1.1590
+  S-statistic: 4316.0
+  Variance of S: 13862116.6667
+  Slope: 0.0000
+  Lower CI: -0.0000
+  Upper CI: 0.0000

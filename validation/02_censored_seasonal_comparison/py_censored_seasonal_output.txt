@@ -1,0 +1,9 @@
+--- Python Censored Seasonal Trend Analysis (LWP-Compatible) ---
+  Trend: increasing
+  P-value: 0.0000
+  Z-statistic: 10.4191
+  S-statistic: 1226.0
+  Variance of S: 13823.3333
+  Slope: 1.3143
+  Lower CI: 0.8693
+  Upper CI: 1.6495
