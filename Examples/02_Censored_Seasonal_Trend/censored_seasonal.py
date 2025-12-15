@@ -13,6 +13,7 @@ def main():
     seasonal_pattern = np.tile([5, 8, 12, 18, 25, 30, 32, 30, 25, 18, 10, 6], n_years)
     slope_per_year = 2.0
     linear_trend = slope_per_year * (t - t[0])
+    np.random.seed(42) # Set seed for reproducibility
     noise = np.random.normal(0, 4, len(t))
     x_raw_numeric = 20 + seasonal_pattern + linear_trend + noise
 

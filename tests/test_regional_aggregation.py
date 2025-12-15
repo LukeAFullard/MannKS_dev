@@ -21,9 +21,9 @@ class TestRegionalAggregation(unittest.TestCase):
             np.random.seed(hash(site) % (2**32 - 1))
             noise = np.random.normal(0, 1.0, 20)
             if site == 'B':
-                trend = -0.1 * np.arange(20)
+                trend = -0.5 * np.arange(20) # Increased trend signal
             else:
-                trend = 0.1 * np.arange(20)
+                trend = 0.5 * np.arange(20) # Increased trend signal
 
             values = 10 + trend + noise
 
