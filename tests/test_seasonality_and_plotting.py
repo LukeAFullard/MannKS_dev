@@ -89,6 +89,7 @@ def test_biweekly_seasonality():
 
     result = seasonal_trend_test(x, t, season_type='biweekly', period=26)
     assert result.trend == 'no trend'
+    assert result.classification == 'No Trend'
 
 def test_biweekly_seasonality_53_week_year():
     """
@@ -99,6 +100,7 @@ def test_biweekly_seasonality_53_week_year():
 
     result = seasonal_trend_test(x, t, season_type='biweekly', period=27)
     assert result.trend == 'increasing'
+    assert 'Increasing' in result.classification
 
 # Edge case tests based on code review feedback
 def test_day_of_year_seasonality_leap_year():
@@ -113,6 +115,7 @@ def test_day_of_year_seasonality_leap_year():
     # The function should dynamically determine the number of seasons
     result = seasonal_trend_test(x, t, season_type='day_of_year')
     assert result.trend == 'increasing'
+    assert 'Increasing' in result.classification
 
 def test_week_of_year_seasonality_53_week_year():
     """
@@ -124,6 +127,7 @@ def test_week_of_year_seasonality_53_week_year():
 
     result = seasonal_trend_test(x, t, season_type='week_of_year', period=53)
     assert result.trend == 'increasing'
+    assert 'Increasing' in result.classification
 
 
 # Parameterized test for robust season types
@@ -147,6 +151,7 @@ def test_general_season_types(season_type, period, freq, n_periods):
 
     result = seasonal_trend_test(x, t, season_type=season_type, period=period)
     assert result.trend == 'increasing'
+    assert 'Increasing' in result.classification
 
 def test_seasonal_trend_test_aggregation_methods():
     """
@@ -162,18 +167,18 @@ def test_seasonal_trend_test_aggregation_methods():
     # Test with no aggregation
     result_none = seasonal_trend_test(x=values, t=dates, period=12, season_type='month')
     assert result_none.trend == 'increasing'
+    assert 'Increasing' in result_none.classification
 
     # Test with 'median' aggregation
-    # The data for Jan 2020 will be aggregated to a single point with value 1.5
-    # The data for Jan 2022 will be aggregated to a single point with value 4.5
     result_median = seasonal_trend_test(x=values, t=dates, period=12, season_type='month', agg_method='median')
     assert result_median.trend == 'increasing'
+    assert 'Increasing' in result_median.classification
 
     # Test with 'middle' aggregation
-    # The data for Jan 2020 will be aggregated to the point on 2020-01-20 (value 2)
-    # The data for Jan 2022 will be aggregated to the point on 2022-01-25 (value 5)
     result_middle = seasonal_trend_test(x=values, t=dates, period=12, season_type='month', agg_method='middle')
     assert result_middle.trend == 'increasing'
+    assert 'Increasing' in result_middle.classification
+
 
     # The scores and slopes should be different for each aggregation method
     assert result_none.s != result_median.s

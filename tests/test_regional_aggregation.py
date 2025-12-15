@@ -42,6 +42,12 @@ class TestRegionalAggregation(unittest.TestCase):
             site_data = time_series_data[time_series_data['site'] == site]
             res = trend_test(x=site_data['value'], t=site_data['time'], min_size=None)
 
+            # Assert that the new fields are present
+            self.assertTrue(hasattr(res, 'classification'))
+            self.assertTrue(hasattr(res, 'analysis_notes'))
+            self.assertIsInstance(res.analysis_notes, list)
+
+
             # Convert namedtuple to a dictionary and add site
             res_dict = res._asdict()
             res_dict['site'] = site

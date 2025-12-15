@@ -247,12 +247,12 @@ def test_seasonal_trend_test_with_nan():
 
 def test_tied_timestamp_warning():
     """
-    Tests that a UserWarning is raised when tied timestamps are present.
+    Tests that an analysis note is returned when tied timestamps are present.
     """
     t = np.array([1, 2, 2, 4, 5])
     x = np.arange(len(t))
-    with pytest.warns(UserWarning, match="Tied timestamps detected"):
-        trend_test(x, t)
+    result = trend_test(x, t)
+    assert 'tied timestamps present without aggregation' in result.analysis_notes
 
 def test_empty_input():
     """

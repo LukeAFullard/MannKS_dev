@@ -121,8 +121,8 @@ This function performs the Mann-Kendall test on unequally spaced time series dat
 - `sens_slope_method` (str): The method for handling ambiguous slopes in censored data. See the function docstring for details.
 - `tau_method` (str): The method for calculating Kendall's Tau ('a' or 'b'). Default is `'b'`.
 - `agg_method` (str): The method for aggregating data at tied timestamps. See the function docstring for options.
-  - **Caution**: Using aggregation methods (`median`, `robust_median`, `middle`) with censored data is not statistically robust and may produce biased results. A `UserWarning` will be issued.
 - `min_size` (int): The minimum sample size required to perform the test (default is 10).
+- `category_map` (dict, optional): A dictionary to customize the trend classification labels. See the `classify_trend` function for details.
 
 **Output:**
 A named tuple with the following fields:
@@ -139,6 +139,8 @@ A named tuple with the following fields:
 - `upper_ci`: The upper confidence interval of the slope.
 - `C`: The confidence of the trend direction.
 - `Cd`: The confidence that the trend is decreasing.
+- `classification`: A descriptive category of the trend (e.g., "Highly Likely Increasing").
+- `analysis_notes`: A list of strings containing data quality notes (e.g., "sample size below minimum").
 
 
 ### `seasonal_trend_test(x, t, period=12, alpha=0.05, agg_method='none', season_type='month', hicensor=False, plot_path=None, lt_mult=0.5, gt_mult=1.1, sens_slope_method='nan', tau_method='b', min_size_per_season=5)`
@@ -159,6 +161,7 @@ This function performs the seasonal Mann-Kendall test on unequally spaced time s
 - `sens_slope_method` (str): The method for handling ambiguous slopes in censored data. See the function docstring for details.
 - `tau_method` (str): The method for calculating Kendall's Tau ('a' or 'b'). Default is `'b'`.
 - `min_size_per_season` (int): The minimum number of observations required per season (default is 5).
+- `category_map` (dict, optional): A dictionary to customize the trend classification labels. See the `classify_trend` function for details.
 
 **Output:**
 A named tuple with the same fields as `trend_test`.
