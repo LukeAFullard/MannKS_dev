@@ -4,7 +4,7 @@ This example demonstrates the most common use case for the `MannKenSen` package:
 
 ## Steps
 
-1.  **Generate Synthetic Data**: We create a simple linear time series with a known slope and add some random noise to make it more realistic.
+1.  **Generate Synthetic Data**: We create a simple linear time series with a known slope and add some random noise to make it more realistic. A random seed is set to ensure that the "random" noise is the same every time the script is run, making the example's output reproducible.
 2.  **Perform Trend Analysis**: We call the `trend_test` function, which now automatically classifies the trend and checks for data quality issues.
 3.  **Review the Output**: We print the enhanced results, including the trend classification, the slope with its confidence intervals, and any analysis notes.
 
@@ -53,7 +53,7 @@ Running the script produces a comprehensive output. The test correctly identifie
   Classification: Highly Likely Increasing
   Trend: increasing
   P-value: 0.0000
-  Slope: 2.73 (2.11, 3.15)
+  Slope: 2.04 (1.67, 2.34)
   Analysis Notes: None
 
   Plot saved to: Examples/01_Basic_Trend_Analysis/basic_trend_plot.png

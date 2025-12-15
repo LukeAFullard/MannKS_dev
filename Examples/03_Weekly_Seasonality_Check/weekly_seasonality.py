@@ -13,6 +13,7 @@ def main():
 
     day_of_week = t.dayofweek
     weekly_pattern = np.array([-15 if day in (5, 6) else 5 for day in day_of_week])
+    np.random.seed(42) # Set seed for reproducibility
     noise = np.random.normal(0, 4, len(t))
     x = 100 + weekly_pattern + noise
 

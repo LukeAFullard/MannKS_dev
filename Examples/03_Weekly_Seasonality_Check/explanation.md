@@ -6,7 +6,7 @@ We will simulate daily data with a clear weekly pattern (e.g., lower values on w
 
 ## Steps
 
-1.  **Generate Synthetic Data**: We create five years of daily data. A strong weekly pattern is added by assigning different values for weekdays versus weekends. No long-term trend is added.
+1.  **Generate Synthetic Data**: We create five years of daily data. A strong weekly pattern is added by assigning different values for weekdays versus weekends. No long-term trend is added. A random seed is set to ensure the results are reproducible.
 2.  **Check for Seasonality**: We use the `check_seasonality` function to test the hypothesis that there is a significant difference between the days of the week.
 3.  **Perform Seasonal Trend Analysis**: Based on the confirmation of seasonality, we proceed with the `seasonal_trend_test`. It now automatically classifies the trend and returns data quality notes.
 4.  **Review the Output**: We print and examine the results from both functions.
@@ -31,6 +31,7 @@ def main():
 
     day_of_week = t.dayofweek
     weekly_pattern = np.array([-15 if day in (5, 6) else 5 for day in day_of_week])
+    np.random.seed(42) # Set seed for reproducibility
     noise = np.random.normal(0, 4, len(t))
     x = 100 + weekly_pattern + noise
 
@@ -78,7 +79,7 @@ The `seasonal_trend_test` correctly identifies that there is **"No Trend"** in t
 --- Seasonal Trend Analysis ---
   Classification: No Trend
   Trend: no trend
-  P-value: 0.6841
+  P-value: 0.2465
   Slope: 0.0000 (-0.0000, 0.0000)
   Analysis Notes: ['WARNING: Sen slope based on tied non-censored values']
 

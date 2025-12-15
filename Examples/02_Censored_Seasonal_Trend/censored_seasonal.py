@@ -13,12 +13,13 @@ def main():
     seasonal_pattern = np.tile([5, 8, 12, 18, 25, 30, 32, 30, 25, 18, 10, 6], n_years)
     slope_per_year = 2.0
     linear_trend = slope_per_year * (t - t[0])
-    np.random.seed(42) # Set seed for reproducibility
+    np.random.seed(123) # Set seed for reproducibility
     noise = np.random.normal(0, 4, len(t))
     x_raw_numeric = 20 + seasonal_pattern + linear_trend + noise
 
     # 2. Introduce Censoring
-    detection_limit = 45
+    # A lower limit is chosen to censor less data than the original example
+    detection_limit = 35
     x_mixed = [f"<{detection_limit}" if val < detection_limit else val for val in x_raw_numeric]
 
     # 3. Pre-process the Censored Data
@@ -30,14 +31,14 @@ def main():
     # Method 1: 'nan' (Default, statistically neutral)
     result_nan = seasonal_trend_test(x=x_prepared,
                                      t=t,
-                                     period=1,
+                                     period=12, # Use 12 for monthly data
                                      plot_path=plot_path,
                                      sens_slope_method='nan')
 
     # Method 2: 'lwp' (LWP-TRENDS R script compatibility)
     result_lwp = seasonal_trend_test(x=x_prepared,
                                      t=t,
-                                     period=1,
+                                     period=12, # Use 12 for monthly data
                                      plot_path=None, # Don't overwrite plot
                                      sens_slope_method='lwp')
 
