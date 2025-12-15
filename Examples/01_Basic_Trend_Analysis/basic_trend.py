@@ -6,6 +6,9 @@ def main():
     Generate a simple linear time series with noise and perform a trend analysis.
     """
     # 1. Generate Synthetic Data
+    # Set a random seed to ensure the generated noise is the same every time
+    # the script is run, which makes the results reproducible.
+    np.random.seed(42)
     t = np.arange(2000, 2020, dtype=float)
     slope = 2.5
     intercept = 10
