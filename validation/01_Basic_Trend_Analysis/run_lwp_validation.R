@@ -10,33 +10,24 @@ suppressWarnings({
 data <- read.csv("validation/01_Basic_Trend_Analysis/validation_data.csv")
 
 # --- Prepare the data for LWP-TRENDS ---
-# The R script is very particular about its input data frame structure.
-
-# 1. Rename columns to match the script's expected names.
 names(data) <- c("Year", "RawValue")
-
-# 2. Add a 'myDate' column, which is required for internal sorting and time calculations.
 data$myDate <- as.Date(paste(data$Year, "-01-01", sep=""))
-
-# 3. Add censoring information.
 data$Censored <- FALSE
 data$CenType <- "not"
-
-# 4. Use the LWP-TRENDS helper function to add required date columns.
-#    This function creates columns like 'Month', 'Qtr', etc., which are
-#    expected by downstream functions, even for annual data.
 data <- GetMoreDateInfo(data)
-
-# 5. Define the time increment for the analysis.
 data$TimeIncr <- data$Year
 
 # --- Run the non-seasonal trend analysis ---
 result <- NonSeasonalTrendAnalysis(data, ValuesToUse = "RawValue", Year = "Year")
 
-# --- Print the key results in a structured format ---
-# This format is designed to be easily comparable with the Python script's output.
+# --- Get LAWA Trend Classification ---
+# The AssignConfCat function requires an 'analyte' column to exist in the data frame.
+result$analyte <- "value"
+lawa_classification <- AssignConfCat(result, CatType = "Direction")
+
+# --- Print the key results ---
 cat("--- LWP-TRENDS Analysis Results ---\n")
 cat(sprintf("  P-value: %.4f\n", result$p))
 cat(sprintf("  Z-statistic: %.4f\n", result$Z))
 cat(sprintf("  Slope: %.2f (%.2f, %.2f)\n", result$AnnualSenSlope, result$Sen_Lci, result$Sen_Uci))
-cat(sprintf("  Trend Classification: %s\n", result$TrendDirection))
+cat(sprintf("  Trend Classification: %s\n", lawa_classification))
