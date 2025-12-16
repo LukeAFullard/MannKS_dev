@@ -58,6 +58,8 @@ Run the `install_r_packages.R` script from your terminal.
 
 ### Manual Installation
 
+If the automated script fails, you can install the packages manually.
+
 1.  Start an R interactive session.
     ```bash
     # On Linux/macOS
@@ -90,28 +92,23 @@ With the system and R dependencies in place, you can now set up the Python envir
     source venv/bin/activate  # On Windows use `venv\Scripts\activate`
     ```
 
-2.  **Install Python dependencies:** The project's development dependencies are defined in `dev-requirements.txt`. Install them using pip:
+2.  **Install Python dependencies and the `MannKenSen` package:**
+    The project's development dependencies are defined in `dev-requirements.txt`. Installing this file will also install the `MannKenSen` package in "editable" mode, which means you can modify the source code and run it without reinstalling.
     ```bash
     pip install -r dev-requirements.txt
     ```
-    This command will install all necessary packages for running the `MannKenSen` code and its test suite.
 
 ## Step 4: Running Tests and Validations
 
-Once the environment is fully set up, you can run the tests and validation scripts. Before running, you must add the project's root directory to your PYTHONPATH.
+Once the environment is fully set up, you can run the tests and validation scripts. Because the package was installed in editable mode, you no longer need to manually set the `PYTHONPATH`.
 
--   **On Linux/macOS:**
-    ```bash
-    export PYTHONPATH=$PYTHONPATH:.
-    python3 -m pytest tests/
-    python3 validation/01_Basic_Trend_Analysis/basic_trend.py
-    ```
--   **On Windows:**
-    ```powershell
-    $env:PYTHONPATH = ".;" + $env:PYTHONPATH
-    python3 -m pytest tests/
-    python3 validation/01_Basic_Trend_Analysis/basic_trend.py
-    ```
+```bash
+# Run the test suite
+python3 -m pytest tests/
+
+# Run the first validation script
+python3 validation/01_Basic_Trend_Analysis/basic_trend.py
+```
 
 ## Step 5: Troubleshooting
 

@@ -1,3 +1,4 @@
+-e .
 pandas
 matplotlib
 seaborn

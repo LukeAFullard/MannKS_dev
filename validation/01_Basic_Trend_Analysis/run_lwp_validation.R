@@ -23,7 +23,7 @@ result <- NonSeasonalTrendAnalysis(data, ValuesToUse = "RawValue", Year = "Year"
 # --- Get LAWA Trend Classification ---
 # The AssignConfCat function requires an 'analyte' column to exist in the data frame.
 result$analyte <- "value"
-lawa_classification <- AssignConfCat(result, CatType = "Decrease", nCat = "Simple")
+lawa_classification <- AssignConfCat(result, CatType = "Direction")
 
 # --- Print the key results ---
 cat("--- LWP-TRENDS Analysis Results ---\n")

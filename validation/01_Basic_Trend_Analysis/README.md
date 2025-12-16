@@ -84,16 +84,19 @@ data$TimeIncr <- data$Year
 # --- Run the non-seasonal trend analysis ---
 result <- NonSeasonalTrendAnalysis(data, ValuesToUse = "RawValue", Year = "Year")
 
-# --- Get LAWA Trend Classification ---
+# --- Get Trend Classification ---
+# The user-requested `ImprovementConfCatLAWA` function is not defined in the LWP-TRENDS
+# script. The `AssignConfCat` function with `CatType = "Direction"` provides the
+# intended classification based on confidence in the trend's direction.
 result$analyte <- "value"
-lawa_classification <- AssignConfCat(result, CatType = "Decrease", nCat = "Simple")
+classification <- AssignConfCat(result, CatType = "Direction")
 
 # --- Print the key results ---
 cat("--- LWP-TRENDS Analysis Results ---\n")
 cat(sprintf("  P-value: %.4f\n", result$p))
 cat(sprintf("  Z-statistic: %.4f\n", result$Z))
 cat(sprintf("  Slope: %.2f (%.2f, %.2f)\n", result$AnnualSenSlope, result$Sen_Lci, result$Sen_Uci))
-cat(sprintf("  Trend Classification: %s\n", lawa_classification))
+cat(sprintf("  Trend Classification: %s\n", classification))
 ```
 
 ## Results Comparison
@@ -104,7 +107,7 @@ cat(sprintf("  Trend Classification: %s\n", lawa_classification))
 | **Z-statistic**        | 5.0938                      | 5.0938                      | 5.0938                      |
 | **Sen's Slope**        | 2.04                        | 2.04                        | 2.04                        |
 | **90% Conf. Interval** | (1.67, 2.34)                | (1.66, 2.34)                | (1.70, 2.30)                |
-| **Trend Classification** | Highly Likely Increasing    | Highly Likely Increasing    | Very likely increasing      |
+| **Trend Classification** | Highly Likely Increasing    | Highly Likely Increasing    | Highly likely                |
 
 ### Analysis
 
@@ -112,6 +115,6 @@ The results from all three runs are extremely close, which strongly validates th
 
 - The **P-value, Z-statistic, and Sen's Slope** are identical across all three analyses. This indicates that the core Mann-Kendall and Sen's Slope calculations are consistent.
 - The **90% Confidence Intervals** show minor differences. This is due to a methodological difference in how the confidence intervals are calculated from the ranks of the slopes. The LWP-TRENDS R script uses linear interpolation (`approx()` function) for fractional ranks, while the `MannKenSen` Python package effectively truncates the ranks to the nearest integer. The R script's interpolation method is arguably more statistically precise.
-- The **Trend Classification** is highly comparable. Both the Python package (`Highly Likely Increasing`) and the R script (`Very likely increasing`) provide a high-confidence assessment of the increasing trend. The minor difference in wording is due to the different category maps used in each package's classification scheme. It should be noted that the user requested the `ImprovementConfCatLAWA` function be used; however, this function is commented out in the LWP-TRENDS source and is not defined. The `AssignConfCat` function was used as the intended equivalent.
+- The **Trend Classification** is highly comparable. The Python package uses "Highly Likely Increasing", while the R script with the `CatType="Direction"` parameter returns "Highly likely". The underlying confidence is the same, and the minor difference in wording is negligible. The user's request to use a specific set of classification breaks and labels is fulfilled by this method, as the requested logic is identical to the `CatType="Direction"` option within the `AssignConfCat` function.
 
-Overall, the validation is successful and demonstrates that the `MannKenSen` package can produce results that are highly consistent with the LWP-TRENDS R script, especially when using the LWP-emulation settings.
+Overall, the validation is successful and demonstrates that the `MannKenSen` package can produce results that are highly consistent with the LWP-TRENDS R script.
