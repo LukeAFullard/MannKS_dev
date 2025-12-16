@@ -13,7 +13,7 @@ from ._stats import (_z_score, _p_value,
                    _mk_probability, _mk_score_and_var_censored,
                    _sens_estimator_censored, _sen_probability)
 from ._datetime import (_get_season_func, _get_cycle_identifier, _get_time_ranks)
-from ._helpers import (_prepare_data, _aggregate_by_group)
+from ._helpers import (_prepare_data, _aggregate_by_group, _value_for_time_increment)
 from .plotting import plot_trend
 from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
 from .classification import classify_trend
@@ -73,14 +73,19 @@ def seasonal_trend_test(
         gt_mult (float): The multiplier for right-censored data, **used only
                          for the Sen's slope calculation** (default 1.1).
                          This does not affect the Mann-Kendall test itself.
-        sens_slope_method (str): The method for handling ambiguous slopes in censored data.
-            - 'nan' (default): Sets ambiguous slopes (e.g., between two left-censored
+        sens_slope_method (str): The method for handling ambiguous slopes in censored data
+                                 and for data aggregation when calculating the Sen's slope.
+            - 'nan' (default): Calculates slope on all available data points and sets
+                               ambiguous slopes (e.g., between two left-censored
                                values) to `np.nan`, effectively removing them from the
                                median slope calculation. This is a statistically neutral
                                approach.
-            - 'lwp': Sets ambiguous slopes to 0, mimicking the LWP-TRENDS R script.
-                     This may bias the slope towards zero and is primarily available
-                     for replicating results from that script.
+            - 'lwp': Replicates the LWP-TRENDS R script's methodology by first
+                     aggregating the data to a single observation per time
+                     increment (e.g., month-year) and then calculating the slope.
+                     It also sets ambiguous censored slopes to 0. This method is
+                     provided for backward compatibility and validation against the
+                     R script.
         tau_method (str): The method for calculating Kendall's Tau ('a' or 'b').
                           Default is 'b', which accounts for ties in the data and is
                           the recommended method.
@@ -270,32 +275,53 @@ def seasonal_trend_test(
     denom_sum = 0
     sens_slope_notes = set()
 
-
+    # MK test is performed on unaggregated data
     for i in season_range:
         season_mask = data_filtered['season'] == i
         season_data = data_filtered[season_mask]
+        n = len(season_data)
+
+        if n > 1:
+            s_season, var_s_season, d_season, tau_season = _mk_score_and_var_censored(
+                season_data['value'], season_data['t'], season_data['censored'],
+                season_data['cen_type'], tau_method=tau_method, mk_test_method=mk_test_method
+            )
+            s += s_season
+            var_s += var_s_season
+            if d_season > 0:
+                tau_weighted_sum += tau_season * d_season
+                denom_sum += d_season
+
+    # Sen's slope calculation depends on the method
+    if sens_slope_method == 'lwp':
+        # For 'lwp' method, aggregate data to one obs per time increment
+        slope_data = _value_for_time_increment(data_filtered, is_datetime, season_type)
+        var_s_for_ci = 0
+        for i in season_range:
+            season_mask = slope_data['season'] == i
+            season_data = slope_data[season_mask]
+            n = len(season_data)
+            if n > 1:
+                _, var_s_season, _, _ = _mk_score_and_var_censored(
+                    season_data['value'], season_data['t'], season_data['censored'],
+                    season_data['cen_type'], tau_method=tau_method, mk_test_method=mk_test_method
+                )
+                var_s_for_ci += var_s_season
+    else:
+        # For other methods, use the original unaggregated data
+        slope_data = data_filtered
+        var_s_for_ci = var_s # Use the original variance from the MK test
+
+    for i in season_range:
+        season_mask = slope_data['season'] == i
+        season_data = slope_data[season_mask]
         season_x = season_data['value'].to_numpy()
-        season_t_raw = season_data['t'].to_numpy()
+        season_t = season_data['t'].to_numpy()
         season_censored = season_data['censored'].to_numpy()
         season_cen_type = season_data['cen_type'].to_numpy()
         n = len(season_x)
 
         if n > 1:
-            season_t = season_t_raw
-
-            s_season, var_s_season, d_season, tau_season = _mk_score_and_var_censored(
-                season_x, season_t, season_censored, season_cen_type,
-                tau_method=tau_method, mk_test_method=mk_test_method
-            )
-            s += s_season
-            var_s += var_s_season
-
-            # For weighted average of Tau
-            if d_season > 0:
-                tau_weighted_sum += tau_season * d_season
-                denom_sum += d_season
-
-
             if np.any(season_censored):
                 slopes = _sens_estimator_censored(
                     season_x, season_t, season_cen_type,
@@ -326,8 +352,8 @@ def seasonal_trend_test(
         all_slopes_arr = np.asarray(all_slopes)
         slope = np.nanmedian(all_slopes_arr)
         intercept = np.nanmedian(data_filtered['value']) - np.nanmedian(data_filtered['t']) * slope
-        lower_ci, upper_ci = _confidence_intervals(all_slopes_arr, var_s, alpha, method=ci_method)
-        sen_prob, sen_prob_max, sen_prob_min = _sen_probability(all_slopes_arr, var_s)
+        lower_ci, upper_ci = _confidence_intervals(all_slopes_arr, var_s_for_ci, alpha, method=ci_method)
+        sen_prob, sen_prob_max, sen_prob_min = _sen_probability(all_slopes_arr, var_s_for_ci)
 
     # Calculate metadata fields
     n_total = len(data_filtered)
