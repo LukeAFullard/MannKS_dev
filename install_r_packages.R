@@ -1,0 +1,8 @@
+install.packages('plyr', repos='http://cran.us.r-project.org')
+install.packages('tidyr', repos='http://cran.us.r-project.org')
+install.packages('viridis', repos='http://cran.us.r-project.org')
+install.packages('NADA', repos='http://cran.us.r-project.org')
+install.packages('lubridate', repos='http://cran.us.r-project.org')
+install.packages('gam', repos='http://cran.us.r-project.org')
+install.packages('ggplot2', repos='http://cran.us.r-project.org')
+install.packages('ggpubr', repos='http://cran.us.r-project.org')
