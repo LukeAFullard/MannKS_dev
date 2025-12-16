@@ -41,11 +41,24 @@ Setting up the environment on Windows requires a few manual steps.
 
 ## Step 2: R Packages
 
-Once R is installed, you need to install the R packages required for validation and comparison tests.
+Once R is installed, you need to install the R packages required for validation and comparison tests. You can do this automatically by running the provided script, or manually.
 
-> **Note for Windows Users:** You do not need to use `sudo`. Simply open a standard R session or RGui.
+### Automated Installation (Recommended)
 
-1.  Start an R interactive session. On Linux/macOS, use `sudo R` to install packages system-wide. On Windows, open the R GUI or type `R` in your terminal.
+Run the `install_r_packages.R` script from your terminal.
+
+-   **On Linux/macOS:**
+    ```bash
+    sudo Rscript install_r_packages.R
+    ```
+-   **On Windows:**
+    ```powershell
+    Rscript install_r_packages.R
+    ```
+
+### Manual Installation
+
+1.  Start an R interactive session.
     ```bash
     # On Linux/macOS
     sudo R
@@ -53,8 +66,7 @@ Once R is installed, you need to install the R packages required for validation 
     R
     ```
 
-2.  Inside the R session, install the required packages. To prevent installation timeouts, it is recommended to install each package individually.
-
+2.  Inside the R session, install the required packages one by one.
     ```R
     install.packages('plyr')
     install.packages('tidyr')
@@ -82,31 +94,34 @@ With the system and R dependencies in place, you can now set up the Python envir
     ```bash
     pip install -r dev-requirements.txt
     ```
-    This command will install all necessary packages for running the `MannKenSen` code and its test suite, including `numpy`, `pandas`, `scipy`, `pytest`, and `rpy2`.
+    This command will install all necessary packages for running the `MannKenSen` code and its test suite.
 
-## Step 4: Running Tests
+## Step 4: Running Tests and Validations
 
-Once the environment is fully set up, you can run the tests to verify the installation. Before running the tests, you must add the project's root directory to the PYTHONPATH.
+Once the environment is fully set up, you can run the tests and validation scripts. Before running, you must add the project's root directory to your PYTHONPATH.
 
-```bash
-export PYTHONPATH=$PYTHONPATH:.
-python3 -m pytest tests/
-```
+-   **On Linux/macOS:**
+    ```bash
+    export PYTHONPATH=$PYTHONPATH:.
+    python3 -m pytest tests/
+    python3 validation/01_Basic_Trend_Analysis/basic_trend.py
+    ```
+-   **On Windows:**
+    ```powershell
+    $env:PYTHONPATH = ".;" + $env:PYTHONPATH
+    python3 -m pytest tests/
+    python3 validation/01_Basic_Trend_Analysis/basic_trend.py
+    ```
 
 ## Step 5: Troubleshooting
 
 A common point of failure is the `rpy2` package being unable to locate your R installation.
 
 -   **`rpy2` Installation Fails:** If you see errors related to `R_HOME` or `No such file or directory` during the `pip install` step, it likely means `rpy2` cannot find R.
-    -   **Solution 1 (Recommended):** Ensure that the directory containing the R executable is in your system's `PATH` environment variable. When you can run `R` from your terminal, `rpy2` can usually find it.
+    -   **Solution 1 (Recommended):** Ensure that the directory containing the R executable is in your system's `PATH`.
     -   **Solution 2 (Manual Override):** You can explicitly set the `R_HOME` environment variable before running `pip install`.
         ```bash
-        # Example for macOS
-        export R_HOME="/Library/Frameworks/R.framework/Resources"
-        pip install -r dev-requirements.txt
-
         # Example for Linux
         export R_HOME="/usr/lib/R"
         pip install -r dev-requirements.txt
         ```
-        You will need to find the correct path for your R installation. On Windows, this would be the root directory of your R installation (e.g., `C:\Program Files\R\R-4.2.2`).
