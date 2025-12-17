@@ -1,4 +1,4 @@
-# Validation script for Right-Censored and Mixed-Censored Data Analysis
+# Validation script for Example 7: Censoring Effect (Aggregated)
 
 # Load the LWP-TRENDS functions
 suppressWarnings({
@@ -6,10 +6,10 @@ suppressWarnings({
 })
 
 # Define the scenarios to test
-scenarios <- c("right_censored", "mixed_censored")
-output_dir <- "validation/08_Right_Censored_Data"
+scenarios <- c("0pct", "20pct", "40pct", "60pct")
+output_dir <- "."
 
-cat("--- LWP-TRENDS Analysis Results ---\n")
+cat("--- LWP-TRENDS Aggregated Analysis Results for Example 7 ---\n")
 
 # Loop through each scenario, read data, and run the analysis
 for (name in scenarios) {
@@ -17,26 +17,23 @@ for (name in scenarios) {
     file_path <- file.path(output_dir, sprintf("validation_data_%s.csv", name))
     data <- read.csv(file_path)
 
-    # LWP script expects specific column names
-    names(data)[names(data) == "time"] <- "Year" # The data is annual
-    names(data)[names(data) == "value_for_manken"] <- "Value"
-    data$TimeIncr <- data$Year
-
     # --- Pre-process the data ---
     data <- RemoveAlphaDetect(data, ColToUse = "Value")
-    data$myDate <- as.Date(paste(data$Year, "-01-01", sep=""))
+    data$myDate <- as.Date(data$Date)
+    data$Year <- format(data$myDate, "%Y")
+    data$TimeIncr <- data$Year # Data is annual
     data <- GetMoreDateInfo(data)
 
-    # --- Run the non-seasonal trend analysis ---
+    # --- Run the non-seasonal trend analysis in AGGREGATED mode ---
     result <- NonSeasonalTrendAnalysis(
         data,
         ValuesToUse = "RawValue",
         Year = "Year",
-        TimeIncrMed = TRUE # Use aggregated workflow
+        TimeIncrMed = TRUE # Use the aggregated workflow
     )
 
     # --- Print the key results ---
-    cat(sprintf("\n--- Scenario: %s ---\n", gsub("_", " ", name)))
+    cat(sprintf("\n--- Scenario: %s Censoring ---\n", name))
     cat(sprintf("%-12s | %-10s | %-10s | %-10s | %s\n", "Method", "P-value", "Z-stat", "Slope", "90% CI"))
     cat(paste(rep("-", 65), collapse = ""), "\n")
 

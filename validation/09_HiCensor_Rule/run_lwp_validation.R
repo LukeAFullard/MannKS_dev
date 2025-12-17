@@ -2,10 +2,10 @@
 
 # Load the LWP-TRENDS functions
 suppressWarnings({
-    source("Example_Files/R/LWPTrends_v2502/LWPTrends_v2502.r")
+    source("../../Example_Files/R/LWPTrends_v2502/LWPTrends_v2502.r")
 })
 
-output_dir <- "validation/09_HiCensor_Rule"
+output_dir <- "."
 
 cat("--- LWP-TRENDS 'HiCensor' Rule Validation ---\n")
 
@@ -13,19 +13,19 @@ cat("--- LWP-TRENDS 'HiCensor' Rule Validation ---\n")
 file_path <- file.path(output_dir, "validation_data_hicensor.csv")
 data <- read.csv(file_path)
 
-# LWP script expects specific column names and needs date info
-names(data)[names(data) == "Value"] <- "Value"
-names(data)[names(data) == "Year"] <- "Year"
+# Pre-process the data
+data <- RemoveAlphaDetect(data, ColToUse = "Value")
+
+# LWP script needs date info
 data$myDate <- as.Date(paste(data$Year, "-01-01", sep=""))
-data <- GetMoreDateInfo(data) # This adds Month, etc.
-data$TimeIncr <- data$Month # Use Month to force aggregation
+data <- GetMoreDateInfo(data)
+data$TimeIncr <- data$Month # Use Month to ensure aggregation
 
 # --- Run analysis with HiCensor = FALSE ---
 cat("\n--- Analysis with HiCensor=FALSE (Default) ---\n")
-# Use TimeIncrMed=TRUE to force aggregation and avoid the bug
 result_default <- NonSeasonalTrendAnalysis(
     data,
-    ValuesToUse = "Value",
+    ValuesToUse = "RawValue",
     Year = "Year",
     HiCensor = FALSE,
     TimeIncrMed = TRUE
@@ -42,7 +42,7 @@ cat(sprintf("%-12s | %-10.4f | %-10.4f | %-10.4f | %s\n",
 cat("\n--- Analysis with HiCensor=TRUE ---\n")
 result_hicensor <- NonSeasonalTrendAnalysis(
     data,
-    ValuesToUse = "Value",
+    ValuesToUse = "RawValue",
     Year = "Year",
     HiCensor = TRUE,
     TimeIncrMed = TRUE
