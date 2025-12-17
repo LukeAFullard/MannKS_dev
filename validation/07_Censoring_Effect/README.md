@@ -1,8 +1,8 @@
 # Validation: 07 - Effect of Censoring on Trend Analysis
 
-This validation example investigates how different levels of left-censoring affect the results of the Mann-Kendall trend test. It compares the output of the Python `MannKenSen` package (using both 'robust' and 'lwp' emulation settings) against the intended output from the `LWP-TRENDS` R script.
+This validation example investigates how different levels of left-censoring affect the results of the Mann-Kendall trend test. It presents the results from the `MannKenSen` package's default robust method and documents a bug in the `LWP-TRENDS` R script that prevents a direct comparison.
 
-**Conclusion:** The `MannKenSen` package correctly handles censored data. A direct comparison with the `LWP-TRENDS` R script was not possible for this non-aggregated scenario due to a bug in the R script that causes it to crash. A detailed analysis of this bug is provided below.
+**Conclusion:** The `MannKenSen` package correctly handles censored data using a statistically robust method. A direct comparison with the `LWP-TRENDS` R script was not possible for this non-aggregated scenario due to a bug in the R script that causes it to crash. A detailed analysis of this bug is provided below.
 
 ## Methodology
 
@@ -11,30 +11,25 @@ A synthetic dataset with a known linear trend was generated. This dataset was th
 The Python script (`censoring_effect_validation.py`) was used to:
 1.  Generate the base data and the censored datasets.
 2.  Save each dataset to a `.csv` file for use by the R script.
-3.  Run the `MannKenSen.trend_test` on each dataset using both the default `'robust'` method and the `'lwp'` emulation method.
+3.  Run the `MannKenSen.trend_test` on each dataset using the default `'robust'` method.
 4.  Generate and save plots for each analysis.
 
-The R script (`run_lwp_validation.R`) was intended to run the `LWP-TRENDS` `NonSeasonalTrendAnalysis` on the same `.csv` files.
+The R script (`run_lwp_validation.R`) was intended to run the `LWP-TRENDS` `NonSeasonalTrendAnalysis` on the same `.csv` files, but it fails due to an internal bug.
 
 ## Python `MannKenSen` Results
 
-The `MannKenSen` package successfully analyzed all datasets.
+The `MannKenSen` package successfully analyzed all datasets using its default robust method.
 
-| Censoring | Method      | P-value | Z-stat   | Slope    | 90% CI             |
-| :-------- | :---------- | :------ | :------- | :------- | :----------------- |
-| **0%**    | Robust      | 0.0000  | 10.5693  | 0.2565   | [0.233, 0.283]     |
-|           | LWP Emul.   | 0.0000  | 10.5693  | 0.2565   | [0.233, 0.283]     |
-| **20%**   | Robust      | 0.0000  | 10.0895  | 0.2563   | [0.212, 0.299]     |
-|           | LWP Emul.   | 0.0000  | 10.0895  | 0.1378   | [0.046, 0.196]     |
-| **40%**   | Robust      | 0.0000  | 9.8291   | 0.1962   | [0.086, 0.295]     |
-|           | LWP Emul.   | 0.0000  | 9.8291   | 0.0000   | [0.000, 0.000]     |
-| **60%**   | Robust      | 0.0000  | 9.8291   | 0.1962   | [0.086, 0.295]     |
-|           | LWP Emul.   | 0.0000  | 9.8291   | 0.0000   | [0.000, 0.000]     |
+| Censoring | Method | P-value | Z-stat   | Slope  | 90% CI         |
+| :-------- | :----- | :------ | :------- | :----- | :------------- |
+| **0%**    | Robust | 0.0000  | 10.5693  | 0.2565 | [0.233, 0.283] |
+| **20%**   | Robust | 0.0000  | 10.0895  | 0.2563 | [0.212, 0.299] |
+| **40%**   | Robust | 0.0000  | 9.8291   | 0.1962 | [0.086, 0.295] |
+| **60%**   | Robust | 0.0000  | 9.8291   | 0.1962 | [0.086, 0.295] |
 
 ### Analysis of Python Results
 
--   The **'robust'** method shows a gradual and expected decrease in the estimated slope as the level of censoring increases. This is statistically sound behavior, as censoring removes information from the dataset, leading to a more conservative (closer to zero) slope estimate.
--   The **'lwp' emulation** method shows a much more dramatic drop in the slope. This is also expected behavior for this specific emulation, which is designed to replicate the LWP-TRENDS heuristic of treating censored data in a way that can significantly flatten the trend line.
+The results show a gradual and expected decrease in the estimated slope as the level of censoring increases. This is statistically sound behavior, as censoring removes information from the dataset, leading to a more conservative (closer to zero) but still robust estimate of the underlying trend.
 
 ---
 

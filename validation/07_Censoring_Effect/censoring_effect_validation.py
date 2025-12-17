@@ -6,7 +6,7 @@ import os
 def main():
     """
     Generate synthetic data with varying levels of censoring, run trend analysis
-    using both 'robust' and 'lwp' methods, and save the data for R validation.
+    using the default 'robust' method, and save the data for R validation.
     """
     # 1. Generate Base Synthetic Data with a Known Trend
     n_points = 100
@@ -24,7 +24,7 @@ def main():
     # 2. Define Censoring Proportions to Test
     censor_proportions = [0.0, 0.20, 0.40, 0.60]
 
-    print("--- Effect of Censoring on Trend Estimation (MannKenSen vs. LWP) ---")
+    print("--- Effect of Censoring on Trend Estimation (MannKenSen Robust Method) ---")
 
     # 3. Loop through each proportion, apply censoring, and run the test
     for prop in censor_proportions:
@@ -63,31 +63,19 @@ def main():
         prepared_data = MannKenSen.prepare_censored_data(censored_data_mixed)
 
         # --- Perform Trend Analysis ---
-        plot_path_robust = os.path.join(output_dir, f"manken_robust_{int(prop*100)}pct.png")
-        result_robust = MannKenSen.trend_test(
+        plot_path = os.path.join(output_dir, f"manken_plot_{int(prop*100)}pct.png")
+        result = MannKenSen.trend_test(
             x=prepared_data,
             t=time_vector,
-            plot_path=plot_path_robust
-        )
-
-        plot_path_lwp = os.path.join(output_dir, f"manken_lwp_{int(prop*100)}pct.png")
-        result_lwp = MannKenSen.trend_test(
-            x=prepared_data,
-            t=time_vector,
-            sens_slope_method='lwp',
-            ci_method='lwp',
-            tie_break_method='lwp',
-            plot_path=plot_path_lwp
+            plot_path=plot_path
         )
 
         # --- Print the comparative results ---
         print(f"\n--- Censoring Level: {prop*100:.0f}% ---")
         print(f"{'Method':<12} | {'P-value':<10} | {'Z-stat':<10} | {'Slope':<10} | {'90% CI'}")
         print("-" * 65)
-        ci_robust = f"[{result_robust.lower_ci:.3f}, {result_robust.upper_ci:.3f}]"
-        print(f"{'Robust':<12} | {result_robust.p:<10.4f} | {result_robust.z:<10.4f} | {result_robust.slope:<10.4f} | {ci_robust}")
-        ci_lwp = f"[{result_lwp.lower_ci:.3f}, {result_lwp.upper_ci:.3f}]"
-        print(f"{'LWP Emul.':<12} | {result_lwp.p:<10.4f} | {result_lwp.z:<10.4f} | {result_lwp.slope:<10.4f} | {ci_lwp}")
+        ci_str = f"[{result.lower_ci:.3f}, {result.upper_ci:.3f}]"
+        print(f"{'Robust':<12} | {result.p:<10.4f} | {result.z:<10.4f} | {result.slope:<10.4f} | {ci_str}")
 
     print("\n" + "="*65)
     print("Validation data and plots saved to:", output_dir)
