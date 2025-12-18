@@ -1,95 +1,113 @@
+
+import os
 import numpy as np
 import pandas as pd
 import MannKenSen as mks
-import os
+import textwrap
+import io
+from contextlib import redirect_stdout
 
-# --- Define Paths ---
-output_dir = 'Examples/15_Regional_Trend_Analysis'
-readme_file = os.path.join(output_dir, 'README.md')
+def generate_readme():
+    """
+    Generates a comprehensive README.md file for Example 15, demonstrating
+    regional trend analysis.
+    """
+    # --- 1. Define Paths and Code Block ---
+    output_dir = os.path.dirname(__file__)
 
-# --- 1. Generate Data ---
-np.random.seed(42)
-sites = ['Site A', 'Site B', 'Site C']
-years = np.arange(2010, 2021)
-n_years = len(years)
-# Site A: Clear increasing trend
-trend_a = np.linspace(0, 5, n_years); noise_a = np.random.normal(0, 1, n_years)
-values_a = 10 + trend_a + noise_a
-# Site B: Weaker increasing trend
-trend_b = np.linspace(0, 2, n_years); noise_b = np.random.normal(0, 1, n_years)
-values_b = 15 + trend_b + noise_b
-# Site C: No clear trend (stable)
-trend_c = np.linspace(0, 0, n_years); noise_c = np.random.normal(0, 1, n_years)
-values_c = 12 + trend_c + noise_c
-# Combine into a single DataFrame
-df_a = pd.DataFrame({'site': 'Site A', 'year': years, 'value': values_a})
-df_b = pd.DataFrame({'site': 'Site B', 'year': years, 'value': values_b})
-df_c = pd.DataFrame({'site': 'Site C', 'year': years, 'value': values_c})
-regional_data = pd.concat([df_a, df_b, df_c], ignore_index=True)
+    code_block = textwrap.dedent("""
+        import numpy as np
+        import pandas as pd
+        import MannKenSen as mks
 
-# --- 2. Run Analyses ---
-site_results = []
-for site in sites:
-    site_data = regional_data[regional_data['site'] == site]
-    result = mks.trend_test(x=site_data['value'], t=site_data['year'])
-    site_results.append(result)
+        # 1. Generate Data for Multiple Sites
+        np.random.seed(42)
+        sites = ['Site A', 'Site B', 'Site C']
+        years = np.arange(2010, 2021)
 
-results_df = pd.DataFrame(site_results)
-results_df['site'] = sites
-regional_result = mks.regional_test(
-    trend_results=results_df,
-    time_series_data=regional_data,
-    site_col='site',
-    value_col='value',
-    time_col='year',
-    s_col='s',
-    c_col='C'
-)
+        # Site A: Clear increasing trend
+        values_a = 10 + np.linspace(0, 5, len(years)) + np.random.normal(0, 1, len(years))
+        # Site B: Weaker increasing trend
+        values_b = 15 + np.linspace(0, 2, len(years)) + np.random.normal(0, 1, len(years))
+        # Site C: No clear trend (stable)
+        values_c = 12 + np.linspace(0, 0, len(years)) + np.random.normal(0, 1, len(years))
 
-# --- 3. Format Results and Generate README ---
-site_a_summary = "- Site A Trend: {}\\n".format(site_results[0].classification)
-site_b_summary = "- Site B Trend: {}\\n".format(site_results[1].classification)
-site_c_summary = "- Site C Trend: {}\\n".format(site_results[2].classification)
-regional_summary = (
-    "- **Regional Trend Direction:** {}\\n"
-    "- **Aggregate Trend Confidence (CT):** {:.4f}\\n"
-    "- **Number of Sites (M):** {}\\n"
-).format(regional_result.DT, regional_result.CT, regional_result.M)
+        # Combine into a single DataFrame
+        df_a = pd.DataFrame({'site': 'Site A', 'year': years, 'value': values_a})
+        df_b = pd.DataFrame({'site': 'Site B', 'year': years, 'value': values_b})
+        df_c = pd.DataFrame({'site': 'Site C', 'year': years, 'value': values_c})
+        regional_data = pd.concat([df_a, df_b, df_c], ignore_index=True)
 
-readme_content = """
+        # 2. Perform Trend Test on Each Site
+        print("--- Individual Site Results ---")
+        site_results = []
+        for site in sites:
+            site_data = regional_data[regional_data['site'] == site]
+            result = mks.trend_test(x=site_data['value'], t=site_data['year'])
+            print(f"{site}: classification='{result.classification}', p={result.p:.4f}, slope={result.slope:.4f}")
+            site_results.append(result)
+
+        # 3. Perform Regional Test
+        print("\\n--- Regional Test Result ---")
+        results_df = pd.DataFrame(site_results)
+        results_df['site'] = sites
+        regional_result = mks.regional_test(
+            trend_results=results_df,
+            time_series_data=regional_data,
+            site_col='site', value_col='value', time_col='year'
+        )
+        print(regional_result)
+    """)
+
+    # --- 2. Execute the Code Block to Get Outputs ---
+    f = io.StringIO()
+    with redirect_stdout(f):
+        exec(code_block, {'np': np, 'pd': pd, 'mks': mks})
+    output_str = f.getvalue().strip()
+
+    # --- 3. Construct the README ---
+    readme_content = f"""
 # Example 15: Regional Trend Analysis
 
 This example demonstrates how to use the `regional_test` function to aggregate trend results from multiple sites to determine if there is a significant trend across an entire region.
 
 ## Key Concepts
-A regional test answers the question: "Is there a general, region-wide trend?" It works by:
-1.  Performing a trend test on each individual site.
-2.  Aggregating the S-statistics and their variances.
-3.  Adjusting for inter-site correlation.
-4.  Performing a final Z-test on the aggregated results.
+A regional test answers the question: "Is there a general, region-wide trend?" It is more powerful than simply averaging the results of individual sites because it properly accounts for the variance of each site's trend and the correlation between sites. The workflow is:
+1.  Perform a standard `trend_test` on each individual site.
+2.  Combine the individual site results and the raw time series data into the `regional_test` function.
 
-## Script: `run_example.py`
-The script simulates a scenario with three sites: two with increasing trends of different strengths and one with no trend. It analyzes each site individually and then passes the results to the `regional_test` function.
+## The Python Script
+The script simulates a scenario with three sites: two with increasing trends of different strengths and one with no trend. It analyzes each site individually and then passes all the results to the `regional_test` function for a final, aggregated analysis.
 
-## Results
-Despite one site showing no trend, the regional test combines the evidence to find an overall trend.
+```python
+{code_block}
+```
+
+## Command Output
+Running the script produces the following output, showing the individual site results first, followed by the final regional test result.
+
+```
+{output_str}
+```
+
+## Interpretation of Results
 
 ### Individual Site Results
-{}
-{}
-{}
+-   **Site A** and **Site B** both show statistically significant increasing trends.
+-   **Site C** shows 'No Trend'.
 
 ### Regional Test Result
-{}
+Despite Site C having no trend, the `regional_test` combines the strong evidence from Sites A and B to conclude that there is a **'Highly Likely Increasing'** trend across the region as a whole. The `DT` (Direction of Trend) field confirms this.
 
-**Conclusion:** The `regional_test` function provides a statistically sound method for assessing large-scale environmental changes by synthesizing trend information from multiple time series.
-""".format(site_a_summary, site_b_summary, site_c_summary, regional_summary)
+**Conclusion:** The `regional_test` function provides a statistically sound method for assessing large-scale environmental changes by synthesizing trend information from multiple, potentially correlated, time series.
+"""
 
-with open(readme_file, 'w') as f:
-    f.write(readme_content)
+    # Write the README file
+    readme_file_path = os.path.join(output_dir, 'README.md')
+    with open(readme_file_path, 'w') as f:
+        f.write(readme_content)
 
-# Clean up the old text file if it exists
-if os.path.exists(os.path.join(output_dir, 'regional_analysis_output.txt')):
-    os.remove(os.path.join(output_dir, 'regional_analysis_output.txt'))
+    print("Successfully generated README for Example 15.")
 
-print("Successfully generated README for Example 15.")
+if __name__ == '__main__':
+    generate_readme()

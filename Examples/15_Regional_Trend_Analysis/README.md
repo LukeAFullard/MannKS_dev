@@ -4,24 +4,79 @@
 This example demonstrates how to use the `regional_test` function to aggregate trend results from multiple sites to determine if there is a significant trend across an entire region.
 
 ## Key Concepts
-A regional test answers the question: "Is there a general, region-wide trend?" It works by:
-1.  Performing a trend test on each individual site.
-2.  Aggregating the S-statistics and their variances.
-3.  Adjusting for inter-site correlation.
-4.  Performing a final Z-test on the aggregated results.
+A regional test answers the question: "Is there a general, region-wide trend?" It is more powerful than simply averaging the results of individual sites because it properly accounts for the variance of each site's trend and the correlation between sites. The workflow is:
+1.  Perform a standard `trend_test` on each individual site.
+2.  Combine the individual site results and the raw time series data into the `regional_test` function.
 
-## Script: `run_example.py`
-The script simulates a scenario with three sites: two with increasing trends of different strengths and one with no trend. It analyzes each site individually and then passes the results to the `regional_test` function.
+## The Python Script
+The script simulates a scenario with three sites: two with increasing trends of different strengths and one with no trend. It analyzes each site individually and then passes all the results to the `regional_test` function for a final, aggregated analysis.
 
-## Results
-Despite one site showing no trend, the regional test combines the evidence to find an overall trend.
+```python
+
+import numpy as np
+import pandas as pd
+import MannKenSen as mks
+
+# 1. Generate Data for Multiple Sites
+np.random.seed(42)
+sites = ['Site A', 'Site B', 'Site C']
+years = np.arange(2010, 2021)
+
+# Site A: Clear increasing trend
+values_a = 10 + np.linspace(0, 5, len(years)) + np.random.normal(0, 1, len(years))
+# Site B: Weaker increasing trend
+values_b = 15 + np.linspace(0, 2, len(years)) + np.random.normal(0, 1, len(years))
+# Site C: No clear trend (stable)
+values_c = 12 + np.linspace(0, 0, len(years)) + np.random.normal(0, 1, len(years))
+
+# Combine into a single DataFrame
+df_a = pd.DataFrame({'site': 'Site A', 'year': years, 'value': values_a})
+df_b = pd.DataFrame({'site': 'Site B', 'year': years, 'value': values_b})
+df_c = pd.DataFrame({'site': 'Site C', 'year': years, 'value': values_c})
+regional_data = pd.concat([df_a, df_b, df_c], ignore_index=True)
+
+# 2. Perform Trend Test on Each Site
+print("--- Individual Site Results ---")
+site_results = []
+for site in sites:
+    site_data = regional_data[regional_data['site'] == site]
+    result = mks.trend_test(x=site_data['value'], t=site_data['year'])
+    print(f"{site}: classification='{result.classification}', p={result.p:.4f}, slope={result.slope:.4f}")
+    site_results.append(result)
+
+# 3. Perform Regional Test
+print("\n--- Regional Test Result ---")
+results_df = pd.DataFrame(site_results)
+results_df['site'] = sites
+regional_result = mks.regional_test(
+    trend_results=results_df,
+    time_series_data=regional_data,
+    site_col='site', value_col='value', time_col='year'
+)
+print(regional_result)
+
+```
+
+## Command Output
+Running the script produces the following output, showing the individual site results first, followed by the final regional test result.
+
+```
+--- Individual Site Results ---
+Site A: classification='Highly Likely Increasing', p=0.0031, slope=0.4618
+Site B: classification='Highly Likely Increasing', p=0.0293, slope=0.2835
+Site C: classification='No Trend', p=0.4363, slope=0.0927
+
+--- Regional Test Result ---
+RegionalTrendResult(M=3, TAU=np.float64(1.0), VarTAU=np.float64(0.02072443088726685), CorrectedVarTAU=np.float64(0.028445554482865915), DT='Increasing', CT=np.float64(0.9984845053743532))
+```
+
+## Interpretation of Results
 
 ### Individual Site Results
-- Site A Trend: Highly Likely Increasing\n
-- Site B Trend: Highly Likely Increasing\n
-- Site C Trend: No Trend\n
+-   **Site A** and **Site B** both show statistically significant increasing trends.
+-   **Site C** shows 'No Trend'.
 
 ### Regional Test Result
-- **Regional Trend Direction:** Increasing\n- **Aggregate Trend Confidence (CT):** 0.9985\n- **Number of Sites (M):** 3\n
+Despite Site C having no trend, the `regional_test` combines the strong evidence from Sites A and B to conclude that there is a **'Highly Likely Increasing'** trend across the region as a whole. The `DT` (Direction of Trend) field confirms this.
 
-**Conclusion:** The `regional_test` function provides a statistically sound method for assessing large-scale environmental changes by synthesizing trend information from multiple time series.
+**Conclusion:** The `regional_test` function provides a statistically sound method for assessing large-scale environmental changes by synthesizing trend information from multiple, potentially correlated, time series.
