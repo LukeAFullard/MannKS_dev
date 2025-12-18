@@ -1,77 +1,100 @@
+
+import os
 import numpy as np
 import pandas as pd
 import MannKenSen as mks
+import textwrap
+import io
+from contextlib import redirect_stdout
 
-# --- 1. Generate Synthetic Data ---
-# This example demonstrates the essential workflow for handling censored data.
-np.random.seed(42)
-n_samples = 80
-dates = pd.date_range(start='2015-01-01', periods=n_samples, freq='QS-OCT')
+def generate_readme():
+    """
+    Generates a comprehensive README.md file for Example 4, demonstrating
+    the workflow for handling censored data.
+    """
+    # --- 1. Define Paths and Code Block ---
+    output_dir = os.path.dirname(__file__)
 
-# Create data with an upward trend and some noise
-time_as_years = np.arange(n_samples) / 4.0 # Quarterly data
-trend = 0.3 * time_as_years
-noise = np.random.normal(0, 0.7, n_samples)
-values = (5 + trend + noise).astype(object)
+    code_block = textwrap.dedent("""
+        import numpy as np
+        import pandas as pd
+        import MannKenSen as mks
+        import os
 
-# Introduce some left-censored ('<') and right-censored ('>') values
-values[10] = '<2.5'
-values[25] = '<3.0'
-values[40] = '<3.0'
-values[60] = '>12.0'
-values[70] = '>12.0'
+        # 1. Generate Synthetic Data
+        np.random.seed(42)
+        n_samples = 80
+        dates = pd.date_range(start='2015-01-01', periods=n_samples, freq='QS-OCT')
 
-# --- 2. Pre-process the Censored Data ---
-# Before running the trend test, the raw data must be processed using the
-# `prepare_censored_data` function. This function takes your raw data
-# (which can be a mix of numbers and strings) and converts it into a
-# uniform format that the trend testing functions can understand.
-# It returns a DataFrame with 'value', 'censored', and 'cen_type' columns.
-prepared_data = mks.prepare_censored_data(x=values)
+        # Create data with an upward trend
+        time_as_years = np.arange(n_samples) / 4.0
+        trend = 0.3 * time_as_years
+        noise = np.random.normal(0, 0.7, n_samples)
+        values = (5 + trend + noise)
 
-# --- 3. Perform the Trend Test with Plotting ---
-# The trend_test is then called on this prepared DataFrame. The package
-# automatically detects the censored data columns and applies the correct
-# statistical methods.
-result = mks.trend_test(
-    x=prepared_data,
-    t=dates,
-    plot_path='Examples/04_Handling_Censored_Data/censored_trend_plot.png'
-)
+        # Introduce censored values as strings
+        values_str = [f"{v:.2f}" for v in values]
+        values_str[10] = '<2.5'
+        values_str[25] = '<3.0'
+        values_str[40] = '<3.0'
+        values_str[60] = '>12.0'
+        values_str[70] = '>12.0'
 
-# --- 4. Format Results and Generate README ---
-SECONDS_PER_YEAR = 365.25 * 24 * 60 * 60
-annual_slope = result.slope * SECONDS_PER_YEAR
-median_val = np.median(prepared_data['value'])
-annual_percent_change = (annual_slope / median_val) * 100
+        # 2. Pre-process the Censored Data
+        print("--- Prepared Data (first 5 rows) ---")
+        prepared_data = mks.prepare_censored_data(x=values_str)
+        print(prepared_data.head())
 
-result_summary = f"""
-- **Trend Classification:** {result.classification}
-- **P-value (p):** {result.p:.4f}
-- **Annual Sen's Slope:** {annual_slope:.4f} (units per year)
-- **Proportion of Data Censored:** {result.prop_censored:.2%}
-"""
+        # 3. Perform the Trend Test
+        print("\\n--- Trend Test Result ---")
+        plot_path = 'censored_trend_plot.png'
+        result = mks.trend_test(x=prepared_data, t=dates, plot_path=plot_path)
+        print(result)
+    """)
 
-readme_content = f"""
+    # --- 2. Execute the Code Block to Get Outputs ---
+    f = io.StringIO()
+    original_dir = os.getcwd()
+    os.chdir(output_dir)
+    with redirect_stdout(f):
+        exec(code_block, {'np': np, 'pd': pd, 'mks': mks, 'os': os})
+    os.chdir(original_dir)
+    output_str = f.getvalue().strip()
+
+    # --- 3. Construct the README ---
+    readme_content = f"""
 # Example 4: Handling Basic Censored Data
 
 This example demonstrates the essential workflow for handling time series data that contains censored values (e.g., values reported as below or above a laboratory detection limit, such as `"<5"` or `">50"`).
 
 ## Key Concepts
 
-The statistical methods in `MannKenSen` are specifically designed to handle censored data correctly. However, you must pre-process your data before running the trend test. This is a deliberate design choice to ensure the user is aware of the data conversion process.
+The statistical methods in `MannKenSen` are designed to handle censored data correctly. However, you must first pre-process your data. This is a deliberate design choice to ensure you are aware of the data conversion process.
 
 The workflow is a two-step process:
-1.  **`mks.prepare_censored_data(x)`:** This function takes your raw, mixed-type data (numbers and strings) and returns a `pandas.DataFrame` with three columns: `value` (the numeric limit), `censored` (boolean), and `cen_type` (`'lt'` for left-censored, `'gt'` for right-censored, or `'not'` for uncensored).
-2.  **`mks.trend_test(x, t)`:** You then pass this **prepared DataFrame** as the `x` argument to the trend test function. The function will automatically detect the special format and apply the appropriate censored-data statistics.
+1.  **`mks.prepare_censored_data(x)`:** This function takes your raw, mixed-type data and returns a `pandas.DataFrame` with three columns: `value` (the numeric limit), `censored` (boolean), and `cen_type` (`'lt'` for left-censored, `'gt'` for right-censored, or `'not'` for uncensored).
+2.  **`mks.trend_test(x, t)`:** You then pass this **prepared DataFrame** as the `x` argument to the trend test function. The function will automatically detect this special format and apply the appropriate censored-data statistics.
 
-## Script: `run_example.py`
-The script generates a synthetic quarterly dataset with an upward trend. It then introduces both left-censored (`<`) and right-censored (`>`) values. It follows the two-step workflow described above and saves a plot of the results. Finally, it dynamically generates this README file.
+## The Python Script
 
-## Results
-The key results from the analysis are summarized below.
+The script below generates a synthetic quarterly dataset with an upward trend, introduces both left-censored (`<`) and right-censored (`>`) values, and then follows the two-step workflow.
 
-{result_summary}
+```python
+{code_block}
+```
+
+## Command Output
+
+Running the script first prints the head of the `prepared_data` DataFrame, showing how the raw strings have been converted. It then prints the final trend test result.
+
+```
+{output_str}
+```
+
+## Interpretation of Results
+
+*   **Data Preparation:** The first part of the output shows the structured DataFrame created by `prepare_censored_data`. Notice how `'<2.5'` is converted into a row with `value=2.5`, `censored=True`, and `cen_type='lt'`.
+*   **Trend Result:** Despite some of the data being censored, the test correctly identifies the underlying **'Highly Likely Increasing'** trend with a very small p-value. The `prop_censored` field in the result confirms that `6.25%` of the data was censored.
 
 ### Plot Interpretation (`censored_trend_plot.png`)
 The plot provides a clear visualization of the censored data:
@@ -79,14 +102,17 @@ The plot provides a clear visualization of the censored data:
 -   **Left-Censored Data (`<`):** Plotted as green triangles pointing downwards.
 -   **Right-Censored Data (`>`):** Plotted as green triangles pointing upwards.
 
-This allows for a quick and intuitive assessment of how the censored data is distributed within the time series.
-
 ![Censored Trend Plot](censored_trend_plot.png)
 
 **Conclusion:** Handling censored data is a core feature of the `MannKenSen` package. By using the simple `prepare_censored_data` -> `trend_test` workflow, you can perform a statistically robust trend analysis on complex, real-world datasets.
 """
 
-with open('Examples/04_Handling_Censored_Data/README.md', 'w') as f:
-    f.write(readme_content)
+    # Write the README file
+    readme_file_path = os.path.join(output_dir, 'README.md')
+    with open(readme_file_path, 'w') as f:
+        f.write(readme_content)
 
-print("Successfully generated README and plot for Example 4.")
+    print("Successfully generated README and plot for Example 4.")
+
+if __name__ == '__main__':
+    generate_readme()

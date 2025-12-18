@@ -2,101 +2,115 @@
 import os
 import numpy as np
 import pandas as pd
-import MannKenSen
+import MannKenSen as mks
+import textwrap
+import io
+from contextlib import redirect_stdout
 
 def generate_readme():
     """
-    Generates the README.md file for this example, demonstrating the difference
-    between 'robust' and 'lwp' methods for right-censored data.
+    Generates a comprehensive README.md for Example 9, clarifying the
+    methodological differences between 'robust' and 'lwp' for right-censored data.
     """
-    # 1. Generate Synthetic Data with right-censored values
-    # The trend is weak, making the method choice impactful.
-    np.random.seed(15)
-    t = np.arange(2010, 2021)
-    x_raw = np.linspace(5, 7, len(t)) + np.random.normal(0, 0.8, len(t))
-    x_censored = [f">{val:.1f}" if val > 6.5 else f"{val:.1f}" for val in x_raw]
-    x_censored[1] = '>7.0' # Add a higher censored value
+    # --- 1. Define Paths and Code Block ---
+    output_dir = os.path.dirname(__file__)
 
-    # 2. Prepare the data
-    x_prepared = MannKenSen.prepare_censored_data(x_censored)
+    code_block = textwrap.dedent("""
+        import numpy as np
+        import pandas as pd
+        import MannKenSen as mks
 
-    # 3. Run trend test with both methods
-    result_robust = MannKenSen.trend_test(x_prepared, t, mk_test_method='robust')
-    result_lwp = MannKenSen.trend_test(x_prepared, t, mk_test_method='lwp')
+        # 1. Generate Data with Right-Censored Values
+        x_censored = ['5.1', '>7.0', '5.3', '6.0', '6.4', '>6.7', '6.2', '6.3', '>7.1', '6.8', '>7.2']
+        t = np.arange(2010, 2021)
 
-    # --- Format results for display ---
-    robust_str = f"p={result_robust.p:.4f}, z={result_robust.z:.4f}, classification='{result_robust.classification}'"
-    lwp_str = f"p={result_lwp.p:.4f}, z={result_lwp.z:.4f}, classification='{result_lwp.classification}'"
+        # 2. Prepare the data for analysis
+        x = mks.prepare_censored_data(x_censored)
 
-    # --- Generate README ---
+        # 3. Run analysis with the 'robust' method (Default)
+        print("--- Analysis with mk_test_method='robust' ---")
+        result_robust = mks.trend_test(x, t, mk_test_method='robust', alpha=0.1)
+        print(result_robust)
+
+        # 4. Run analysis with the 'lwp' method
+        print("\\n--- Analysis with mk_test_method='lwp' ---")
+        result_lwp = mks.trend_test(x, t, mk_test_method='lwp', alpha=0.1)
+        print(result_lwp)
+    """)
+
+    # --- 2. Execute the Code Block to Get Outputs ---
+    f = io.StringIO()
+    exec_globals = {'np': np, 'pd': pd, 'mks': mks}
+    with redirect_stdout(f):
+        exec(code_block, exec_globals)
+    output_str = f.getvalue().strip()
+
+    result_robust = exec_globals['result_robust']
+    result_lwp = exec_globals['result_lwp']
+
+    # --- 3. Construct the README ---
     readme_content = f"""
 # Example 9: Comparing Right-Censored Data Methods (`mk_test_method`)
 
-When a dataset contains right-censored (greater-than) values (e.g., `>10`), the `MannKenSen` package offers two distinct methods for handling them in the Mann-Kendall test, controlled by the `mk_test_method` parameter. This choice can have a significant impact on the results.
+When a dataset contains right-censored (greater-than) values like `>10`, the true value is unknown. The `MannKenSen` package provides two distinct methods for handling this uncertainty in the Mann-Kendall test, controlled by the `mk_test_method` parameter.
 
-This example provides a direct comparison between the two methods.
+This example provides a direct comparison of these two methods, with clear justifications for their behavior.
 
-## 1. Data Generation
+## The Python Script
 
-We create a small dataset with a weak increasing trend and several right-censored values.
+The following script creates a dataset with a weak increasing trend and several right-censored values. It then runs the trend test twice: once with the default `'robust'` method, and once with the `'lwp'` method. A lenient `alpha=0.1` is used to better highlight the difference.
 
 ```python
-import numpy as np
-import MannKenSen
-
-# Generate data with right-censored values
-x_censored = ['5.1', '>7.0', '5.3', '6.0', '6.4', '>6.7', '6.2', '6.3', '>7.1', '6.8', '>7.2']
-t = np.arange(2010, 2021)
-
-# Prepare the data for analysis
-x = MannKenSen.prepare_censored_data(x_censored)
+{code_block}
 ```
 
-## 2. Method Comparison
+## Command Output
 
-We run the `trend_test` on the same data twice, changing only the `mk_test_method`.
+Running the script produces the following results for each method:
+
+```
+{output_str}
+```
+
+## Interpretation of Results
 
 ### Method 1: `mk_test_method='robust'` (Default)
 
-This is the default and statistically recommended method. It handles right-censored data non-parametrically.
+**Justification:** This is the default and most statistically sound method. It is a non-parametric approach that relies only on rank information and does not invent or substitute data.
 
--   A right-censored value (e.g., `>7`) is treated as having a rank higher than any observed, non-censored value less than 7.
--   When comparing `>7` to a non-censored value like `8`, the outcome is considered **ambiguous** (it contributes 0 to the S-statistic) because 8 could be less than, equal to, or greater than the true (unknown) value.
+**How it works:**
+-   A right-censored value (e.g., `>7.0`) is treated as having a rank higher than any observed, non-censored value below 7.0.
+-   When comparing `>7.0` to a non-censored value like `8.0`, the result is **ambiguous**. We cannot know if the true value of `>7.0` is less than, equal to, or greater than 8.0. In these cases, the `'robust'` method assigns a score of 0 to the comparison, making no assumption.
 
-```python
-result_robust = MannKenSen.trend_test(x, t, mk_test_method='robust')
-print(result_robust)
-```
-**Result (`robust`):** `{robust_str}`
+In our dataset, this ambiguity reduces the overall evidence for a trend, leading to a higher p-value (`{result_robust.p:.4f}`) and a **`{result_robust.classification}`** classification.
 
 ### Method 2: `mk_test_method='lwp'`
 
-This method replicates a heuristic used in the LWP-TRENDS R script. It is less statistically pure but is provided for backward compatibility.
+**Justification:** This method replicates a heuristic from the LWP-TRENDS R script. It is provided for users who need to reproduce results from that specific software. It is not recommended for general scientific use because it involves data substitution.
 
--   It finds the maximum right-censored detection limit in the dataset (in this case, 7.2).
--   It **replaces all right-censored values** with a number slightly larger than this maximum (e.g., `7.3`).
--   It then treats these substituted values as regular, non-censored numbers. This eliminates the ambiguity described above.
+**How it works:**
+-   First, it scans the entire dataset to find the highest right-censored detection limit (in this case, `7.2` from `>7.2`).
+-   It then **replaces all right-censored values** with a single, arbitrary number that is slightly larger than this maximum (e.g., `7.3`).
+-   Finally, it treats these substituted values as if they were true, non-censored measurements.
 
-```python
-result_lwp = MannKenSen.trend_test(x, t, mk_test_method='lwp')
-print(result_lwp)
-```
-**Result (`lwp`):** `{lwp_str}`
+This process eliminates all ambiguity, but it does so by inventing data. In our example, this substitution strengthens the apparent trend, leading to a lower p-value (`{result_lwp.p:.4f}`) and a **`{result_lwp.classification}`** classification.
 
-## 3. Conclusion
+### Conclusion
 
-The **`'robust'`** method, being more statistically conservative, correctly identifies **'{result_robust.classification}'** in this ambiguous dataset.
+| Method   | Statistical Approach | Recommendation                               |
+|----------|----------------------|----------------------------------------------|
+| **`robust`** | Purely rank-based    | **Recommended for most scientific applications.** |
+| **`lwp`**    | Data substitution    | Use only for backward compatibility.         |
 
-The **`'lwp'`** method, by substituting values and removing ambiguity, finds a **'{result_lwp.classification}'**. While this may seem more sensitive, it is based on a heuristic (value substitution) rather than a purely rank-based statistical approach.
-
-For most scientific applications, the default **`'robust'`** method is the recommended choice.
+For rigorous scientific analysis, the default **`'robust'`** method is the superior choice because it does not make arbitrary assumptions about the true values of the censored data.
 """
 
-    # Write to file
-    filepath = os.path.join(os.path.dirname(__file__), 'README.md')
-    with open(filepath, 'w') as f:
+    # Write the README file
+    readme_file_path = os.path.join(output_dir, 'README.md')
+    with open(readme_file_path, 'w') as f:
         f.write(readme_content)
-    print("Generated README.md for Example 9.")
+
+    print(f"Successfully generated README for Example 9.")
 
 if __name__ == '__main__':
     generate_readme()

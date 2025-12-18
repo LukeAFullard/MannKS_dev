@@ -1,69 +1,88 @@
+
+import os
 import numpy as np
 import pandas as pd
 import MannKenSen as mks
-import os
+import textwrap
+import io
+from contextlib import redirect_stdout
 
-# --- Define Paths ---
-output_dir = 'Examples/12_Censored_Data_Multipliers'
-readme_file = os.path.join(output_dir, 'README.md')
+def generate_readme():
+    """
+    Generates a comprehensive README.md file for Example 12, explaining
+    the impact of censored data multipliers.
+    """
+    # --- 1. Define Paths and Code Block ---
+    output_dir = os.path.dirname(__file__)
 
-# --- 1. Generate and Pre-process Data ---
-np.random.seed(42)
-dates = pd.to_datetime(pd.to_datetime(np.arange(2010, 2020), format='%Y'))
-values = ['<2', '3', '<4', '5', '6', '7', '<8', '9', '10', '11']
-prepared_data = mks.prepare_censored_data(values)
+    code_block = textwrap.dedent("""
+        import numpy as np
+        import pandas as pd
+        import MannKenSen as mks
 
-# --- 2. Run Analyses ---
-result_default = mks.trend_test(x=prepared_data, t=dates)
-result_custom = mks.trend_test(x=prepared_data, t=dates, lt_mult=0.75)
+        # 1. Generate and Pre-process Data
+        dates = pd.to_datetime(pd.to_datetime(np.arange(2010, 2020), format='%Y'))
+        values = ['<2', '3', '<4', '5', '6', '7', '<8', '9', '10', '11']
+        prepared_data = mks.prepare_censored_data(values)
 
-# --- 3. Format Results and Generate README ---
-annual_slope_default = result_default.slope * 365.25 * 24 * 60 * 60
-default_summary = (
-    "- **Annual Slope:** {:.4f}\\n"
-    "- **P-value:** {:.4f}\\n"
-    "- **S-statistic:** {}\\n"
-).format(annual_slope_default, result_default.p, result_default.s)
+        # 2. Run with default multiplier (lt_mult=0.5)
+        print("--- Analysis with Default Multiplier (lt_mult=0.5) ---")
+        result_default = mks.trend_test(x=prepared_data, t=dates)
+        print(f"P-value={result_default.p:.4f}, S-statistic={result_default.s}, Slope={result_default.slope * 365.25 * 24 * 60 * 60:.4f}")
 
-annual_slope_custom = result_custom.slope * 365.25 * 24 * 60 * 60
-custom_summary = (
-    "- **Annual Slope:** {:.4f}\\n"
-    "- **P-value:** {:.4f}\\n"
-    "- **S-statistic:** {}\\n"
-).format(annual_slope_custom, result_custom.p, result_custom.s)
+        # 3. Run with a custom multiplier
+        print("\\n--- Analysis with Custom Multiplier (lt_mult=0.75) ---")
+        result_custom = mks.trend_test(x=prepared_data, t=dates, lt_mult=0.75)
+        print(f"P-value={result_custom.p:.4f}, S-statistic={result_custom.s}, Slope={result_custom.slope * 365.25 * 24 * 60 * 60:.4f}")
+    """)
 
-readme_content = """
+    # --- 2. Execute the Code Block to Get Outputs ---
+    f = io.StringIO()
+    with redirect_stdout(f):
+        exec(code_block, {'np': np, 'pd': pd, 'mks': mks})
+    output_str = f.getvalue().strip()
+
+    # --- 3. Construct the README ---
+    readme_content = f"""
 # Example 12: The Impact of Censored Data Multipliers
 
-This example explains the `lt_mult` and `gt_mult` parameters, which are used for sensitivity analysis of the Sen's slope calculation with censored data.
+This example explains the `lt_mult` and `gt_mult` parameters, which are used for sensitivity analysis of the Sen's slope calculation when censored data is present.
 
 ## Key Concepts
-The Sen's slope calculation requires numeric values. For censored data, a substitution is made:
--   `lt_mult` (default `0.5`): A value like `'<10'` is replaced by `10 * lt_mult`.
--   `gt_mult` (default `1.0`): A value like `'>50'` is replaced by `50 * gt_mult`.
+The Sen's slope calculation requires numeric values. For censored data, a substitution must be made when a censored value is compared to another censored value.
+-   `lt_mult` (default `0.5`): A value like `'<10'` is substituted with `10 * 0.5 = 5`.
+-   `gt_mult` (default `1.0`): A value like `'>50'` is substituted with `50 * 1.0 = 50`.
 
-Changing these parameters **does not** affect the Mann-Kendall significance test (p-value, S-statistic), which is rank-based. It only affects the slope's magnitude.
+**Crucially, these multipliers only affect the Sen's slope calculation.** They **do not** affect the Mann-Kendall significance test (the p-value and S-statistic), which is based on rank comparisons and does not substitute values.
 
-## Script: `run_example.py`
+## The Python Script
 The script analyzes a simple censored dataset twice: once with the default `lt_mult=0.5` and once with `lt_mult=0.75`.
 
-## Results
-The p-value and S-statistic are identical in both runs, as expected. The slope may or may not change depending on the data's structure.
+```python
+{code_block}
+```
 
-### Default Multiplier (`lt_mult=0.5`)
-{}
+## Command Output
+Running the script produces the following results:
 
-### Custom Multiplier (`lt_mult=0.75`)
-{}
+```
+{output_str}
+```
 
-**Conclusion:** The `lt_mult` and `gt_mult` parameters are specialized tools for sensitivity analysis of the Sen's slope magnitude, without altering the trend's significance.
-""".format(default_summary, custom_summary)
+## Interpretation of Results
+As expected, the **P-value** and **S-statistic** are identical in both runs. The underlying Mann-Kendall test for significance is unaffected by the multiplier.
 
-with open(readme_file, 'w') as f:
-    f.write(readme_content)
+However, the **Slope** is different. By changing `lt_mult` from `0.5` to `0.75`, we increased the substituted values for the censored data points (e.g., `'<2'` becomes `1.5` instead of `1.0`). This change was enough to shift the median of all pairwise slopes, resulting in a slightly higher overall Sen's slope.
 
-# Clean up the old text file if it exists
-if os.path.exists(os.path.join(output_dir, 'multipliers_output.txt')):
-    os.remove(os.path.join(output_dir, 'multipliers_output.txt'))
+**Conclusion:** The `lt_mult` and `gt_mult` parameters are specialized tools. They should not be used to "get a better trend," but rather for sensitivity analysis to understand how much the magnitude of the Sen's slope depends on the assumptions made about the censored data.
+"""
 
-print("Successfully generated README for Example 12.")
+    # Write the README file
+    readme_file_path = os.path.join(output_dir, 'README.md')
+    with open(readme_file_path, 'w') as f:
+        f.write(readme_content)
+
+    print("Successfully generated README for Example 12.")
+
+if __name__ == '__main__':
+    generate_readme()

@@ -1,59 +1,82 @@
+
+import os
 import numpy as np
 import MannKenSen as mks
+import textwrap
+import io
+from contextlib import redirect_stdout
 
-# --- 1. Generate Synthetic Data ---
-# This example demonstrates the simplest use case: a non-seasonal trend test
-# on a dataset with a simple numeric time vector.
-np.random.seed(42)
-n_samples = 50
-time = np.arange(n_samples)
+def generate_readme():
+    """
+    Generates a comprehensive README.md file for Example 2, demonstrating a
+    basic non-seasonal trend test with a numeric time vector.
+    """
+    # --- 1. Define Paths and Code Block ---
+    output_dir = os.path.dirname(__file__)
 
-# Create data with a clear upward trend (slope of approx. 0.1) and add noise
-trend = 0.1 * time
-noise = np.random.normal(0, 0.5, n_samples)
-values = trend + noise
+    code_block = textwrap.dedent("""
+        import numpy as np
+        import MannKenSen as mks
 
-# --- 2. Perform the Trend Test ---
-# Call the trend_test function with the data.
-# Since the data is not censored, we don't need to pre-process it.
-result = mks.trend_test(x=values, t=time)
+        # 1. Generate Synthetic Data
+        # This demonstrates the simplest use case with a numeric time vector.
+        np.random.seed(42)
+        n_samples = 50
+        time = np.arange(n_samples)
 
-# --- 3. Generate README ---
-# The results are formatted into a string to be embedded in the README.
-result_summary = f"""
-- **Trend Classification:** {result.classification}
-- **Is Trend Significant? (h):** {result.h}
-- **P-value (p):** {result.p:.4f}
-- **Sen's Slope:** {result.slope:.4f}
-- **Mann-Kendall Score (s):** {result.s}
-- **Kendall's Tau:** {result.Tau:.4f}
-"""
+        # Create data with a clear upward trend (slope of approx. 0.1)
+        values = (0.1 * time) + np.random.normal(0, 0.5, n_samples)
 
-readme_content = f"""
+        # 2. Perform the Trend Test
+        result = mks.trend_test(x=values, t=time)
+
+        # 3. Print the full result
+        print(result)
+    """)
+
+    # --- 2. Execute the Code Block to Get Outputs ---
+    f = io.StringIO()
+    with redirect_stdout(f):
+        exec(code_block, {'np': np, 'mks': mks})
+    output_str = f.getvalue().strip()
+
+    # --- 3. Construct the README ---
+    readme_content = f"""
 # Example 2: Basic Non-Seasonal Trend Test (Numeric Time)
 
-This example demonstrates the simplest use case of the `MannKenSen` package: performing a non-seasonal trend test on a dataset with a simple numeric time vector.
+This example demonstrates the simplest use case of the `MannKenSen` package: performing a non-seasonal trend test on a dataset with a simple numeric time vector (e.g., `[0, 1, 2, ...]`).
 
-## Script: `run_example.py`
-The script performs the following actions:
-1.  Generates a synthetic dataset with 50 data points, a clear upward trend, and a simple integer time vector (`t = [0, 1, 2, ...]`).
-2.  Calls the `mks.trend_test` function to perform the analysis.
-3.  Captures the key results and dynamically generates this `README.md` file, embedding the results below.
+## The Python Script
 
-## Results
-The `trend_test` function returns a `namedtuple` containing the full results of the analysis. The most critical fields for interpretation are listed below.
+The following script generates 50 data points with a clear upward trend and runs the `trend_test` function to perform the analysis.
 
-{result_summary}
+```python
+{code_block}
+```
 
-### Interpretation
--   The **p-value** is very low (well below 0.05), and `h` is `True`, indicating a statistically significant trend.
--   The **Sen's Slope** is positive, confirming the trend is increasing. The value (`~0.1`) is the calculated rate of change, which is consistent with the trend we added to the synthetic data.
--   The **Classification** of "Highly Likely Increasing" provides a clear, human-readable summary of the result.
+## Command Output
+
+Running the script prints the full `Mann_Kendall_Test` namedtuple containing all the results of the analysis.
+
+```
+{output_str}
+```
+
+## Interpretation of Results
+The most critical fields for a quick interpretation are:
+-   **`p`**: The p-value is extremely low (close to zero), which is well below the standard significance level of 0.05. This indicates a **statistically significant** trend.
+-   **`slope`**: The Sen's slope is `~0.1`. Since it's positive, the trend is **increasing**. The value is the estimated rate of change per unit of time.
+-   **`classification`**: The final classification of **'Highly Likely Increasing'** provides a clear, human-readable summary, confirming the significant increasing trend.
 
 **Conclusion:** This basic example shows the fundamental workflow for performing a trend test on simple numeric data.
 """
 
-with open('Examples/02_Basic_Non_Seasonal_Numeric/README.md', 'w') as f:
-    f.write(readme_content)
+    # Write the README file
+    readme_file_path = os.path.join(output_dir, 'README.md')
+    with open(readme_file_path, 'w') as f:
+        f.write(readme_content)
 
-print("Successfully generated README for Example 2.")
+    print("Successfully generated README for Example 2.")
+
+if __name__ == '__main__':
+    generate_readme()
