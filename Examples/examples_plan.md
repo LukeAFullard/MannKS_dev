@@ -40,13 +40,13 @@ Each example will be self-contained in its own directory within `Examples/` and 
 - **Goal:** Explain and demonstrate the `hicensor` rule for mitigating bias from changing detection limits.
 - **Dataset:** A time series where the censoring level (`<X`) improves (decreases) over time.
 
-#### Example 8: Aggregation for Tied Timestamps
-- **Goal:** Show how to resolve data with multiple measurements at the exact same timestamp.
-- **Comparison:** `agg_method` with `'median'`, `'robust_median'`, and `'middle'`.
+#### Example 8: Aggregation for Tied and Clustered Data
+- **Goal:** Show how to resolve data with multiple measurements at the same timestamp (tied) and demonstrate temporal aggregation for irregularly sampled data (clustered).
+- **Comparison:** `agg_method` with `'median'`, `'robust_median'`, `'middle'`, `'none'`, and `'lwp'`.
 
-#### Example 9: Aggregation for Clustered Data
-- **Goal:** Demonstrate how temporal aggregation (`agg_method='lwp'`) provides a more robust slope for irregularly sampled data.
-- **Comparison:** `agg_method='none'` vs. `agg_method='lwp'`.
+#### Example 9: Comparing Right-Censored Data Methods (`mk_test_method`)
+- **Goal:** Demonstrate and explain the difference between the `'robust'` and `'lwp'` methods for handling right-censored data.
+- **Comparison:** `mk_test_method='robust'` vs. `mk_test_method='lwp'`.
 
 #### Example 10: Handling Data with Multiple Censoring Levels
 - **Goal:** Showcase the robustness of the package with complex, real-world censored data.

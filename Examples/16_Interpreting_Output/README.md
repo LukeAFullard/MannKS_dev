@@ -16,7 +16,7 @@ import MannKenSen
 np.random.seed(42)
 n = 50
 t = pd.to_datetime(pd.date_range(start='2000-01-01', periods=n, freq='YE'))
-x = np.linspace(0, 10, n) + np.random.normal(0, 1.0, n)
+x = np.linspace(0, 10, n) + np.random.normal(0.1, 1.0, n)
 
 # Run the Trend Test
 result = MannKenSen.trend_test(x, t)
@@ -29,7 +29,7 @@ print(result)
 The test returns a `namedtuple` object with the following values:
 
 ```
-trend: increasing\nh: True\np: 0.0000\nz: 8.2645\nTau: 0.8073\ns: 989.0\nvar_s: 14291.6667\nslope: 0.0000 (units/sec), 0.1917 (units/year)\nintercept: -5.8044\nlower_ci: 0.1723 (units/year)\nupper_ci: 0.2110 (units/year)\nC: 1.0000\nCd: 0.0000\nclassification: Highly Likely Increasing\nanalysis_notes: ['WARNING: Sen slope based on tied non-censored values']\nsen_probability: 0.0000\nsen_probability_max: 0.0000\nsen_probability_min: 0.0000\nprop_censored: 0.00%\nprop_unique: 100.00%\nn_censor_levels: 0
+trend: increasing\nh: True\np: 0.0000\nz: 8.2645\nTau: 0.8073\ns: 989.0\nvar_s: 14291.6667\nslope: 0.0000 (units/sec), 0.1917 (units/year)\nintercept: -5.7044\nlower_ci: 0.1723 (units/year)\nupper_ci: 0.2110 (units/year)\nC: 1.0000\nCd: 0.0000\nclassification: Highly Likely Increasing\nanalysis_notes: []\nsen_probability: 0.0000\nsen_probability_max: 0.0000\nsen_probability_min: 0.0000\nprop_censored: 0.00%\nprop_unique: 100.00%\nn_censor_levels: 0
 ```
 
 ## 3. Explanation of Each Field
@@ -58,7 +58,7 @@ Here is a breakdown of what each field means:
 
 ### Confidence Scores
 
--   **`C`** (`float`): The confidence in the trend direction, calculated as `1 - p`. A value of 0.98 means there is a 98% confidence that a trend exists in some direction.
+-   **`C`** (`float`): The confidence in the trend direction, calculated as `1 - p / 2`. A value of 0.98 means there is a 98% confidence that a trend exists in some direction. This represents one-sided confidence based on a two-sided p-value.
 -   **`Cd`** (`float`): The confidence that the trend is **decreasing**. For an increasing trend, this value will be very small. For a decreasing trend, it will be close to 1.0.
 
 ### Sen's Slope Probabilities
