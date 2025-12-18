@@ -56,6 +56,9 @@ def seasonal_trend_test(
               statistically robust and may produce biased results. A `UserWarning`
               will be issued in this case.
             - 'none' (default): performs analysis on all data points.
+            - 'lwp': Replicates the LWP-TRENDS R script's aggregation by selecting
+                     a single observation for each time increment. Provided for
+                     backward compatibility and validation.
             - 'median': (LWP method) uses the median of values and times.
             - 'robust_median': uses a more statistically robust median for
                                censored data. Note: The logic to determine
@@ -73,19 +76,14 @@ def seasonal_trend_test(
         gt_mult (float): The multiplier for right-censored data, **used only
                          for the Sen's slope calculation** (default 1.1).
                          This does not affect the Mann-Kendall test itself.
-        sens_slope_method (str): The method for handling ambiguous slopes in censored data
-                                 and for data aggregation when calculating the Sen's slope.
-            - 'nan' (default): Calculates slope on all available data points and sets
-                               ambiguous slopes (e.g., between two left-censored
+        sens_slope_method (str): The method for handling ambiguous slopes in censored data.
+            - 'nan' (default): Sets ambiguous slopes (e.g., between two left-censored
                                values) to `np.nan`, effectively removing them from the
                                median slope calculation. This is a statistically neutral
                                approach.
-            - 'lwp': Replicates the LWP-TRENDS R script's methodology by first
-                     aggregating the data to a single observation per time
-                     increment (e.g., month-year) and then calculating the slope.
-                     It also sets ambiguous censored slopes to 0. This method is
-                     provided for backward compatibility and validation against the
-                     R script.
+            - 'lwp': Sets ambiguous slopes to 0, mimicking the LWP-TRENDS R script.
+                     This may bias the slope towards zero and is primarily available
+                     for replicating results from that script.
         tau_method (str): The method for calculating Kendall's Tau ('a' or 'b').
                           Default is 'b', which accounts for ties in the data and is
                           the recommended method.
@@ -174,7 +172,7 @@ def seasonal_trend_test(
     ])
 
     # --- Method String Validation ---
-    valid_agg_methods = ['none', 'median', 'robust_median', 'middle', 'middle_lwp']
+    valid_agg_methods = ['none', 'median', 'robust_median', 'middle', 'middle_lwp', 'lwp']
     if agg_method not in valid_agg_methods:
         raise ValueError(f"Invalid `agg_method`. Must be one of {valid_agg_methods}.")
 
@@ -209,8 +207,11 @@ def seasonal_trend_test(
                    np.nan, np.nan, np.nan, 0, 0, 0)
 
     # --- Aggregation Logic ---
-    if agg_method != 'none':
-        if data_filtered['censored'].any() and agg_method != 'robust_median':
+    if agg_method == 'lwp':
+        # The 'lwp' method uses a specific aggregation that chooses one value per time increment.
+        data_filtered = _value_for_time_increment(data_filtered, is_datetime, season_type)
+    elif agg_method != 'none':
+        if data_filtered['censored'].any() and agg_method not in ['robust_median', 'lwp']:
              analysis_notes.append(
                 f"WARNING: '{agg_method}' aggregation with censored data may produce "
                 f"biased results. Consider using agg_method='robust_median'."
@@ -292,25 +293,10 @@ def seasonal_trend_test(
                 tau_weighted_sum += tau_season * d_season
                 denom_sum += d_season
 
-    # Sen's slope calculation depends on the method
-    if sens_slope_method == 'lwp':
-        # For 'lwp' method, aggregate data to one obs per time increment
-        slope_data = _value_for_time_increment(data_filtered, is_datetime, season_type)
-        var_s_for_ci = 0
-        for i in season_range:
-            season_mask = slope_data['season'] == i
-            season_data = slope_data[season_mask]
-            n = len(season_data)
-            if n > 1:
-                _, var_s_season, _, _ = _mk_score_and_var_censored(
-                    season_data['value'], season_data['t'], season_data['censored'],
-                    season_data['cen_type'], tau_method=tau_method, mk_test_method=mk_test_method
-                )
-                var_s_for_ci += var_s_season
-    else:
-        # For other methods, use the original unaggregated data
-        slope_data = data_filtered
-        var_s_for_ci = var_s # Use the original variance from the MK test
+    # Sen's slope calculation uses the data after any user-specified aggregation.
+    # The variance for CIs should be based on the same data.
+    slope_data = data_filtered
+    var_s_for_ci = var_s
 
     for i in season_range:
         season_mask = slope_data['season'] == i
