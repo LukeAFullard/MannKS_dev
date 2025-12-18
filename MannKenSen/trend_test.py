@@ -10,7 +10,7 @@ from ._stats import (_z_score, _p_value, _sens_estimator_unequal_spacing,
                      _confidence_intervals, _mk_probability,
                      _mk_score_and_var_censored, _sens_estimator_censored,
                      _sen_probability)
-from ._helpers import (_prepare_data, _aggregate_by_group)
+from ._helpers import (_prepare_data, _aggregate_by_group, _value_for_time_increment)
 from .plotting import plot_trend
 from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
 from .classification import classify_trend
@@ -29,6 +29,7 @@ def trend_test(
     sens_slope_method: str = 'nan',
     tau_method: str = 'b',
     agg_method: str = 'none',
+    agg_period: str = 'year',
     min_size: Optional[int] = 10,
     mk_test_method: str = 'robust',
     ci_method: str = 'direct',
@@ -63,16 +64,25 @@ def trend_test(
         tau_method (str): The method for calculating Kendall's Tau ('a' or 'b').
                           Default is 'b', which accounts for ties in the data and is
                           the recommended method.
-        agg_method (str): The method for aggregating data at tied timestamps.
-            - **Caution**: Using aggregation methods with censored data is not
-              statistically robust and may produce biased results. A `UserWarning`
-              will be issued in this case.
-            - 'none' (default): No aggregation is performed. A warning is issued if
-                                ties are present.
-            - 'median': Use the median of values and times.
-            - 'robust_median': A more statistically robust median for censored data.
-            - 'middle': Use the observation closest to the mean of the actual timestamps in the period.
-            - 'middle_lwp': Use the observation closest to the theoretical midpoint of the time period (to match R).
+        agg_method (str): The method for aggregating data.
+            - **Caution**: Using aggregation with censored data (other than
+              'robust_median') is not statistically robust and may produce
+              biased results.
+            - 'none' (default): No aggregation. A warning is issued if tied
+                                timestamps are present.
+            - 'lwp': Aggregates data to a single observation per time period defined
+                     by `agg_period` (e.g., year, month). This mimics the LWP-TRENDS
+                     R script and is useful for handling high-density data
+                     clusters. Requires a datetime-like time vector `t`.
+            - 'median': Aggregates tied timestamps using the median of values and times.
+            - 'robust_median': A more statistically robust median for censored data at
+                               tied timestamps.
+            - 'middle': Aggregates tied timestamps using the observation closest to the
+                        mean of the actual timestamps.
+            - 'middle_lwp': Aggregates tied timestamps using the observation closest to the
+                            theoretical midpoint of the time period.
+        agg_period (str): The time period for LWP aggregation ('year', 'month', etc.).
+                          Only used when `agg_method='lwp'`.
         min_size (int): Minimum sample size. Warnings issued if n < min_size.
                        Set to None to disable check.
         mk_test_method (str): The method for handling right-censored data in the
@@ -168,7 +178,7 @@ def trend_test(
     if tau_method not in valid_tau_methods:
         raise ValueError(f"Invalid `tau_method`. Must be one of {valid_tau_methods}.")
 
-    valid_agg_methods = ['none', 'median', 'robust_median', 'middle', 'middle_lwp']
+    valid_agg_methods = ['none', 'median', 'robust_median', 'middle', 'middle_lwp', 'lwp']
     if agg_method not in valid_agg_methods:
         raise ValueError(f"Invalid `agg_method`. Must be one of {valid_agg_methods}.")
 
@@ -202,12 +212,18 @@ def trend_test(
         analysis_notes.append(f'sample size ({n}) below minimum ({min_size})')
 
 
-    # Handle tied timestamps
-    if len(data_filtered['t']) != len(np.unique(data_filtered['t'])):
+    # Handle tied timestamps and temporal aggregation
+    if agg_method == 'lwp':
+        if not is_datetime:
+            raise ValueError("`agg_method='lwp'` can only be used with datetime-like inputs for `t`.")
+        # LWP aggregation selects one value per time period (e.g., year, month).
+        data_filtered = _value_for_time_increment(data_filtered, is_datetime=True, season_type=agg_period)
+    elif len(data_filtered['t']) != len(np.unique(data_filtered['t'])):
         if agg_method == 'none':
             analysis_notes.append('tied timestamps present without aggregation')
         else:
-            if data_filtered['censored'].any():
+            # Standard aggregation for tied timestamps.
+            if data_filtered['censored'].any() and agg_method not in ['robust_median']:
                 analysis_notes.append(f"'{agg_method}' aggregation used with censored data")
 
             agg_data_list = [
