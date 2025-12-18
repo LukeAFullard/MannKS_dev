@@ -1,80 +1,118 @@
+
+import os
 import numpy as np
 import pandas as pd
 import MannKenSen as mks
-import os
+import textwrap
+import io
+from contextlib import redirect_stdout
 
-# --- Define Paths ---
-output_dir = 'Examples/08_Aggregation_Tied_Clustered_Data'
-plot_file = os.path.join(output_dir, 'aggregation_plot.png')
-readme_file = os.path.join(output_dir, 'README.md')
+def generate_readme():
+    """
+    Generates a comprehensive README.md file for Example 8, explaining
+    data aggregation for tied and clustered data.
+    """
+    # --- 1. Define Paths and Code Block ---
+    output_dir = os.path.dirname(__file__)
 
-# --- 1. Generate Data ---
-np.random.seed(42)
-dates = pd.to_datetime([
-    '2010-07-01', '2011-07-01', '2012-07-01',
-    '2013-03-01', '2013-03-05', '2013-03-10', '2013-03-15', # Clustered
-    '2014-06-15', '2014-06-15', # Tied
-    '2015-07-01', '2016-07-01', '2017-07-01', '2018-07-01', '2019-07-01'
-])
-values = np.array([5, 5.5, 6, 6.2, 6.3, 6.1, 6.4, 7, 6.8, 7.5, 8, 8.2, 8.5, 9])
+    code_block = textwrap.dedent("""
+        import numpy as np
+        import pandas as pd
+        import MannKenSen as mks
+        import os
 
-# --- 2. Run Analyses ---
-result_no_agg = mks.trend_test(x=values, t=dates, agg_method='none')
-result_agg = mks.trend_test(
-    x=values,
-    t=dates,
-    agg_method='median',
-    agg_period='year',
-    plot_path=plot_file
-)
+        # 1. Generate Data with Irregular Sampling
+        np.random.seed(42)
+        dates = pd.to_datetime([
+            '2010-07-01', '2011-07-01', '2012-07-01',
+            '2013-03-01', '2013-03-05', '2013-03-10', '2013-03-15', # Clustered
+            '2014-06-15', '2014-06-15', # Tied
+            '2015-07-01', '2016-07-01', '2017-07-01', '2018-07-01', '2019-07-01'
+        ])
+        values = np.array([5, 5.5, 6, 6.2, 6.3, 6.1, 6.4, 7, 6.8, 7.5, 8, 8.2, 8.5, 9])
+        plot_file = 'aggregation_plot.png'
 
-# --- 3. Format Results and Generate README ---
-no_agg_summary = (
-    "- **Classification:** {}\\n"
-    "- **P-value:** {:.2e}\\n"
-    "- **Analysis Notes:** {}\\n"
-).format(result_no_agg.classification, result_no_agg.p, result_no_agg.analysis_notes)
+        # 2. Analysis without Aggregation
+        print("--- Analysis Without Aggregation ---")
+        result_no_agg = mks.trend_test(x=values, t=dates, agg_method='none')
+        print(result_no_agg)
 
-annual_slope = result_agg.slope * 365.25 * 24 * 60 * 60
-agg_summary = (
-    "- **Classification:** {}\\n"
-    "- **P-value:** {:.2e}\\n"
-    "- **Annual Slope:** {:.4f}\\n"
-).format(result_agg.classification, result_agg.p, annual_slope)
+        # 3. Analysis with Annual Median Aggregation
+        print("\\n--- Analysis With Annual Aggregation ---")
+        result_agg = mks.trend_test(
+            x=values,
+            t=dates,
+            agg_method='median',
+            agg_period='year',
+            plot_path=plot_file
+        )
+        print(result_agg)
+    """)
 
-readme_content = """
+    # --- 2. Execute the Code Block to Get Outputs ---
+    f = io.StringIO()
+    original_dir = os.getcwd()
+    os.chdir(output_dir)
+    with redirect_stdout(f):
+        exec(code_block, {'np': np, 'pd': pd, 'mks': mks, 'os': os})
+    os.chdir(original_dir)
+    output_str = f.getvalue().strip()
+
+    # --- 3. Construct the README ---
+    readme_content = f"""
 # Example 8: Aggregation for Tied and Clustered Data
 
-This example demonstrates how temporal aggregation can solve two common data issues: tied timestamps (multiple measurements at the same time) and clustered data (inconsistent sampling frequency). Both can bias the Sen's slope calculation.
+Real-world datasets are often messy. Sampling frequency can change over time, leading to **clustered data**, or multiple measurements might be recorded at the exact same time, resulting in **tied timestamps**. Both of these issues can bias a trend analysis by giving undue weight to certain time periods.
 
-## Key Concepts
-The `trend_test` function includes `agg_method` and `agg_period` parameters. When enabled, the function groups data by the specified period (e.g., 'year'), calculates a single value for each group, and then performs the trend test on the aggregated, evenly-weighted data.
+This example demonstrates how to use the temporal aggregation features of `MannKenSen` to create a more robust and reliable trend analysis.
 
-## Script: `run_example.py`
-The script creates a dataset with both data clustering and tied timestamps. It analyzes the data twice: once without aggregation and once with annual median aggregation.
+## The Python Script
 
-## Results
+The following script generates a dataset with both clustered samples and tied timestamps. It then analyzes the data twice: once without aggregation and once with annual median aggregation.
+
+```python
+{code_block}
+```
+
+## Command Output
+
+Running the script above produces the following output. It shows the full results from both analysis runs.
+
+```
+{output_str}
+```
+
+## Interpretation of Results
 
 ### Analysis Without Aggregation
-The raw analysis flags the tied timestamps as a potential issue in the `analysis_notes`.
-{}
+
+The first result shows a highly significant increasing trend. However, it also produces a critical `analysis_notes`: **`'tied timestamps present without aggregation'`**. This warns you that the results may be unreliable because the Sen's slope calculation is sensitive to data points with identical timestamps. The cluster of data in 2013 also gives that year more weight in the analysis than other years.
 
 ### Analysis With Annual Aggregation
-Aggregating the data to an annual median resolves the issue, providing a more robust trend estimate.
-{}
 
-### Aggregated Analysis Plot (`aggregation_plot.png`)
-The plot shows the trend calculated from the aggregated data.
+The second result, using `agg_method='median'` and `agg_period='year'`, first aggregates the data.
+- The four data points in 2013 are reduced to a single median value for that year.
+- The two tied data points in 2014 are also reduced to their median.
+
+This creates a new, evenly weighted time series of one value per year. The `analysis_notes` field is now empty, indicating that the data quality issue has been resolved. The resulting trend is still significant, but the p-value and slope are different, reflecting a more robust estimate that is not biased by the irregular sampling.
+
+### Aggregated Analysis Plot
+
+The generated plot visualizes the trend line calculated from the **aggregated data**. It clearly shows the final, robust increasing trend.
+
 ![Aggregation Plot](aggregation_plot.png)
 
-**Conclusion:** Temporal aggregation is a powerful tool for improving the accuracy of trend analysis on messy, irregularly sampled real-world data.
-""".format(no_agg_summary, agg_summary)
+### Conclusion
 
-with open(readme_file, 'w') as f:
-    f.write(readme_content)
+Temporal aggregation is an essential tool for improving the reliability of trend analysis on real-world data. By ensuring each time period is weighted equally, it helps to remove biases caused by inconsistent sampling.
+"""
 
-# Clean up the old text file if it exists
-if os.path.exists(os.path.join(output_dir, 'aggregation_output.txt')):
-    os.remove(os.path.join(output_dir, 'aggregation_output.txt'))
+    # Write the README file
+    readme_file_path = os.path.join(output_dir, 'README.md')
+    with open(readme_file_path, 'w') as f:
+        f.write(readme_content)
 
-print("Successfully generated README and plot for Example 8.")
+    print(f"Successfully generated README and plot for Example 8.")
+
+if __name__ == '__main__':
+    generate_readme()

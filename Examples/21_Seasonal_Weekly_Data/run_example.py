@@ -2,45 +2,60 @@
 import os
 import numpy as np
 import pandas as pd
-import MannKenSen
+import MannKenSen as mks
+import textwrap
+import io
+from contextlib import redirect_stdout
 
 def generate_readme():
     """
-    Generates the README.md file for this example, demonstrating a seasonal
-    trend test on weekly data with a decreasing trend.
+    Generates a comprehensive README.md file for Example 21, demonstrating
+    a seasonal trend test on weekly data.
     """
-    # 1. Generate Synthetic Data
-    np.random.seed(42)
-    n_years = 5
-    t = pd.to_datetime(pd.date_range(start='2018-01-01', periods=n_years * 52, freq='W'))
+    # --- 1. Define Paths and Code Block ---
+    output_dir = os.path.dirname(__file__)
 
-    # Create a long-term decreasing trend
-    long_term_trend = np.linspace(10, 0, len(t))
+    code_block = textwrap.dedent("""
+        import numpy as np
+        import pandas as pd
+        import MannKenSen as mks
+        import os
 
-    # Create a weekly seasonal pattern (lower values on weekends)
-    # dayofweek: Monday=0, Sunday=6. We'll make Sat/Sun lower.
-    seasonal_pattern = np.array([-0.5 if day in [5, 6] else 0.5 for day in t.dayofweek])
+        # 1. Generate Synthetic Data
+        np.random.seed(42)
+        n_years = 5
+        t = pd.to_datetime(pd.date_range(start='2018-01-01', periods=n_years * 52, freq='W'))
 
-    # Combine with noise
-    noise = np.random.normal(0, 0.5, len(t))
-    x = long_term_trend + seasonal_pattern + noise
+        # Create a long-term decreasing trend
+        long_term_trend = np.linspace(10, 0, len(t))
 
-    # 2. Run the Seasonal Trend Test
-    plot_path = os.path.join(os.path.dirname(__file__), 'seasonal_weekly_trend.png')
-    # For weekly data (day of week), the period is 7
-    result = MannKenSen.seasonal_trend_test(x, t, season_type='day_of_week', period=7, plot_path=plot_path)
+        # Create a weekly seasonal pattern (lower on weekends)
+        seasonal_pattern = np.array([-0.5 if day in [5, 6] else 0.5 for day in t.dayofweek])
 
-    # 3. Format result for display
-    result_str = (
-        f"trend: {result.trend}\\n"
-        f"h: {result.h}\\n"
-        f"p: {result.p:.4f}\\n"
-        f"z: {result.z:.4f}\\n"
-        f"classification: {result.classification}\\n"
-        f"slope: {result.slope * 365.25*24*60*60:.4f} (units/year)"
-    )
+        # Combine with noise
+        noise = np.random.normal(0, 0.5, len(t))
+        x = long_term_trend + seasonal_pattern + noise
 
-    # --- Generate README ---
+        # 2. Run the Seasonal Trend Test
+        plot_path = 'seasonal_weekly_trend.png'
+        # For 'day_of_week', the period is 7
+        result = mks.seasonal_trend_test(x, t, season_type='day_of_week', period=7, plot_path=plot_path)
+
+        # 3. Print the result
+        print(result)
+    """)
+
+    # --- 2. Execute the Code Block to Get Outputs ---
+    f = io.StringIO()
+    original_dir = os.getcwd()
+    os.chdir(output_dir)
+    with redirect_stdout(f):
+        exec(code_block, {'np': np, 'pd': pd, 'mks': mks, 'os': os})
+    os.chdir(original_dir)
+    output_str = f.getvalue().strip()
+
+
+    # --- 3. Construct the README ---
     readme_content = f"""
 # Example 21: Seasonal Trend with Weekly Data
 
@@ -48,62 +63,41 @@ The `MannKenSen` package is not limited to monthly or annual seasons. It can per
 
 This example demonstrates an analysis of weekly data, testing for an overall trend while accounting for variations between each day of the week.
 
-## 1. Data Generation
+## The Python Script
 
-We generate 5 years of weekly data with two patterns:
+The following script generates 5 years of weekly data with two patterns:
 1.  A steady long-term **decreasing** trend.
 2.  A weekly seasonal pattern where values are slightly lower on weekends (Saturday and Sunday).
 
 ```python
-import numpy as np
-import pandas as pd
-import MannKenSen
-
-# 1. Generate Synthetic Data
-np.random.seed(42)
-n_years = 5
-t = pd.to_datetime(pd.date_range(start='2018-01-01', periods=n_years * 52, freq='W'))
-
-# Create a long-term decreasing trend
-long_term_trend = np.linspace(10, 0, len(t))
-
-# Create a weekly seasonal pattern (lower on weekends)
-seasonal_pattern = np.array([-0.5 if day in [5, 6] else 0.5 for day in t.dayofweek])
-
-# Combine with noise
-noise = np.random.normal(0, 0.5, len(t))
-x = long_term_trend + seasonal_pattern + noise
-
-# 2. Run the Seasonal Trend Test
-# For 'day_of_week', the period is 7
-plot_path = 'seasonal_weekly_trend.png'
-result = MannKenSen.seasonal_trend_test(x, t, season_type='day_of_week', period=7, plot_path=plot_path)
-
-print(result)
+{code_block}
 ```
 
-## 2. Results
+## Command Output
 
-The `seasonal_trend_test` function returns a single `namedtuple` object that summarizes the overall trend across all seasons. The test combines the evidence from each day of the week to produce one set of statistics.
+Running the script produces a single result object that summarizes the overall trend across all seasons (days of the week).
 
 ```
-{result_str}
+{output_str}
 ```
 
-The result shows a **'Highly Likely Decreasing'** trend with a very small p-value. The function correctly identified the strong, underlying decreasing trend present in the data, even with the weekly seasonal pattern.
+## Interpretation of Results
 
-## 3. Plot
+The result shows a **'Highly Likely Decreasing'** trend with a very small p-value. The test combines the evidence from each day of the week to produce one set of statistics. It successfully identified the strong, underlying decreasing trend present in the data, even with the weekly seasonal pattern.
+
+## Plot
 
 The generated plot is the primary tool for visualizing the behavior of individual seasons. Each subplot shows the data for a specific day of the week (Monday=0, Sunday=6). The plot visually confirms that a decreasing trend is present for every day, consistent with the overall result.
 
 ![Seasonal Weekly Trend Plot](seasonal_weekly_trend.png)
 """
 
-    # Write to file
-    filepath = os.path.join(os.path.dirname(__file__), 'README.md')
-    with open(filepath, 'w') as f:
+    # Write the README file
+    readme_file_path = os.path.join(output_dir, 'README.md')
+    with open(readme_file_path, 'w') as f:
         f.write(readme_content)
-    print("Generated README.md and plot for Example 21.")
+
+    print("Successfully generated README and plot for Example 21.")
 
 if __name__ == '__main__':
     generate_readme()

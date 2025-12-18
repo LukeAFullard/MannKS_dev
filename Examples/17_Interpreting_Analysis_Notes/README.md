@@ -7,41 +7,32 @@ This example demonstrates how to trigger and interpret the most common notes.
 
 ### Insufficient Unique Values
 
-**Analysis Note Produced:** `['< 3 unique values', 'sample size (8) below minimum (10)', 'WARNING: Sen slope based on tied non-censored values']`
+**Analysis Note Produced:** `['< 3 unique values', 'WARNING: Sen slope based on tied non-censored values']`
 
-**Explanation:** This note is triggered when there are fewer than 3 unique non-censored values. With such low variability, a trend analysis is not meaningful.
+**Explanation:** This note is triggered when there are fewer than 3 unique non-censored values. With such low variability, a meaningful trend analysis cannot be performed.
 
 **Code to Reproduce:**
 ```python
-import pandas as pd
-import MannKenSen
-
-# Data
+# Data has fewer than 3 unique non-censored values.
 x = [1, 1, 2, 2, 1, 1, 2, 2]
-t = [0, 1, 2, 3, 4, 5, 6, 7]
-
-# Analysis
-result = MannKenSen.trend_test(x, t, **{})
+t = range(len(x))
+result = mks.trend_test(x, t, min_size=None)
 print(result.analysis_notes)
 ```
 
 ### Insufficient Non-Censored Values
 
-**Analysis Note Produced:** `['< 5 Non-censored values', 'sample size (7) below minimum (10)', 'Long run of single value']`
+**Analysis Note Produced:** `['< 5 Non-censored values', 'Long run of single value']`
 
-**Explanation:** Triggered when there are fewer than 5 non-censored data points available for the analysis.
+**Explanation:** Triggered when there are fewer than 5 non-censored data points. The statistical power of the test is too low with such a small sample size.
 
 **Code to Reproduce:**
 ```python
-import pandas as pd
-import MannKenSen
-
-# Data
-x_censored = ['<1', '<1', '<1', '<1', 5, 6, 7]\nx = MannKenSen.prepare_censored_data(x_censored)
-t = [0, 1, 2, 3, 4, 5, 6]
-
-# Analysis
-result = MannKenSen.trend_test(x, t, **{})
+# Data has fewer than 5 non-censored values.
+x_censored = ['<1', '<1', '<1', '<1', 5, 6, 7]
+t = range(len(x_censored))
+x = mks.prepare_censored_data(x_censored)
+result = mks.trend_test(x, t, min_size=None)
 print(result.analysis_notes)
 ```
 
@@ -49,19 +40,14 @@ print(result.analysis_notes)
 
 **Analysis Note Produced:** `['Long run of single value']`
 
-**Explanation:** Occurs if more than 50% of the data consists of a single, repeated value. This can heavily bias the Mann-Kendall test and reduce its power.
+**Explanation:** Occurs if a significant portion of the data consists of a single, repeated value. This high number of ties can reduce the power of the Mann-Kendall test.
 
 **Code to Reproduce:**
 ```python
-import pandas as pd
-import MannKenSen
-
-# Data
+# More than 50% of the data consists of a single value (3).
 x = [1, 2, 3, 3, 3, 3, 3, 3, 4, 5]
-t = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-
-# Analysis
-result = MannKenSen.trend_test(x, t, **{})
+t = range(len(x))
+result = mks.trend_test(x, t)
 print(result.analysis_notes)
 ```
 
@@ -69,19 +55,14 @@ print(result.analysis_notes)
 
 **Analysis Note Produced:** `['< 5 Non-censored values', 'sample size (4) below minimum (10)', 'tied timestamps present without aggregation']`
 
-**Explanation:** Generated when the time vector `t` contains duplicate values and the default `agg_method='none'` is used. The Sen's slope calculation can be sensitive to this.
+**Explanation:** Generated when the time vector `t` contains duplicate values and no aggregation method is specified. The Sen's slope calculation is sensitive to this and the result may be biased.
 
 **Code to Reproduce:**
 ```python
-import pandas as pd
-import MannKenSen
-
-# Data
+# The timestamp 2001 is duplicated.
 x = [1, 2, 3, 4]
 t = [2000, 2001, 2001, 2002]
-
-# Analysis
-result = MannKenSen.trend_test(x, t, **{'agg_method': 'none'})
+result = mks.trend_test(x, t, agg_method='none')
 print(result.analysis_notes)
 ```
 
@@ -89,19 +70,15 @@ print(result.analysis_notes)
 
 **Analysis Note Produced:** `['< 5 Non-censored values', 'sample size (4) below minimum (10)', 'WARNING: Sen slope influenced by left-censored values.']`
 
-**Explanation:** This is a `WARNING` that the median Sen's slope was calculated from a pair of data points where at least one was censored. The slope's value is therefore an estimate based on the `lt_mult` or `gt_mult` parameters.
+**Explanation:** A `WARNING` that the median Sen's slope was calculated from a pair of data points where at least one was censored. The slope's value is therefore an estimate that depends on the `lt_mult` or `gt_mult` parameters.
 
 **Code to Reproduce:**
 ```python
-import pandas as pd
-import MannKenSen
-
-# Data
-x_censored = ['<10', 15, 5, 25]\nx = MannKenSen.prepare_censored_data(x_censored)
+# The median slope is calculated from a pair involving a censored value.
+x_censored = ['<10', 15, 5, 25]
 t = [2000, 2001, 2002, 2003]
-
-# Analysis
-result = MannKenSen.trend_test(x, t, **{})
+x = mks.prepare_censored_data(x_censored)
+result = mks.trend_test(x, t)
 print(result.analysis_notes)
 ```
 
@@ -109,18 +86,13 @@ print(result.analysis_notes)
 
 **Analysis Note Produced:** `['sample size (5) below minimum (10)']`
 
-**Explanation:** A note indicating that the number of data points (n=5) is below the recommended minimum size (`min_size=10`) for a reliable test.
+**Explanation:** A note indicating that the number of data points is below the recommended minimum size (`min_size`) for a reliable test.
 
 **Code to Reproduce:**
 ```python
-import pandas as pd
-import MannKenSen
-
-# Data
+# The dataset size (5) is less than the specified min_size (10).
 x = [1, 2, 3, 4, 5]
-t = [0, 1, 2, 3, 4]
-
-# Analysis
-result = MannKenSen.trend_test(x, t, **{'min_size': 10})
+t = range(len(x))
+result = mks.trend_test(x, t, min_size=10)
 print(result.analysis_notes)
 ```

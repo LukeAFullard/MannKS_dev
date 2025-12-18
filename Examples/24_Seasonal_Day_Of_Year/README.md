@@ -5,16 +5,18 @@ For some datasets, particularly in environmental science, seasonality is tied to
 
 The `MannKenSen` package supports this type of granular analysis using `season_type='day_of_year'`.
 
-## 1. Data Generation
+## The Python Script
 
-We generate 5 years of daily data. The dataset includes:
+The following script generates 5 years of daily data with two patterns:
 1.  A subtle long-term **increasing** trend.
 2.  A sharp **spike** in values for a 30-day period each year (days 120-150), simulating an annual event.
 
 ```python
+
 import numpy as np
 import pandas as pd
-import MannKenSen
+import MannKenSen as mks
+import os
 
 # 1. Generate Synthetic Data
 np.random.seed(1)
@@ -35,24 +37,30 @@ noise = np.random.normal(0, 2.0, len(t))
 x = long_term_trend + seasonal_pattern + noise
 
 # 2. Run the Seasonal Trend Test
-# For day_of_year, set period=366 to handle leap years
 plot_path = 'seasonal_day_of_year_trend.png'
-result = MannKenSen.seasonal_trend_test(x, t, season_type='day_of_year', period=366, plot_path=plot_path)
+# For day_of_year, set period=366 to handle leap years
+result = mks.seasonal_trend_test(x, t, season_type='day_of_year', period=366, plot_path=plot_path)
 
+# 3. Print the result
 print(result)
+
 ```
 
-## 2. Results
+## Command Output
+
+Running the script produces a single result object, summarizing the overall trend across all 366 days of the year.
+
+```
+Seasonal_Mann_Kendall_Test(trend='increasing', h=np.True_, p=np.float64(0.0), z=np.float64(22.567361398816026), Tau=np.float64(0.48272078990674705), s=np.float64(1760.0), var_s=np.float64(6075.333333333355), slope=np.float64(3.110415495962254e-08), intercept=np.float64(-44.76459738152427), lower_ci=np.float64(2.874634498469521e-08), upper_ci=np.float64(3.3873195107072006e-08), C=1.0, Cd=0.0, classification='Highly Likely Increasing', analysis_notes=['< 3 non-NA values in Season', 'minimum season size (1) below minimum (5)', 'WARNING: Sen slope based on tied non-censored values'], sen_probability=np.float64(4.9840958047925364e-113), sen_probability_max=np.float64(4.9840958047925364e-113), sen_probability_min=np.float64(4.9840958047925364e-113), prop_censored=np.float64(0.0), prop_unique=1.0, n_censor_levels=0)
+```
+
+## Interpretation of Results
 
 The test is configured with `season_type='day_of_year'` and `period=366`. The period must be 366 to correctly handle leap years, preventing day numbers from shifting. The test compares the value for each specific day across all years (e.g., Jan 1st 2016 vs. Jan 1st 2017, etc.).
 
-```
-trend: increasing\nh: True\np: 0.0000\nz: 22.5674\nclassification: Highly Likely Increasing\nslope: 0.9816 (units/year)
-```
-
 The result is a **'Highly Likely Increasing'** trend. The test successfully identified the subtle, long-term increasing trend that was present on each day, independent of the large annual spike.
 
-## 3. Plot
+## Plot
 
 **Note:** The plot for this analysis is very large, as it generates a subplot for every day of the year (366 in total). It is still a useful diagnostic tool but can be slow to generate and view.
 

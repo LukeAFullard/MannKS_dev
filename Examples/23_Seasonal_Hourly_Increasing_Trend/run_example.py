@@ -2,107 +2,104 @@
 import os
 import numpy as np
 import pandas as pd
-import MannKenSen
+import MannKenSen as mks
+import textwrap
+import io
+from contextlib import redirect_stdout
 
 def generate_readme():
     """
-    Generates the README.md file for this example, demonstrating a seasonal
-    trend test on hourly data with an increasing trend.
+    Generates a comprehensive README.md file for Example 23, demonstrating
+    a seasonal trend test on hourly data.
     """
-    # 1. Generate Synthetic Data
-    np.random.seed(1)
-    n_weeks = 4
-    t = pd.to_datetime(pd.date_range(start='2023-01-01', periods=n_weeks * 7 * 24, freq='H'))
+    # --- 1. Define Paths and Code Block ---
+    output_dir = os.path.dirname(__file__)
 
-    # Create a long-term increasing trend
-    long_term_trend = np.linspace(0, 15, len(t))
+    code_block = textwrap.dedent("""
+        import numpy as np
+        import pandas as pd
+        import MannKenSen as mks
+        import os
 
-    # Create a strong diurnal (daily) pattern
-    diurnal_cycle = 5 * np.sin(2 * np.pi * t.hour / 24)
+        # 1. Generate Synthetic Data
+        np.random.seed(1)
+        n_weeks = 4
+        t = pd.to_datetime(pd.date_range(start='2023-01-01', periods=n_weeks * 7 * 24, freq='h'))
 
-    # Combine with noise
-    noise = np.random.normal(0, 1.5, len(t))
-    x = long_term_trend + diurnal_cycle + noise
+        # Create a long-term increasing trend
+        long_term_trend = np.linspace(0, 15, len(t))
 
-    # 2. Run the Seasonal Trend Test
-    plot_path = os.path.join(os.path.dirname(__file__), 'seasonal_hourly_trend.png')
-    # For hourly data with a daily cycle, season_type is 'hour' and period is 24
-    result = MannKenSen.seasonal_trend_test(x, t, season_type='hour', period=24, plot_path=plot_path)
+        # Create a strong diurnal (daily) pattern
+        diurnal_cycle = 5 * np.sin(2 * np.pi * t.hour / 24)
 
-    # 3. Format result for display
-    result_str = (
-        f"trend: {result.trend}\\n"
-        f"h: {result.h}\\n"
-        f"p: {result.p:.4f}\\n"
-        f"z: {result.z:.4f}\\n"
-        f"classification: {result.classification}\\n"
-        f"slope: {result.slope * 365.25*24*60*60:.4f} (units/year)"
-    )
+        # Combine with noise
+        noise = np.random.normal(0, 1.5, len(t))
+        x = long_term_trend + diurnal_cycle + noise
 
-    # --- Generate README ---
+        # 2. Run the Seasonal Trend Test
+        plot_path = 'seasonal_hourly_trend.png'
+        # For a daily cycle in hourly data, season_type='hour' and period=24
+        result = mks.seasonal_trend_test(x, t, season_type='hour', period=24, plot_path=plot_path)
+
+        # 3. Print the result
+        print(result)
+    """)
+
+    # --- 2. Execute the Code Block to Get Outputs ---
+    f = io.StringIO()
+    original_dir = os.getcwd()
+    os.chdir(output_dir)
+    with redirect_stdout(f):
+        exec(code_block, {'np': np, 'pd': pd, 'mks': mks, 'os': os})
+    os.chdir(original_dir)
+    output_str = f.getvalue().strip()
+
+
+    # --- 3. Construct the README ---
     readme_content = f"""
-# Example 23: Seasonal Trend with Hourly Data (Increasing Trend)
+# Example 23: Seasonal Trend with Hourly Data
 
 The seasonal trend test can be applied to high-frequency data, such as hourly measurements, to identify long-term trends while accounting for daily (diurnal) cycles.
 
 This example demonstrates how to configure the test for hourly data with a 24-hour seasonal period.
 
-## 1. Data Generation
+## The Python Script
 
-We generate 4 weeks of hourly data. The dataset is built with two key patterns:
+The following script generates 4 weeks of hourly data with two key patterns:
 1.  A steady long-term **increasing** trend.
 2.  A strong **diurnal cycle**, simulating a repeating 24-hour pattern.
 
 ```python
-import numpy as np
-import pandas as pd
-import MannKenSen
-
-# 1. Generate Synthetic Data
-np.random.seed(1)
-n_weeks = 4
-t = pd.to_datetime(pd.date_range(start='2023-01-01', periods=n_weeks * 7 * 24, freq='H'))
-
-# Create a long-term increasing trend
-long_term_trend = np.linspace(0, 15, len(t))
-
-# Create a strong diurnal (daily) pattern
-diurnal_cycle = 5 * np.sin(2 * np.pi * t.hour / 24)
-
-# Combine with noise
-noise = np.random.normal(0, 1.5, len(t))
-x = long_term_trend + diurnal_cycle + noise
-
-# 2. Run the Seasonal Trend Test
-# For a daily cycle in hourly data, season_type='hour' and period=24
-plot_path = 'seasonal_hourly_trend.png'
-result = MannKenSen.seasonal_trend_test(x, t, season_type='hour', period=24, plot_path=plot_path)
-
-print(result)
+{code_block}
 ```
 
-## 2. Results
+## Command Output
 
-The test is configured with `season_type='hour'` and `period=24`. It analyzes the trend for each hour of the day across the 4-week period. For example, it compares the data from 01:00 on day 1, 01:00 on day 2, and so on. The combined result correctly identifies the overall increasing trend.
+Running the script produces a single result object that summarizes the overall trend across all seasons (hours of the day).
 
 ```
-{result_str}
+{output_str}
 ```
 
-The **'Highly Likely Increasing'** classification shows that the test successfully detected the underlying trend amidst the strong daily cycle.
+## Interpretation of Results
 
-## 3. Plot
+The test is configured with `season_type='hour'` and `period=24`. It analyzes the trend for each hour of the day across the 4-week period. For example, it compares the data from 01:00 on day 1, 01:00 on day 2, and so on.
 
-The plot shows the data for all 24 seasons (hours). While the diurnal cycle is visible in the main plot (top left), each individual hourly subplot clearly shows the long-term increasing trend.
+The combined result is a **'Highly Likely Increasing'** classification, with a very small p-value. This shows that the test successfully detected the underlying increasing trend amidst the strong daily cycle.
+
+## Plot
+
+The plot shows the data for all 24 seasons (hours). While the diurnal cycle is visible in the main plot (top left), each individual hourly subplot clearly shows the long-term increasing trend, consistent with the overall result.
 
 ![Seasonal Hourly Trend Plot](seasonal_hourly_trend.png)
 """
 
-    # Write to file
-    filepath = os.path.join(os.path.dirname(__file__), 'README.md')
-    with open(filepath, 'w') as f:
+    # Write the README file
+    readme_file_path = os.path.join(output_dir, 'README.md')
+    with open(readme_file_path, 'w') as f:
         f.write(readme_content)
-    print("Generated README.md and plot for Example 23.")
+
+    print("Successfully generated README and plot for Example 23.")
 
 if __name__ == '__main__':
     generate_readme()
