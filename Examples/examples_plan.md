@@ -1,6 +1,6 @@
 # Plan for `MannKenSen` Package Examples (Comprehensive)
 
-This document outlines a plan for creating a comprehensive suite of 20 examples to guide users through the functionality of the `MannKenSen` package. The examples are designed to build upon each other, progressing from basic usage to advanced, nuanced scenarios.
+This document outlines a plan for creating a comprehensive suite of examples to guide users through the functionality of the `MannKenSen` package. The examples are designed to build upon each other, progressing from basic usage to advanced, nuanced scenarios.
 
 Each example will be self-contained in its own directory within `Examples/` and will include a Python script and a markdown (`.md`) file explaining the process, code, and results with embedded plots.
 
@@ -99,3 +99,27 @@ Each example will be self-contained in its own directory within `Examples/` and 
 #### Example 20: Cross-Validation with `pyMannKendall`
 - **Goal:** Provide a simple cross-validation against another Python package for a basic, non-censored case.
 - **Comparison:** `MannKenSen.trend_test` vs. `pyMannKendall.original_test`.
+
+---
+
+### **Part 5: Advanced Seasonal Analysis**
+
+#### Example 21: Seasonal Trend with Weekly Data (Decreasing Trend)
+- **Goal:** Demonstrate seasonal analysis on weekly data (`season_type='day_of_week'`).
+- **Dataset:** A multi-year dataset with a clear decreasing trend and a weekly pattern (e.g., lower values on weekends).
+- **Functions:** `seasonal_trend_test()`.
+
+#### Example 22: Seasonal Trend with Daily Data (No Trend)
+- **Goal:** Show seasonal analysis on daily data over multiple years, where a strong seasonal pattern exists but no significant long-term trend.
+- **Dataset:** Daily data with a "summer vs. winter" pattern but no overall upward or downward slope.
+- **Functions:** `seasonal_trend_test(season_type='month')`.
+
+#### Example 23: Seasonal Trend with Hourly Data (Increasing Trend)
+- **Goal:** Demonstrate analysis on high-frequency data, such as hourly measurements over several weeks.
+- **Dataset:** Hourly data showing a diurnal (daily) pattern with an overall increasing trend.
+- **Functions:** `seasonal_trend_test(season_type='hour')`.
+
+#### Example 24: Advanced Seasonality with `day_of_year`
+- **Goal:** Showcase a more granular seasonal analysis using the day of the year, which is useful for environmental data.
+- **Dataset:** Multi-year daily data with a distinct pattern related to a specific time of year (e.g., spring runoff).
+- **Functions:** `seasonal_trend_test(season_type='day_of_year')`.
