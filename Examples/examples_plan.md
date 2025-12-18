@@ -1,82 +1,101 @@
-# Plan for `MannKenSen` Package Examples
+# Plan for `MannKenSen` Package Examples (Comprehensive)
 
-This document outlines a plan for creating a comprehensive suite of examples to guide users through the functionality of the `MannKenSen` package. The examples are designed to build upon each other, starting with the simplest use case and progressively introducing more complex features and parameters.
+This document outlines a plan for creating a comprehensive suite of 20 examples to guide users through the functionality of the `MannKenSen` package. The examples are designed to build upon each other, progressing from basic usage to advanced, nuanced scenarios.
 
 Each example will be self-contained in its own directory within `Examples/` and will include a Python script and a markdown (`.md`) file explaining the process, code, and results with embedded plots.
 
 ---
 
-### Example 1: Basic Non-Seasonal Trend Test (Numeric Time)
+### **Part 1: Core Concepts & Basic Workflow**
 
--   **Goal:** Demonstrate the simplest use case of the package: a standard Mann-Kendall and Sen's slope analysis on a simple, non-seasonal dataset with a numeric time vector.
--   **Dataset:** A small, synthetically generated dataset with a clear linear trend and some random noise. The time vector will be a simple integer sequence (e.g., `np.arange(n)`).
--   **Key Functions & Parameters:**
-    -   `MannKenSen.trend_test()`
-    -   Basic interpretation of the output tuple (p-value, slope, trend classification).
+#### Example 1: Getting Started - Inspecting Your Data
+- **Goal:** Showcase the first step in any analysis: visualizing and understanding the data's structure.
+- **Functions:** `MannKenSen.inspect_trend_data(plot=True)`.
 
----
+#### Example 2: Basic Non-Seasonal Trend Test (Numeric Time)
+- **Goal:** Demonstrate the simplest use case with an integer time vector.
+- **Functions:** `MannKenSen.trend_test()`.
 
-### Example 2: Non-Seasonal Trend Test with Timestamps
+#### Example 3: Non-Seasonal Trend Test with Timestamps
+- **Goal:** Introduce the handling of real-world time series data using `pandas` `datetime` objects.
+- **Functions:** `MannKenSen.trend_test()`, `plot_path`.
 
--   **Goal:** Introduce the handling of real-world time series data using `pandas` `datetime` objects.
--   **Dataset:** A synthetic dataset spanning several years with monthly observations and a clear trend. The time vector will be a `pandas.date_range`.
--   **Key Functions & Parameters:**
-    -   `MannKenSen.trend_test()`
-    -   Demonstrate how the package automatically handles `datetime` inputs.
-    -   Introduce the `plot_path` parameter to generate and save a visualization of the trend.
+#### Example 4: Handling Basic Censored Data
+- **Goal:** Explain the essential workflow for data containing censored values.
+- **Functions:** `MannKenSen.prepare_censored_data()`, `MannKenSen.trend_test()`.
 
----
-
-### Example 3: Handling Censored Data
-
--   **Goal:** Explain and demonstrate the workflow for analyzing a dataset containing censored data points.
--   **Dataset:** A synthetic dataset similar to Example 2, but with some values represented as censored strings (e.g., `'<5'`, `'>50'`).
--   **Key Functions & Parameters:**
-    -   `MannKenSen.prepare_censored_data()`: Show how to pre-process raw data into the required format.
-    -   `MannKenSen.trend_test()`: Run the trend test on the processed data.
-    -   `plot_path`: Visualize the trend with censored data points highlighted.
+#### Example 5: Basic Seasonal Trend Test
+- **Goal:** Introduce seasonal trend analysis for monthly data.
+- **Functions:** `MannKenSen.check_seasonality()`, `MannKenSen.seasonal_trend_test()`.
 
 ---
 
-### Example 4: Basic Seasonal Trend Test
+### **Part 2: Handling Complex & Messy Data**
 
--   **Goal:** Introduce the concept of seasonal trend analysis.
--   **Dataset:** A synthetic dataset with a clear seasonal pattern (e.g., higher in summer, lower in winter) and an underlying linear trend across years.
--   **Key Functions & Parameters:**
-    -   `MannKenSen.check_seasonality()`: Show how to statistically test for the presence of seasonality.
-    -   `MannKenSen.seasonal_trend_test()`: Run the seasonal analysis.
-    -   `period=12`: Explain the `period` parameter for monthly data.
+#### Example 6: Deep Dive into Censored Data Options
+- **Goal:** Compare the `'robust'` vs. `'lwp'` methods for handling censored data to show their impact.
+- **Comparison:** `mk_test_method='robust'` vs. `'lwp'`, `sens_slope_method='nan'` vs. `'lwp'`.
 
----
+#### Example 7: The High Censor Rule (`hicensor`)
+- **Goal:** Explain and demonstrate the `hicensor` rule for mitigating bias from changing detection limits.
+- **Dataset:** A time series where the censoring level (`<X`) improves (decreases) over time.
 
-### Example 5: Advanced Aggregation and LWP Compatibility
+#### Example 8: Aggregation for Tied Timestamps
+- **Goal:** Show how to resolve data with multiple measurements at the exact same timestamp.
+- **Comparison:** `agg_method` with `'median'`, `'robust_median'`, and `'middle'`.
 
--   **Goal:** Demonstrate the powerful aggregation features and how to use them to handle clustered data and replicate the LWP-TRENDS R script's methodology.
--   **Dataset:** A synthetic dataset with an irregular sampling frequency (e.g., daily samples in one month, followed by monthly samples for the rest of the year).
--   **Analysis & Comparison:**
-    1.  Run `MannKenSen.trend_test()` with `agg_method='none'` to show how the high-density data cluster can bias the Sen's slope.
-    2.  Run `MannKenSen.trend_test()` with `agg_method='lwp'` and `agg_period='month'` to show how temporal aggregation mitigates this bias.
-    3.  Explain the use of other compatibility flags (`sens_slope_method='lwp'`, `mk_test_method='lwp'`, `ci_method='lwp'`) for users who need to validate results against the LWP R script.
+#### Example 9: Aggregation for Clustered Data
+- **Goal:** Demonstrate how temporal aggregation (`agg_method='lwp'`) provides a more robust slope for irregularly sampled data.
+- **Comparison:** `agg_method='none'` vs. `agg_method='lwp'`.
 
----
-
-### Example 6: Interpreting Confidence and Classification
-
--   **Goal:** Provide a deeper dive into the interpretation of the statistical outputs, particularly the trend classification.
--   **Dataset:** A synthetic dataset with a weak or ambiguous trend.
--   **Key Functions & Parameters:**
-    -   `MannKenSen.trend_test()`
-    -   `alpha`: Demonstrate how changing the significance level (`alpha`) can change the `h` (significance) and `classification` results.
-    -   `category_map`: Show how to provide a custom dictionary to the `category_map` parameter to define custom classification labels.
-    -   Explain the meaning of `C` (Confidence) and how it relates to the final classification.
+#### Example 10: Handling Data with Multiple Censoring Levels
+- **Goal:** Showcase the robustness of the package with complex, real-world censored data.
+- **Dataset:** Data with numerous different censoring levels (e.g., `<1`, `<2`, `<5`, `>50`, `>100`).
 
 ---
 
-### Example 7: Regional Trend Analysis
+### **Part 3: Advanced Features & Nuances**
 
--   **Goal:** Demonstrate how to aggregate trend results from multiple sites to determine a regional trend.
--   **Dataset:** A set of 3-4 synthetic time series, where some show an increasing trend, some a decreasing trend, and some no trend.
--   **Key Functions & Parameters:**
-    -   `MannKenSen.trend_test()`: Run on each site individually.
-    -   `MannKenSen.regional_test()`: Pass the results of the individual tests to this function.
-    -   Explain the interpretation of the regional test output, including the aggregate trend strength (`TAU`) and direction (`DT`).
+#### Example 11: Advanced Seasonality (Non-Monthly Data)
+- **Goal:** Demonstrate seasonal analysis on non-monthly data (e.g., weekly, quarterly).
+- **Functions:** `seasonal_trend_test(season_type='day_of_week')`, `plot_seasonal_distribution()`.
+
+#### Example 12: The Impact of Censored Data Multipliers
+- **Goal:** Show the sensitivity of the Sen's slope to the `lt_mult` and `gt_mult` parameters.
+- **Comparison:** Run the same analysis with different multiplier values.
+
+#### Example 13: Comparing Confidence Interval Methods
+- **Goal:** Visually and numerically compare the `'direct'` vs. `'lwp'` confidence interval methods.
+- **Comparison:** `ci_method='direct'` vs. `ci_method='lwp'`.
+
+#### Example 14: Time Vector Nuances (Numeric Data)
+- **Goal:** Explain the difference between using simple integer ranks vs. fractional years as the time vector for numeric analysis.
+- **Comparison:** `t=np.arange(n)` vs. `t=df['Year'] + df['Month']/12`.
+
+#### Example 15: Regional Trend Analysis
+- **Goal:** Demonstrate how to aggregate trend results from multiple sites.
+- **Functions:** `MannKenSen.regional_test()`.
+
+---
+
+### **Part 4: Interpreting Results & Validation**
+
+#### Example 16: Interpreting the Full Output
+- **Goal:** Provide a detailed explanation of every field in the `namedtuple` returned by the test functions.
+- **Focus:** Explain less obvious fields like `Tau`, `s`, `var_s`, `sen_probability`, and `n_censor_levels`.
+
+#### Example 17: Interpreting Analysis Notes
+- **Goal:** Explain the meaning of the common "Analysis Notes" returned by the package.
+- **Scenarios:** Generate results that produce notes like `"Long run of single value"`, `"Sen slope influenced by censored values"`, and `"Insufficient data"`.
+
+#### Example 18: Interpreting Confidence and Customizing Classification
+- **Goal:** Provide a deeper dive into the trend classification system.
+- **Functions:** `alpha`, `category_map`, and explaining the `C` and `Cd` scores.
+
+#### Example 19: Visual Diagnostics of Trend Plots
+- **Goal:** Show users how to "read" the output of `plot_trend` to diagnose issues.
+- **Scenarios:** Generate plots showing wide confidence intervals (high uncertainty), clear trends, and no trend.
+
+#### Example 20: Cross-Validation with `pyMannKendall`
+- **Goal:** Provide a simple cross-validation against another Python package for a basic, non-censored case.
+- **Comparison:** `MannKenSen.trend_test` vs. `pyMannKendall.original_test`.
