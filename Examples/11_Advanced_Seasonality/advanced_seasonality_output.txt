@@ -1,0 +1,45 @@
+### Example 11: Advanced Seasonality (Non-Monthly Data) ###
+
+This example demonstrates that seasonal analysis is not limited to
+monthly data. The `seasonal_trend_test` function can analyze any
+sub-annual pattern (e.g., daily, weekly, quarterly) by using the
+`season_type` parameter.
+
+Here, we will analyze data with a strong weekly pattern (e.g., weekday vs.
+weekend effects) to find the underlying long-term trend.
+------------------------------------------------------------
+
+--- Generated Data ---
+A 3-year daily dataset was created with a strong weekly cycle
+(high on weekends, low on weekdays) and an increasing trend.
+Data head:
+        date      value
+0 2018-01-01  13.029938
+1 2018-01-02   3.389788
+2 2018-01-03   9.874894
+3 2018-01-04   8.279945
+4 2018-01-05  15.538825
+------------------------------------------------------------
+
+--- 3. Visualize with `plot_seasonal_distribution` ---
+We can create a box plot to visualize the distribution for each day
+of the week, which should clearly show the weekend effect.
+
+A box plot has been saved to 'seasonal_distribution_plot.png'.
+Note: 0=Monday, 1=Tuesday, ..., 6=Sunday.
+------------------------------------------------------------
+
+--- 4. Using `seasonal_trend_test` with `season_type='day_of_week'` ---
+By specifying `season_type='day_of_week'`, the test analyzes the trend
+for all Mondays, all Tuesdays, etc., separately, then combines the
+results. This correctly isolates the long-term trend from the weekly cycle.
+
+Results:
+Seasonal_Mann_Kendall_Test(trend='increasing', h=np.True_, p=np.float64(0.0), z=np.float64(30.76312295232386), Tau=np.float64(0.6264339503131818), s=np.float64(53406.0), var_s=np.float64(3013720.6666666665), slope=np.float64(1.564575960607993e-07), intercept=np.float64(-223.93895194264334), lower_ci=np.float64(1.4999042324452066e-07), upper_ci=np.float64(1.6318018851669248e-07), C=np.float64(1.0), Cd=np.float64(0.0), classification='Highly Likely Increasing', analysis_notes=[], sen_probability=np.float64(4.1207471511678015e-208), sen_probability_max=np.float64(4.1207471511678015e-208), sen_probability_min=np.float64(4.1207471511678015e-208), prop_censored=np.float64(0.0), prop_unique=1.0, n_censor_levels=0)
+
+Annual Slope: 4.9374
+
+Conclusion: The test correctly identifies the strong 'Increasing' trend
+even with the powerful weekly pattern in the data.
+A trend plot has been saved to 'seasonal_trend_plot.png'.
+------------------------------------------------------------
