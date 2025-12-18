@@ -279,9 +279,11 @@ def _mk_probability(p, s):
     """
     Computes the Mann-Kendall probability.
     """
-    C = 1 - p / 2
-    Cd = C if s <= 0 else p / 2
-    return C, Cd
+    # Ensure p is a scalar to prevent array issues downstream
+    p_scalar = np.mean(p)
+    C = 1 - p_scalar / 2
+    Cd = C if s <= 0 else p_scalar / 2
+    return float(C), float(Cd)
 
 def _sens_estimator_unequal_spacing(x, t):
     """
