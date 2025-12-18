@@ -5,12 +5,13 @@ import sys
 import os
 
 # Define the output directory
-output_dir = 'Examples/6_detecting_seasonality'
+output_dir = 'Examples/05_Basic_Seasonal_Trend_Test'
 os.makedirs(output_dir, exist_ok=True)
 
 # Define output file paths
-output_file = os.path.join(output_dir, 'seasonality_output.txt')
-plot_file = os.path.join(output_dir, 'seasonality_plot.png')
+output_file = os.path.join(output_dir, 'seasonal_test_output.txt')
+dist_plot_file = os.path.join(output_dir, 'seasonal_distribution_plot.png')
+trend_plot_file = os.path.join(output_dir, 'seasonal_trend_plot.png')
 
 # Redirect output to a file
 with open(output_file, 'w') as f:
@@ -18,11 +19,11 @@ with open(output_file, 'w') as f:
     sys.stdout = f
 
     # --- 1. Introduction ---
-    print("### Example 6: Detecting and Visualizing Seasonality ###")
-    print("\nBefore performing a trend test, it's often crucial to determine")
-    print("if your data has a seasonal pattern. A seasonal pattern can mask or")
-    print("falsely indicate a long-term trend. The MannKenSen package provides")
-    print("tools to both statistically test for and visualize seasonality.")
+    print("### Example 5: Basic Seasonal Trend Test ###")
+    print("\nThis example demonstrates the standard workflow for seasonal data:")
+    print("1. Check for a statistically significant seasonal pattern.")
+    print("2. Visualize the seasonal distribution.")
+    print("3. Perform a seasonal trend test to find the long-term trend.")
     print("-" * 60)
 
     # --- 2. Generate Synthetic Seasonal Data ---
@@ -81,15 +82,41 @@ with open(output_file, 'w') as f:
         x_old=values,
         t_old=dates,
         season_type='month',
-        save_path=plot_file
+        save_path=dist_plot_file
     )
 
-    print(f"\nA box plot has been saved to '{os.path.basename(plot_file)}'.")
-    print("This plot should visually confirm the cosine pattern we generated,")
-    print("with higher values in winter months (1, 11, 12) and lower values")
-    print("in summer months (6, 7).")
+    print(f"\nA box plot has been saved to '{os.path.basename(dist_plot_file)}'.")
+    print("This plot should visually confirm the cosine pattern we generated.")
     print("-" * 60)
+
+    # --- 5. Perform Seasonal Trend Test ---
+    print("\n--- 5. Using `seasonal_trend_test` ---")
+    print("Since seasonality was confirmed, we use `seasonal_trend_test`.")
+    print("This test analyzes the trend within each season (month) individually")
+    print("and then combines the results to provide an overall trend.")
+    print("This approach correctly identifies the long-term trend, even in the")
+    print("presence of strong seasonal patterns.")
+
+    seasonal_trend_result = mks.seasonal_trend_test(
+        x=values,
+        t=dates,
+        season_type='month',
+        plot_path=trend_plot_file
+    )
+
+    print("\nResults:")
+    print(seasonal_trend_result)
+
+    # The slope is returned in units/sec for datetime inputs. Convert to units/year.
+    seconds_in_year = 365.25 * 24 * 60 * 60
+    annual_slope = seasonal_trend_result.slope * seconds_in_year
+
+    print("\nConclusion: The test correctly identifies the slight 'Increasing' trend")
+    print(f"that was added to the data (slope={annual_slope:.4f}/year).")
+    print(f"A trend plot has been saved to '{os.path.basename(trend_plot_file)}'.")
+    print("-" * 60)
+
 
 # Restore stdout
 sys.stdout = original_stdout
-print(f"Example 6 script finished. Output saved to {output_file}")
+print(f"Example 5 script finished. Output saved to {output_file}")

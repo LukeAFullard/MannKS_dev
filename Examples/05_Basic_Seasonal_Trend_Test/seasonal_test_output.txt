@@ -1,0 +1,57 @@
+### Example 5: Basic Seasonal Trend Test ###
+
+This example demonstrates the standard workflow for seasonal data:
+1. Check for a statistically significant seasonal pattern.
+2. Visualize the seasonal distribution.
+3. Perform a seasonal trend test to find the long-term trend.
+------------------------------------------------------------
+
+--- Generated Data ---
+A 10-year monthly dataset was created with a clear seasonal cycle
+(high in winter, low in summer) and a slight increasing trend.
+Data head:
+        date      value
+0 2010-01-31  29.453699
+1 2010-02-28  28.092214
+2 2010-03-31  27.398206
+3 2010-04-30  20.540874
+4 2010-05-31  14.832995
+------------------------------------------------------------
+
+--- 3. Using `check_seasonality` ---
+The `check_seasonality` function uses the Kruskal-Wallis H-test to
+determine if there is a statistically significant difference between
+the distributions of data for each season (in this case, months).
+
+A low p-value (typically < 0.05) indicates significant seasonality.
+
+Results:
+Seasonality_Test(h_statistic=np.float64(102.60743801652899), p_value=np.float64(5.431341652688979e-17), is_seasonal=np.True_, seasons_tested=[np.int32(1), np.int32(2), np.int32(3), np.int32(4), np.int32(5), np.int32(6), np.int32(7), np.int32(8), np.int32(9), np.int32(10), np.int32(11), np.int32(12)], seasons_skipped=[])
+
+Conclusion: The p-value is very low, confirming the presence of
+a significant seasonal pattern in the data.
+------------------------------------------------------------
+
+--- 4. Using `plot_seasonal_distribution` ---
+A box plot is an excellent way to visualize seasonal patterns.
+The `plot_seasonal_distribution` function creates a box plot showing
+the data distribution for each month.
+
+A box plot has been saved to 'seasonal_distribution_plot.png'.
+This plot should visually confirm the cosine pattern we generated.
+------------------------------------------------------------
+
+--- 5. Using `seasonal_trend_test` ---
+Since seasonality was confirmed, we use `seasonal_trend_test`.
+This test analyzes the trend within each season (month) individually
+and then combines the results to provide an overall trend.
+This approach correctly identifies the long-term trend, even in the
+presence of strong seasonal patterns.
+
+Results:
+Seasonal_Mann_Kendall_Test(trend='increasing', h=np.True_, p=np.float64(7.794875855893224e-12), z=np.float64(6.84227057829977), Tau=np.float64(0.49259259259259247), s=np.float64(266.0), var_s=np.float64(1500.0), slope=np.float64(1.9862384574426033e-08), intercept=np.float64(-4.765312816442055), lower_ci=np.float64(1.4857112257123711e-08), upper_ci=np.float64(2.4623637228777692e-08), C=np.float64(0.9999999999961026), Cd=np.float64(3.897437927946612e-12), classification='Highly Likely Increasing', analysis_notes=['WARNING: Sen slope based on tied non-censored values'], sen_probability=np.float64(4.559577119983538e-12), sen_probability_max=np.float64(4.559577119983538e-12), sen_probability_min=np.float64(4.559577119983538e-12), prop_censored=np.float64(0.0), prop_unique=1.0, n_censor_levels=0)
+
+Conclusion: The test correctly identifies the slight 'Increasing' trend
+that was added to the data (slope=0.6268/year).
+A trend plot has been saved to 'seasonal_trend_plot.png'.
+------------------------------------------------------------
