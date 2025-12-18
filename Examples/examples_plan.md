@@ -123,3 +123,15 @@ Each example will be self-contained in its own directory within `Examples/` and 
 - **Goal:** Showcase a more granular seasonal analysis using the day of the year, which is useful for environmental data.
 - **Dataset:** Multi-year daily data with a distinct pattern related to a specific time of year (e.g., spring runoff).
 - **Functions:** `seasonal_trend_test(season_type='day_of_year')`.
+
+---
+
+### **Part 6: Advanced Parameter Nuances**
+
+#### Example 25: Advanced Parameter Nuances
+- **Goal:** Demonstrate and explain the use of less common but important function parameters.
+- **Topics Covered:**
+    - `tau_method` ('a' vs. 'b')
+    - Standalone `classify_trend` with a custom map
+    - `min_size`
+    - `seasonal_trend_test` with a numeric time vector
