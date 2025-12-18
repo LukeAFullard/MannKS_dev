@@ -1,79 +1,32 @@
+
 # Example 3: Non-Seasonal Trend Test with Timestamps
 
-### Goal
+This example demonstrates how to perform a trend test on a time series that uses `datetime` objects for its time vector, which is the most common format for real-world data. It also shows how to generate and interpret a trend plot.
 
-This example demonstrates the most common real-world use case for `MannKenSen`: analyzing a time series where the time component is represented by `datetime` objects. It also introduces the `plot_path` parameter to automatically generate and save a visualization of the trend analysis.
+## Script: `run_example.py`
+The script performs the following actions:
+1.  Generates 10 years of synthetic monthly data with a slight downward trend.
+2.  Calls `mks.trend_test`, passing the `pandas.DatetimeIndex` as the time vector `t`.
+3.  Uses the `plot_path` argument to save a visualization of the trend analysis.
+4.  Converts the raw Sen's slope (which is in units/second) to a more interpretable annual slope.
+5.  Dynamically generates this `README.md` file, embedding the captured results and the plot.
 
-### Python Script (`run_example.py`)
+## Results
+The key results from the analysis are summarized below.
 
-The script below generates a synthetic dataset representing 10 years of monthly data with a slight downward trend. The time vector is created using `pandas.date_range`. The script then calls `MannKenSen.trend_test()` to perform the analysis and saves a plot of the results.
 
-A crucial part of this example is the **interpretation of the slope**. When `datetime` objects are used, the package converts them to high-resolution numeric timestamps (Unix time in seconds) for the calculation. This results in a raw slope in **units per second**, which is a very small number. To make it human-readable, we must convert it to **units per year** by multiplying by the number of seconds in a year.
+- **Trend Classification:** Highly Likely Decreasing
+- **P-value (p):** 0.0000
+- **Annual Sen's Slope:** -0.4814 (units per year)
+- **Annual Percent Change:** -6.42%
 
-```python
-import numpy as np
-import pandas as pd
-import MannKenSen as mks
 
-# --- 1. Generate Synthetic Data ---
-# This example introduces the use of a datetime object for the time vector,
-# which is the most common use case for real-world time series data.
-np.random.seed(42)
-n_samples = 120 # 10 years of monthly data
-dates = pd.date_range(start='2010-01-01', periods=n_samples, freq='MS')
-
-# Create a slight downward trend of ~0.5 units per year and add noise
-time_as_years = np.arange(n_samples) / 12.0
-trend = -0.5 * time_as_years
-noise = np.random.normal(0, 0.8, n_samples)
-values = 10 + trend + noise
-
-# --- 2. Perform the Trend Test with Plotting ---
-# The trend_test function automatically converts datetime objects to numeric
-# timestamps for the calculation.
-# We also use the `plot_path` argument to save a visualization of the results.
-result = mks.trend_test(
-    x=values,
-    t=dates,
-    plot_path='Examples/03_Non_Seasonal_Timestamps/timestamp_trend_plot.png'
-)
-
-# --- 3. Print Key Results ---
-# When using datetime objects, the raw slope is calculated in units per second
-# (Unix time). To make it human-readable, we convert it to units per year.
-SECONDS_PER_YEAR = 365.25 * 24 * 60 * 60
-annual_slope = result.slope * SECONDS_PER_YEAR
-median_val = np.median(values)
-annual_percent_change = (annual_slope / median_val) * 100
-
-print("--- MannKenSen Trend Analysis Results (with Timestamps) ---")
-print(f"Trend Classification: {result.classification}")
-print(f"P-value (p): {result.p:.4f}")
-print(f"Annual Sen's Slope: {annual_slope:.4f} (units per year)")
-print(f"Annual Percent Change: {annual_percent_change:.2f}%")
-
-```
-
-### Results and Interpretation
-
-Running the script produces the following output and plot:
-
-```
---- MannKenSen Trend Analysis Results (with Timestamps) ---
-Trend Classification: Highly Likely Decreasing
-P-value (p): 0.0000
-Annual Sen's Slope: -0.4814 (units per year)
-Annual Percent Change: -6.42%
-```
+### Plot Interpretation (`timestamp_trend_plot.png`)
+The generated plot provides a comprehensive visual summary of the analysis:
+-   **Data Points:** The raw data points are plotted over time.
+-   **Sen's Slope Line:** The solid red line shows the calculated Sen's slope, representing the main trend line.
+-   **Confidence Intervals:** The dashed red lines show the 95% confidence intervals for the slope. A narrower interval indicates higher confidence in the slope estimate.
 
 ![Trend Plot](timestamp_trend_plot.png)
 
-#### Interpretation:
-
--   **Annual Sen's Slope:** After converting from units/second, the calculated annual slope is `-0.4814` units per year. This is very close to the true synthetic slope of -0.5, confirming the test's accuracy. The negative value indicates a decreasing trend.
--   **Trend Classification:** The `Highly Likely Decreasing` classification and `p-value` of `0.0000` show that the detected downward trend is statistically significant.
--   **Plot Visualization:** The generated plot provides a clear visual confirmation of the analysis.
-    -   The black dots represent the individual monthly data points.
-    -   The solid blue line is the Sen's slope trend line, clearly showing the downward trajectory.
-    -   The dashed blue lines represent the 95% confidence intervals for the slope. The fact that this confidence band is narrow and does not cross the horizontal (zero-slope) plane gives us high confidence in the trend.
-    -   The key statistics are conveniently printed on the plot itself, making it a self-contained summary of the analysis.
+**Conclusion:** The `MannKenSen` package seamlessly handles `datetime` objects, making it easy to analyze real-world time series data. The plotting feature is a crucial tool for visualizing and communicating the results of the trend analysis.
