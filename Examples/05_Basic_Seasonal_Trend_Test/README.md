@@ -1,192 +1,45 @@
-# Example 6: Detecting and Visualizing Seasonality
 
-## Introduction
+# Example 5: Basic Seasonal Trend Test
 
-Is there a cyclical pattern in your data? Do values tend to be higher in the summer and lower in the winter, or vice-versa? Answering this question is a critical first step in time-series analysis. If a strong seasonal pattern exists, you should use a seasonal trend test (like `seasonal_trend_test`) to correctly identify the long-term trend. Ignoring seasonality can lead to incorrect conclusions.
+This example demonstrates the standard workflow for analyzing time series data that has a seasonal pattern. Strong seasonality can mask or create spurious long-term trends, so it's essential to use a seasonal test to correctly identify the underlying trend.
 
-The `MannKenSen` package provides two key functions for this purpose:
-1.  `mks.check_seasonality()`: Performs a Kruskal-Wallis H-test to statistically determine if there's a significant difference between seasons.
-2.  `mks.plot_seasonal_distribution()`: Creates a box plot to visually inspect the distribution of data for each season.
+The workflow involves three key steps:
+1.  **Check for Seasonality:** Statistically determine if a seasonal pattern exists.
+2.  **Visualize Seasonality:** Use a box plot to visually confirm the pattern.
+3.  **Perform Seasonal Test:** If seasonality is present, use the `seasonal_trend_test` to find the long-term trend.
 
-This example demonstrates how to use both.
+## Script: `run_example.py`
+The script generates 10 years of synthetic monthly data containing a strong seasonal cycle (high in winter, low in summer) and a slight, underlying increasing trend. It then performs the three steps outlined above and dynamically generates this README with the captured results.
 
-## The Data
+## Results
 
-We will generate a 10-year monthly dataset with three components:
-1.  A strong cosine-based seasonal pattern (higher values in winter, lower in summer).
-2.  A slight long-term increasing trend.
-3.  Random noise to make it more realistic.
+### 1. Seasonality Check
+The `check_seasonality` function uses the Kruskal-Wallis H-test to check for significant differences between seasons. A low p-value indicates that a seasonal pattern is present.
 
-Here is a sample of the first 5 rows:
-```
-        date      value
-0 2010-01-31  31.989932
-1 2010-02-28  29.563063
-2 2010-03-31  24.965410
-3 2010-04-30  15.548485
-4 2010-05-31  10.785741
-```
 
-## Python Script (`run_example.py`)
+- **Is Seasonal?:** True
+- **P-value:** 8.45e-18
+- **H-statistic:** 106.67
 
-The script below generates the data, runs the statistical test, and creates the visualization.
 
-```python
-import numpy as np
-import pandas as pd
-import MannKenSen as mks
-import sys
-import os
+The very low p-value confirms that the data is seasonal.
 
-# Define the output directory
-output_dir = 'Examples/6_detecting_seasonality'
-os.makedirs(output_dir, exist_ok=True)
+### 2. Seasonal Distribution Plot (`seasonal_distribution_plot.png`)
+This box plot visualizes the data distribution for each month, clearly showing the cosine pattern that was generated in the synthetic data.
+![Seasonal Distribution Plot](seasonal_distribution_plot.png)
 
-# Define output file paths
-output_file = os.path.join(output_dir, 'seasonality_output.txt')
-plot_file = os.path.join(output_dir, 'seasonality_plot.png')
+### 3. Seasonal Trend Test
+Since seasonality was confirmed, we use `seasonal_trend_test`. This function analyzes the trend for each season (month) individually before combining them, which correctly isolates the long-term trend from the seasonal cycle.
 
-# Redirect output to a file
-with open(output_file, 'w') as f:
-    original_stdout = sys.stdout
-    sys.stdout = f
 
-    # --- 1. Introduction ---
-    print("### Example 6: Detecting and Visualizing Seasonality ###")
-    print("\nBefore performing a trend test, it's often crucial to determine")
-    print("if your data has a seasonal pattern. A seasonal pattern can mask or")
-    print("falsely indicate a long-term trend. The MannKenSen package provides")
-    print("tools to both statistically test for and visualize seasonality.")
-    print("-" * 60)
+- **Trend Classification:** Highly Likely Increasing
+- **P-value (p):** 3.86e-14
+- **Annual Sen's Slope:** 0.5479 (units per year)
+- **Kendall's Tau:** 0.5444
 
-    # --- 2. Generate Synthetic Seasonal Data ---
-    # Create a 10-year dataset with monthly data points.
-    dates = pd.date_range(start='2010-01-01', end='2019-12-31', freq='ME')
-    n = len(dates)
 
-    # Create a seasonal pattern (e.g., higher values in summer, lower in winter)
-    # The month number (1-12) is used to create a cyclical pattern.
-    month_numbers = dates.month
-    seasonal_pattern = 10 * np.cos(2 * np.pi * (month_numbers - 1) / 12) + 20
+### Plot Interpretation (`seasonal_trend_plot.png`)
+The final trend plot shows the raw data points with the calculated seasonal Sen's slope and its confidence intervals overlaid, confirming the slight increasing trend.
+![Seasonal Trend Plot](seasonal_trend_plot.png)
 
-    # Add some random noise to make it more realistic
-    noise = np.random.normal(0, 2, n)
-
-    # Add a slight increasing long-term trend
-    trend = np.linspace(0, 5, n)
-
-    # Combine the components
-    values = seasonal_pattern + noise + trend
-
-    print("\n--- Generated Data ---")
-    print("A 10-year monthly dataset was created with a clear seasonal cycle")
-    print("(high in winter, low in summer) and a slight increasing trend.")
-    df = pd.DataFrame({'date': dates, 'value': values})
-    print("Data head:")
-    print(df.head().to_string())
-    print("-" * 60)
-
-    # --- 3. Statistically Check for Seasonality ---
-    print("\n--- 3. Using `check_seasonality` ---")
-    print("The `check_seasonality` function uses the Kruskal-Wallis H-test to")
-    print("determine if there is a statistically significant difference between")
-    print("the distributions of data for each season (in this case, months).")
-    print("\nA low p-value (typically < 0.05) indicates significant seasonality.")
-
-    seasonality_result = mks.check_seasonality(x_old=values, t_old=dates, season_type='month')
-
-    print("\nResults:")
-    print(seasonality_result)
-
-    if seasonality_result.is_seasonal:
-        print("\nConclusion: The p-value is very low, confirming the presence of")
-        print("a significant seasonal pattern in the data.")
-    else:
-        print("\nConclusion: No significant seasonal pattern was detected.")
-    print("-" * 60)
-
-    # --- 4. Visualize Seasonal Distribution ---
-    print("\n--- 4. Using `plot_seasonal_distribution` ---")
-    print("A box plot is an excellent way to visualize seasonal patterns.")
-    print("The `plot_seasonal_distribution` function creates a box plot showing")
-    print("the data distribution for each month.")
-
-    mks.plot_seasonal_distribution(
-        x_old=values,
-        t_old=dates,
-        season_type='month',
-        save_path=plot_file
-    )
-
-    print(f"\nA box plot has been saved to '{os.path.basename(plot_file)}'.")
-    print("This plot should visually confirm the cosine pattern we generated,")
-    print("with higher values in winter months (1, 11, 12) and lower values")
-    print("in summer months (6, 7).")
-    print("-" * 60)
-
-# Restore stdout
-sys.stdout = original_stdout
-print(f"Example 6 script finished. Output saved to {output_file}")
-```
-
-## Results and Interpretation
-
-The script produces the following output, confirming our expectations.
-
-```text
-### Example 6: Detecting and Visualizing Seasonality ###
-
-Before performing a trend test, it's often crucial to determine
-if your data has a seasonal pattern. A seasonal pattern can mask or
-falsely indicate a long-term trend. The MannKenSen package provides
-tools to both statistically test for and visualize seasonality.
-------------------------------------------------------------
-
---- Generated Data ---
-A 10-year monthly dataset was created with a clear seasonal cycle
-(high in winter, low in summer) and a slight increasing trend.
-Data head:
-        date      value
-0 2010-01-31  31.989932
-1 2010-02-28  29.563063
-2 2010-03-31  24.965410
-3 2010-04-30  15.548485
-4 2010-05-31  10.785741
-------------------------------------------------------------
-
---- 3. Using `check_seasonality` ---
-The `check_seasonality` function uses the Kruskal-Wallis H-test to
-determine if there is a statistically significant difference between
-the distributions of data for each season (in this case, months).
-
-A low p-value (typically < 0.05) indicates significant seasonality.
-
-Results:
-Seasonality_Test(h_statistic=108.62772589574714, p_value=1.571434199990818e-18, is_seasonal=True, seasons_tested=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], seasons_skipped=[])
-
-Conclusion: The p-value is very low, confirming the presence of
-a significant seasonal pattern in the data.
-------------------------------------------------------------
-
---- 4. Using `plot_seasonal_distribution` ---
-A box plot is an excellent way to visualize seasonal patterns.
-The `plot_seasonal_distribution` function creates a box plot showing
-the data distribution for each month.
-
-A box plot has been saved to 'seasonality_plot.png'.
-This plot should visually confirm the cosine pattern we generated,
-with higher values in winter months (1, 11, 12) and lower values
-in summer months (6, 7).
-------------------------------------------------------------
-```
-
-### Interpretation
-
-1.  **Statistical Test:** The `check_seasonality` result shows an extremely small `p_value` (1.57e-18), which is far below the typical significance level of 0.05. This provides strong statistical evidence that the data distributions for different months are not the same, confirming a seasonal pattern.
-2.  **Visualization:** The generated box plot provides clear visual confirmation of the statistical result.
-
-### Generated Plot
-
-![Seasonal Distribution Plot](./seasonality_plot.png)
-
-The plot clearly shows the cyclical pattern: values are highest in the winter months (1, 12), lowest in the summer months (6, 7), and transition smoothly in between. This visual evidence, combined with the statistical test, gives us high confidence that a seasonal analysis is required for this dataset.
+**Conclusion:** This workflow—confirm, visualize, and then test for seasonal trend—is a robust method for analyzing seasonal time series data and correctly identifying long-term trends.

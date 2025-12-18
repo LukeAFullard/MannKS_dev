@@ -1,36 +1,27 @@
+
 # Example 15: Regional Trend Analysis
 
-This example demonstrates how to use the `regional_test` function to aggregate trend results from multiple individual sites and determine if there is a statistically significant trend across the entire region.
+This example demonstrates how to use the `regional_test` function to aggregate trend results from multiple sites to determine if there is a significant trend across an entire region.
 
 ## Key Concepts
-
-Often, environmental data is collected from a network of monitoring sites. While analyzing the trend at each site is important, it's also valuable to understand the overall picture. A regional test answers the question: "Is there a general, region-wide trend, even if some individual sites show no trend or a trend in the opposite direction?"
-
-The `MannKenSen.regional_test` function implements the method described by Helsel and Frans (2006), which involves the following steps:
-1.  **Individual Tests:** Perform a standard `trend_test` (or `seasonal_trend_test`) for each site.
-2.  **Sum S-statistics:** Sum the individual Mann-Kendall S-statistics from all sites.
-3.  **Sum Variances:** Sum the variances of the S-statistics from all sites.
-4.  **Covariance Adjustment:** Calculate the covariance between sites to account for inter-site correlation (i.e., sites that tend to vary together). This adjustment is added to the summed variance.
-5.  **Regional Test:** Perform a final Z-test using the summed S-statistic and the adjusted summed variance to determine the overall regional trend.
+A regional test answers the question: "Is there a general, region-wide trend?" It works by:
+1.  Performing a trend test on each individual site.
+2.  Aggregating the S-statistics and their variances.
+3.  Adjusting for inter-site correlation.
+4.  Performing a final Z-test on the aggregated results.
 
 ## Script: `run_example.py`
-The script simulates a common real-world scenario by generating data for three distinct monitoring sites:
--   **Site A:** Has a strong increasing trend.
--   **Site B:** Has a weaker, but still positive, increasing trend.
--   **Site C:** Has no trend (stable data).
-
-The script then follows the regional analysis workflow:
-1.  It loops through the data for each site and performs a standard `trend_test`.
-2.  It collects these individual results into a list.
-3.  It passes the list of results and the full dataset to the `regional_test` function to calculate the final, aggregated trend.
+The script simulates a scenario with three sites: two with increasing trends of different strengths and one with no trend. It analyzes each site individually and then passes the results to the `regional_test` function.
 
 ## Results
+Despite one site showing no trend, the regional test combines the evidence to find an overall trend.
 
-### Output Analysis (`regional_analysis_output.txt`)
-The output file shows the step-by-step process.
+### Individual Site Results
+- Site A Trend: Highly Likely Increasing\n
+- Site B Trend: Highly Likely Increasing\n
+- Site C Trend: No Trend\n
 
-1.  **Individual Results:** First, you see the `Mann_Kendall_Test` namedtuple printed for each of the three sites. You will likely see that Site A and Site B are "Increasing", while Site C is "No Trend".
+### Regional Test Result
+- **Regional Trend Direction:** Increasing\n- **Aggregate Trend Confidence (CT):** 0.9985\n- **Number of Sites (M):** 3\n
 
-2.  **Regional Result:** Following the individual results, the output of the `regional_test` is printed. This is a `Regional_Mann_Kendall_Test` namedtuple containing the final aggregated statistics. Despite the "No Trend" result from Site C, the regional test combines the evidence from all sites and correctly concludes that there is an overall "Increasing" trend for the region as a whole.
-
-**Conclusion:** The `regional_test` function is a powerful tool for synthesizing trend information from multiple time series, providing a statistically sound method for assessing large-scale environmental changes.
+**Conclusion:** The `regional_test` function provides a statistically sound method for assessing large-scale environmental changes by synthesizing trend information from multiple time series.

@@ -1,96 +1,80 @@
 import numpy as np
 import pandas as pd
 import MannKenSen as mks
-import sys
 import os
 
-# Define the output directory
+# --- Define Paths ---
 output_dir = 'Examples/13_Confidence_Interval_Methods'
-os.makedirs(output_dir, exist_ok=True)
-
-# Define output file paths
-output_file = os.path.join(output_dir, 'ci_methods_output.txt')
 direct_plot_file = os.path.join(output_dir, 'direct_ci_plot.png')
 lwp_plot_file = os.path.join(output_dir, 'lwp_ci_plot.png')
+readme_file = os.path.join(output_dir, 'README.md')
 
-# Redirect output to a file
-with open(output_file, 'w') as f:
-    original_stdout = sys.stdout
-    sys.stdout = f
+# --- 1. Generate Data ---
+np.random.seed(42)
+dates = pd.to_datetime(pd.to_datetime(np.arange(2010, 2025), format='%Y'))
+noise = np.random.normal(0, 2, len(dates))
+trend = np.linspace(0, 10, len(dates))
+values = 5 + trend + noise
 
-    # --- 1. Introduction ---
-    print("### Example 13: Comparing Confidence Interval Methods ###")
-    print("\nThis example compares the two methods for calculating the confidence")
-    print("intervals (CI) for the Sen's slope: 'direct' (default) and 'lwp'.")
-    print("The choice of method affects how the confidence limits are selected")
-    print("from the distribution of all pairwise slopes.")
-    print("-" * 60)
+# --- 2. Run Analyses ---
+result_direct = mks.trend_test(
+    x=values,
+    t=dates,
+    ci_method='direct',
+    plot_path=direct_plot_file
+)
+result_lwp = mks.trend_test(
+    x=values,
+    t=dates,
+    ci_method='lwp',
+    plot_path=lwp_plot_file
+)
 
-    # --- 2. Generate Synthetic Data ---
-    # Create a simple dataset with a clear trend.
-    dates = pd.to_datetime(pd.to_datetime(np.arange(2010, 2025), format='%Y'))
-    noise = np.random.normal(0, 2, len(dates))
-    trend = np.linspace(0, 10, len(dates))
-    values = 5 + trend + noise
+# --- 3. Format Results and Generate README ---
+s_in_y = 365.25 * 24 * 60 * 60
+direct_summary = (
+    "- **Annual Slope:** {:.4f}\\n"
+    "- **Annual CI:** ({:.4f}, {:.4f})\\n"
+).format(result_direct.slope * s_in_y, result_direct.lower_ci * s_in_y, result_direct.upper_ci * s_in_y)
 
-    print("\n--- Generated Data ---")
-    df = pd.DataFrame({'date': dates, 'value': values})
-    print("Generated a simple linear dataset with some noise.")
-    print("Data head:")
-    print(df.head().to_string())
-    print("-" * 60)
+lwp_summary = (
+    "- **Annual Slope:** {:.4f}\\n"
+    "- **Annual CI:** ({:.4f}, {:.4f})\\n"
+).format(result_lwp.slope * s_in_y, result_lwp.lower_ci * s_in_y, result_lwp.upper_ci * s_in_y)
 
-    # --- 3. Analysis with 'direct' CI Method (Default) ---
-    print("\n--- 3. Analysis with `ci_method='direct'` (Default) ---")
-    print("The 'direct' method calculates the ranks of the upper and lower CIs")
-    print("and rounds them to the nearest integer to directly index the sorted")
-    print("array of pairwise slopes. It is fast and straightforward.")
+readme_content = """
+# Example 13: Comparing Confidence Interval Methods
 
-    result_direct = mks.trend_test(
-        x=values,
-        t=dates,
-        ci_method='direct', # This is the default
-        plot_path=direct_plot_file
-    )
+This example compares the two methods for calculating the confidence intervals (CI) for the Sen's slope: `'direct'` (default) and `'lwp'`.
 
-    # Convert slope and CI to annual for interpretation
-    seconds_in_year = 365.25 * 24 * 60 * 60
-    annual_slope_direct = result_direct.slope * seconds_in_year
-    annual_lower_ci_direct = result_direct.lower_ci * seconds_in_year
-    annual_upper_ci_direct = result_direct.upper_ci * seconds_in_year
+## Key Concepts
+-   `'direct'` **(Default):** Calculates the ranks of the CIs and rounds them to the nearest integer to directly index the sorted array of pairwise slopes.
+-   `'lwp'`: Emulates the LWP-TRENDS R script by using linear interpolation between slopes to get a more precise CI estimate.
 
-    print("\nDirect CI Results:")
-    print(f"Annual Slope: {annual_slope_direct:.4f}")
-    print(f"Annual CI: ({annual_lower_ci_direct:.4f}, {annual_upper_ci_direct:.4f})")
-    print(f"A plot has been saved to '{os.path.basename(direct_plot_file)}'.")
-    print("-" * 60)
+The choice of method does **not** affect the Sen's slope itself, only its confidence interval.
 
-    # --- 4. Analysis with 'lwp' CI Method ---
-    print("\n--- 4. Analysis with `ci_method='lwp'` ---")
-    print("The 'lwp' method emulates the LWP-TRENDS R script. It uses linear")
-    print("interpolation between the two slopes on either side of the calculated")
-    print("rank. This can provide a more precise, non-integer estimate for the")
-    print("confidence limits, but the difference is often small.")
+## Script: `run_example.py`
+The script analyzes a simple linear dataset twice, once with each `ci_method`, and generates this README.
 
-    result_lwp = mks.trend_test(
-        x=values,
-        t=dates,
-        ci_method='lwp',
-        plot_path=lwp_plot_file
-    )
+## Results
+The Sen's slope is identical, but the confidence intervals are slightly different due to the calculation method.
 
-    annual_slope_lwp = result_lwp.slope * seconds_in_year
-    annual_lower_ci_lwp = result_lwp.lower_ci * seconds_in_year
-    annual_upper_ci_lwp = result_lwp.upper_ci * seconds_in_year
+### Direct CI Method (`ci_method='direct'`)
+{}
+![Direct CI Plot](direct_ci_plot.png)
 
-    print("\nLWP CI Results:")
-    print(f"Annual Slope: {annual_slope_lwp:.4f}")
-    print(f"Annual CI: ({annual_lower_ci_lwp:.4f}, {annual_upper_ci_lwp:.4f})")
-    print("\nConclusion: As shown, the Sen's slope is identical, but the confidence")
-    print("intervals are slightly different due to the calculation method.")
-    print(f"A plot has been saved to '{os.path.basename(lwp_plot_file)}'.")
-    print("-" * 60)
+### LWP CI Method (`ci_method='lwp'`)
+{}
+![LWP CI Plot](lwp_ci_plot.png)
 
-# Restore stdout
-sys.stdout = original_stdout
-print(f"Example 13 script finished. Output saved to {output_file}")
+**Conclusion:** The default `'direct'` method is generally sufficient. The `'lwp'` method is for users who need consistency with the LWP-TRENDS R script or prefer an interpolated result.
+""".format(direct_summary, lwp_summary)
+
+with open(readme_file, 'w') as f:
+    f.write(readme_content)
+
+# Clean up the old text file if it exists
+if os.path.exists(os.path.join(output_dir, 'ci_methods_output.txt')):
+    os.remove(os.path.join(output_dir, 'ci_methods_output.txt'))
+
+print("Successfully generated README and plots for Example 13.")

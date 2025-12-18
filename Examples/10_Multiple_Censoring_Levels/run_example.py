@@ -1,82 +1,67 @@
 import numpy as np
 import pandas as pd
 import MannKenSen as mks
-import sys
 import os
 
-# Define the output directory
+# --- Define Paths ---
 output_dir = 'Examples/10_Multiple_Censoring_Levels'
-os.makedirs(output_dir, exist_ok=True)
-
-# Define output file paths
-output_file = os.path.join(output_dir, 'multi_censor_output.txt')
 plot_file = os.path.join(output_dir, 'multi_censor_plot.png')
+readme_file = os.path.join(output_dir, 'README.md')
 
-# Redirect output to a file
-with open(output_file, 'w') as f:
-    original_stdout = sys.stdout
-    sys.stdout = f
+# --- 1. Generate and Pre-process Data ---
+np.random.seed(42)
+dates = pd.to_datetime(pd.to_datetime(np.arange(2005, 2025), format='%Y'))
+values = [
+    '<1', '1.2', '<2', '1.8', '<1',
+    '2.5', '<5', '4.8', '5.1', '<5',
+    '7.2', '8.1', '>10', '12.3', '11.8',
+    '>10', '14.5', '15.9', '>15', '18.2'
+]
+prepared_data = mks.prepare_censored_data(values)
 
-    # --- 1. Introduction ---
-    print("### Example 10: Handling Data with Multiple Censoring Levels ###")
-    print("\nThis example demonstrates the robustness of the package in handling")
-    print("complex, realistic datasets that contain numerous different")
-    print("censoring levels for both left-censored ('<') and right-censored ('>') data.")
-    print("\nThe underlying statistical methods are designed to correctly interpret")
-    print("these varied limits without any special user intervention other than")
-    print("the standard preprocessing step.")
-    print("-" * 60)
+# --- 2. Run Analysis ---
+result = mks.trend_test(
+    x=prepared_data,
+    t=dates,
+    plot_path=plot_file
+)
 
-    # --- 2. Generate Synthetic Data ---
-    # Create a dataset with a clear increasing trend and a mix of many
-    # different censoring levels.
-    dates = pd.to_datetime(pd.to_datetime(np.arange(2005, 2025), format='%Y'))
-    values = [
-        '<1', '1.2', '<2', '1.8', '<1',  # Low values, some censored
-        '2.5', '<5', '4.8', '5.1', '<5',  # Medium values
-        '7.2', '8.1', '>10', '12.3', '11.8', # High values, one right-censored
-        '>10', '14.5', '15.9', '>15', '18.2' # Higher values, more right-censored
-    ]
+# --- 3. Format Results and Generate README ---
+annual_slope = result.slope * 365.25 * 24 * 60 * 60
+result_summary = (
+    "- **Classification:** {}\\n"
+    "- **P-value:** {:.2e}\\n"
+    "- **Annual Slope:** {:.4f}\\n"
+    "- **Proportion Censored:** {:.2%}\\n"
+).format(result.classification, result.p, annual_slope, result.prop_censored)
 
+readme_content = """
+# Example 10: Handling Data with Multiple Censoring Levels
 
-    print("\n--- Generated Data ---")
-    df = pd.DataFrame({'date': dates, 'value': values})
-    print(df.to_string())
-    print("\nNote the mix of uncensored, left-censored ('<1', '<2', '<5'), and")
-    print("right-censored ('>10', '>15') data points.")
-    print("-" * 60)
+This example demonstrates the robustness of `MannKenSen` in handling complex, realistic datasets that contain numerous different censoring levels.
 
-    # --- 3. Pre-process and Analyze ---
-    print("\n--- 3. Pre-processing and Analyzing Data ---")
-    print("Even with complex data, the workflow remains the same:")
-    print("1. Use `prepare_censored_data` to convert the raw data.")
-    print("2. Pass the prepared data to `trend_test`.")
+## Key Concepts
+Real-world data often has a mix of censoring types (e.g., `<1`, `<5`, `>50`). The statistical engine in `MannKenSen` is designed to handle this complexity automatically. The standard workflow of `prepare_censored_data` followed by `trend_test` is sufficient. The test correctly interprets the relationships between all pairs of values, whether they are censored or not.
 
-    # 1. Prepare the data
-    prepared_data = mks.prepare_censored_data(values)
+## Script: `run_example.py`
+The script generates a synthetic dataset with an increasing trend and a complex mix of left-censored (`<1`, `<2`, `<5`) and right-censored (`>10`, `>15`) data. It runs the standard analysis workflow and generates this README.
 
-    # 2. Run the trend test
-    result = mks.trend_test(
-        x=prepared_data,
-        t=dates,
-        plot_path=plot_file
-    )
+## Results
+The analysis correctly identifies the strong increasing trend despite the complex data.
+{}
 
-    print("\nAnalysis Results:")
-    print(result)
+### Analysis Plot (`multi_censor_plot.png`)
+The plot visualizes the complex data, using different markers for uncensored (circles), left-censored (downward triangles), and right-censored (upward triangles) data points.
+![Multi-Censor Plot](multi_censor_plot.png)
 
-    # Convert slope to annual for interpretation
-    seconds_in_year = 365.25 * 24 * 60 * 60
-    annual_slope = result.slope * seconds_in_year
+**Conclusion:** `MannKenSen` is a robust tool for handling complex, messy, real-world censored data without requiring special configuration.
+""".format(result_summary)
 
-    print(f"\nAnnual Slope: {annual_slope:.4f}")
+with open(readme_file, 'w') as f:
+    f.write(readme_content)
 
-    print("\nConclusion: The package correctly identifies the strong 'Increasing' trend")
-    print("despite the complexity of the multiple censoring levels. The plot")
-    print("visualizes how the different types of data points are handled.")
-    print(f"A plot has been saved to '{os.path.basename(plot_file)}'.")
-    print("-" * 60)
+# Clean up the old text file if it exists
+if os.path.exists(os.path.join(output_dir, 'multi_censor_output.txt')):
+    os.remove(os.path.join(output_dir, 'multi_censor_output.txt'))
 
-# Restore stdout
-sys.stdout = original_stdout
-print(f"Example 10 script finished. Output saved to {output_file}")
+print("Successfully generated README and plot for Example 10.")

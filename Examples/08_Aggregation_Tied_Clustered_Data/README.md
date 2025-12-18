@@ -1,37 +1,26 @@
+
 # Example 8: Aggregation for Tied and Clustered Data
 
-This example demonstrates how the temporal aggregation feature in `MannKenSen` can be used to solve two common data issues:
-1.  **Tied Timestamps:** When multiple measurements are recorded at the exact same time.
-2.  **Clustered Data:** When sampling frequency is inconsistent, leading to dense clusters of data in certain periods.
-
-Both issues can bias the Sen's slope calculation by giving disproportionate weight to periods with more data. Temporal aggregation resolves this by ensuring each time period contributes a single, representative value to the trend analysis.
+This example demonstrates how temporal aggregation can solve two common data issues: tied timestamps (multiple measurements at the same time) and clustered data (inconsistent sampling frequency). Both can bias the Sen's slope calculation.
 
 ## Key Concepts
-
-The `trend_test` function includes two key parameters for aggregation:
--   `agg_method`: Specifies the method used to aggregate data within a period (e.g., `'median'`, `'mean'`, `'robust_median'`).
--   `agg_period`: Specifies the time window for aggregation when using datetimes (e.g., `'year'`, `'month'`, `'day'`).
-
-When aggregation is enabled, the function first groups the data by the specified `agg_period`, calculates a single value for each group using the `agg_method`, and then performs the Mann-Kendall test on the aggregated, evenly-weighted data.
+The `trend_test` function includes `agg_method` and `agg_period` parameters. When enabled, the function groups data by the specified period (e.g., 'year'), calculates a single value for each group, and then performs the trend test on the aggregated, evenly-weighted data.
 
 ## Script: `run_example.py`
-The script creates a synthetic dataset with an increasing trend that exhibits both data clustering (four measurements in March 2013) and tied timestamps (two measurements on the same day in June 2014).
-
-The script analyzes the data twice:
-1.  **Without Aggregation (`agg_method='none'`):** This shows the raw analysis. The output includes an "analysis note" warning that the Sen's slope may be affected by the tied timestamps.
-2.  **With Annual Aggregation (`agg_method='median'`, `agg_period='year'`):** This calculates the median value for each year, creating a temporally balanced dataset. The warning disappears, and the resulting trend is more robust.
+The script creates a dataset with both data clustering and tied timestamps. It analyzes the data twice: once without aggregation and once with annual median aggregation.
 
 ## Results
 
-### Aggregated Analysis Plot
--   **`aggregation_plot.png`**:
-    ![Aggregation Plot](aggregation_plot.png)
+### Analysis Without Aggregation
+The raw analysis flags the tied timestamps as a potential issue in the `analysis_notes`.
+- **Classification:** Highly Likely Increasing\n- **P-value:** 4.25e-06\n- **Analysis Notes:** ['tied timestamps present without aggregation']\n
 
-### Output Analysis (`aggregation_output.txt`)
+### Analysis With Annual Aggregation
+Aggregating the data to an annual median resolves the issue, providing a more robust trend estimate.
+- **Classification:** Highly Likely Increasing\n- **P-value:** 8.44e-06\n- **Annual Slope:** 0.4584\n
 
-The text output file clearly shows the difference between the two approaches.
+### Aggregated Analysis Plot (`aggregation_plot.png`)
+The plot shows the trend calculated from the aggregated data.
+![Aggregation Plot](aggregation_plot.png)
 
--   **Without Aggregation:** The result includes `analysis_notes=['WARNING: Sen slope may be affected by tied timestamps']`.
--   **With Aggregation:** The analysis notes are empty, and the calculated slope and confidence intervals are based on the more reliable, aggregated data. The script also converts the raw slope (in units/second) to a more interpretable annual slope.
-
-**Conclusion:** Temporal aggregation is a powerful tool for improving the accuracy and reliability of trend analysis on real-world data, which is often messy and irregularly sampled.
+**Conclusion:** Temporal aggregation is a powerful tool for improving the accuracy of trend analysis on messy, irregularly sampled real-world data.

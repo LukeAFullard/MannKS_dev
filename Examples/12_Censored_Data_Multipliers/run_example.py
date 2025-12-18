@@ -1,98 +1,69 @@
 import numpy as np
 import pandas as pd
 import MannKenSen as mks
-import sys
 import os
 
-# Define the output directory
+# --- Define Paths ---
 output_dir = 'Examples/12_Censored_Data_Multipliers'
-os.makedirs(output_dir, exist_ok=True)
+readme_file = os.path.join(output_dir, 'README.md')
 
-# Define output file paths
-output_file = os.path.join(output_dir, 'multipliers_output.txt')
-# No plot is needed for this example as the effect is numerical.
+# --- 1. Generate and Pre-process Data ---
+np.random.seed(42)
+dates = pd.to_datetime(pd.to_datetime(np.arange(2010, 2020), format='%Y'))
+values = ['<2', '3', '<4', '5', '6', '7', '<8', '9', '10', '11']
+prepared_data = mks.prepare_censored_data(values)
 
-# Redirect output to a file
-with open(output_file, 'w') as f:
-    original_stdout = sys.stdout
-    sys.stdout = f
+# --- 2. Run Analyses ---
+result_default = mks.trend_test(x=prepared_data, t=dates)
+result_custom = mks.trend_test(x=prepared_data, t=dates, lt_mult=0.75)
 
-    # --- 1. Introduction ---
-    print("### Example 12: The Impact of Censored Data Multipliers ###")
-    print("\nThis example demonstrates the `lt_mult` and `gt_mult` parameters,")
-    print("which control the numeric substitution for censored data when calculating")
-    print("the Sen's slope. Changing these values does NOT affect the Mann-Kendall")
-    print("test itself (p-value, S-statistic) but can be used for sensitivity")
-    print("analysis of the slope magnitude.")
-    print("-" * 60)
+# --- 3. Format Results and Generate README ---
+annual_slope_default = result_default.slope * 365.25 * 24 * 60 * 60
+default_summary = (
+    "- **Annual Slope:** {:.4f}\\n"
+    "- **P-value:** {:.4f}\\n"
+    "- **S-statistic:** {}\\n"
+).format(annual_slope_default, result_default.p, result_default.s)
 
-    # --- 2. Generate Synthetic Data ---
-    # Create a simple dataset with a clear increasing trend and left-censored data.
-    dates = pd.to_datetime(pd.to_datetime(np.arange(2010, 2020), format='%Y'))
-    values = ['<2', '3', '<4', '5', '6', '7', '<8', '9', '10', '11']
+annual_slope_custom = result_custom.slope * 365.25 * 24 * 60 * 60
+custom_summary = (
+    "- **Annual Slope:** {:.4f}\\n"
+    "- **P-value:** {:.4f}\\n"
+    "- **S-statistic:** {}\\n"
+).format(annual_slope_custom, result_custom.p, result_custom.s)
 
-    print("\n--- Generated Data ---")
-    df = pd.DataFrame({'date': dates, 'value': values})
-    print(df.to_string())
-    print("\nThe data has a clear increasing trend with several left-censored values.")
-    print("-" * 60)
+readme_content = """
+# Example 12: The Impact of Censored Data Multipliers
 
-    # --- 3. Pre-process the Censored Data ---
-    print("\n--- 3. Pre-processing Data ---")
-    prepared_data = mks.prepare_censored_data(values)
-    print("Prepared data head:")
-    print(prepared_data.head().to_string())
-    print("-" * 60)
+This example explains the `lt_mult` and `gt_mult` parameters, which are used for sensitivity analysis of the Sen's slope calculation with censored data.
 
+## Key Concepts
+The Sen's slope calculation requires numeric values. For censored data, a substitution is made:
+-   `lt_mult` (default `0.5`): A value like `'<10'` is replaced by `10 * lt_mult`.
+-   `gt_mult` (default `1.0`): A value like `'>50'` is replaced by `50 * gt_mult`.
 
-    # --- 4. Analysis with Default Multiplier (`lt_mult=0.5`) ---
-    print("\n--- 4. Analysis with Default Multiplier (`lt_mult=0.5`) ---")
-    print("By default, left-censored values are replaced by their detection limit")
-    print("times 0.5 for the slope calculation (e.g., '<4' becomes 2.0).")
+Changing these parameters **does not** affect the Mann-Kendall significance test (p-value, S-statistic), which is rank-based. It only affects the slope's magnitude.
 
-    result_default = mks.trend_test(
-        x=prepared_data,
-        t=dates,
-        # lt_mult=0.5 is the default
-    )
+## Script: `run_example.py`
+The script analyzes a simple censored dataset twice: once with the default `lt_mult=0.5` and once with `lt_mult=0.75`.
 
-    # Convert slope to annual for interpretation
-    seconds_in_year = 365.25 * 24 * 60 * 60
-    annual_slope_default = result_default.slope * seconds_in_year
+## Results
+The p-value and S-statistic are identical in both runs, as expected. The slope may or may not change depending on the data's structure.
 
-    print("\nDefault Results:")
-    print(f"Annual Slope: {annual_slope_default:.4f}")
-    print(f"P-value: {result_default.p:.4f}")
-    print(f"S-statistic: {result_default.s}")
-    print("-" * 60)
+### Default Multiplier (`lt_mult=0.5`)
+{}
 
+### Custom Multiplier (`lt_mult=0.75`)
+{}
 
-    # --- 5. Analysis with a Custom Multiplier (`lt_mult=0.75`) ---
-    print("\n--- 5. Analysis with a Custom Multiplier (`lt_mult=0.75`) ---")
-    print("Now, we change the multiplier to 0.75. This assumes the true value is")
-    print("closer to the detection limit (e.g., '<4' becomes 3.0). This should")
-    print("result in a slightly higher calculated Sen's slope.")
+**Conclusion:** The `lt_mult` and `gt_mult` parameters are specialized tools for sensitivity analysis of the Sen's slope magnitude, without altering the trend's significance.
+""".format(default_summary, custom_summary)
 
-    result_custom = mks.trend_test(
-        x=prepared_data,
-        t=dates,
-        lt_mult=0.75
-    )
+with open(readme_file, 'w') as f:
+    f.write(readme_content)
 
-    annual_slope_custom = result_custom.slope * seconds_in_year
+# Clean up the old text file if it exists
+if os.path.exists(os.path.join(output_dir, 'multipliers_output.txt')):
+    os.remove(os.path.join(output_dir, 'multipliers_output.txt'))
 
-    print("\nCustom Multiplier Results:")
-    print(f"Annual Slope: {annual_slope_custom:.4f}")
-    print(f"P-value: {result_custom.p:.4f}")
-    print(f"S-statistic: {result_custom.s}")
-    print("\nConclusion: As shown, changing `lt_mult` had no effect on the p-value or")
-    print("S-statistic. While the slope magnitude can change, in this run it did")
-    print("not, which can happen if the median of slopes is not sensitive to the")
-    print("substituted values. This highlights that the primary use of these")
-    print("parameters is for sensitivity analysis.")
-    print("-" * 60)
-
-
-# Restore stdout
-sys.stdout = original_stdout
-print(f"Example 12 script finished. Output saved to {output_file}")
+print("Successfully generated README for Example 12.")
