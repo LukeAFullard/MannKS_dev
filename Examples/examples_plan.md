@@ -25,8 +25,8 @@ Each example will be self-contained in its own directory within `Examples/` and 
 - **Functions:** `MannKenSen.prepare_censored_data()`, `MannKenSen.trend_test()`.
 
 #### Example 5: Basic Seasonal Trend Test
-- **Goal:** Introduce seasonal trend analysis for monthly data.
-- **Functions:** `MannKenSen.check_seasonality()`, `MannKenSen.seasonal_trend_test()`.
+- **Goal:** Introduce the complete seasonal analysis workflow: checking, visualizing, and testing.
+- **Functions:** `MannKenSen.check_seasonality()`, `MannKenSen.plot_seasonal_distribution()`, `MannKenSen.seasonal_trend_test()`.
 
 ---
 
@@ -88,17 +88,14 @@ Each example will be self-contained in its own directory within `Examples/` and 
 - **Goal:** Explain the meaning of the common "Analysis Notes" returned by the package.
 - **Scenarios:** Generate results that produce notes like `"Long run of single value"`, `"Sen slope influenced by censored values"`, and `"Insufficient data"`.
 
-#### Example 18: Interpreting Confidence and Customizing Classification
-- **Goal:** Provide a deeper dive into the trend classification system.
-- **Functions:** `alpha`, `category_map`, and explaining the `C` and `Cd` scores.
+#### Example 18: Standalone Trend Classification
+- **Goal:** Demonstrate how to re-classify a trend result using different criteria without re-running the analysis.
+- **Functions:** `MannKenSen.classify_trend()`.
+- **Scenarios:** Show how to apply a different `alpha` or a custom `category_map` to an existing result object.
 
 #### Example 19: Visual Diagnostics of Trend Plots
 - **Goal:** Show users how to "read" the output of `plot_trend` to diagnose issues.
 - **Scenarios:** Generate plots showing wide confidence intervals (high uncertainty), clear trends, and no trend.
-
-#### Example 20: Cross-Validation with `pyMannKendall`
-- **Goal:** Provide a simple cross-validation against another Python package for a basic, non-censored case.
-- **Comparison:** `MannKenSen.trend_test` vs. `pyMannKendall.original_test`.
 
 ---
 
