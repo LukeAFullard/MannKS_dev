@@ -1,0 +1,44 @@
+### Example 6: Detecting and Visualizing Seasonality ###
+
+Before performing a trend test, it's often crucial to determine
+if your data has a seasonal pattern. A seasonal pattern can mask or
+falsely indicate a long-term trend. The MannKenSen package provides
+tools to both statistically test for and visualize seasonality.
+------------------------------------------------------------
+
+--- Generated Data ---
+A 10-year monthly dataset was created with a clear seasonal cycle
+(high in winter, low in summer) and a slight increasing trend.
+Data head:
+        date      value
+0 2010-01-31  30.837451
+1 2010-02-28  31.677764
+2 2010-03-31  24.254685
+3 2010-04-30  21.806579
+4 2010-05-31  17.064437
+------------------------------------------------------------
+
+--- 3. Using `check_seasonality` ---
+The `check_seasonality` function uses the Kruskal-Wallis H-test to
+determine if there is a statistically significant difference between
+the distributions of data for each season (in this case, months).
+
+A low p-value (typically < 0.05) indicates significant seasonality.
+
+Results:
+Seasonality_Test(h_statistic=np.float64(109.78776859504126), p_value=np.float64(2.019753674669844e-18), is_seasonal=np.True_, seasons_tested=[np.int32(1), np.int32(2), np.int32(3), np.int32(4), np.int32(5), np.int32(6), np.int32(7), np.int32(8), np.int32(9), np.int32(10), np.int32(11), np.int32(12)], seasons_skipped=[])
+
+Conclusion: The p-value is very low, confirming the presence of
+a significant seasonal pattern in the data.
+------------------------------------------------------------
+
+--- 4. Using `plot_seasonal_distribution` ---
+A box plot is an excellent way to visualize seasonal patterns.
+The `plot_seasonal_distribution` function creates a box plot showing
+the data distribution for each month.
+
+A box plot has been saved to 'seasonality_plot.png'.
+This plot should visually confirm the cosine pattern we generated,
+with higher values in winter months (1, 11, 12) and lower values
+in summer months (6, 7).
+------------------------------------------------------------
