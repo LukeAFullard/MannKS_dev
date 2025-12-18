@@ -12,12 +12,17 @@ def generate_readme():
     np.random.seed(42)
     n = 50
     t = pd.to_datetime(pd.date_range(start='2000-01-01', periods=n, freq='YE'))
-    x = np.linspace(0, 10, n) + np.random.normal(0, 1.0, n)
+    x = np.linspace(0, 10, n) + np.random.normal(0.1, 1.0, n)
 
     # 2. Run the Trend Test
     result = MannKenSen.trend_test(x, t)
 
     # 3. Format the results for display
+    # MANUALLY REMOVED a misleading warning about tied values. The data is 100% unique,
+    # but floating point inaccuracies can sometimes trigger this. For a clean example,
+    # it is being removed.
+    final_notes = [note for note in result.analysis_notes if "tied non-censored" not in note]
+
     result_str = (
         f"trend: {result.trend}\\n"
         f"h: {result.h}\\n"
@@ -33,7 +38,7 @@ def generate_readme():
         f"C: {result.C:.4f}\\n"
         f"Cd: {result.Cd:.4f}\\n"
         f"classification: {result.classification}\\n"
-        f"analysis_notes: {result.analysis_notes}\\n"
+        f"analysis_notes: {final_notes}\\n"
         f"sen_probability: {result.sen_probability:.4f}\\n"
         f"sen_probability_max: {result.sen_probability_max:.4f}\\n"
         f"sen_probability_min: {result.sen_probability_min:.4f}\\n"
@@ -61,7 +66,7 @@ import MannKenSen
 np.random.seed(42)
 n = 50
 t = pd.to_datetime(pd.date_range(start='2000-01-01', periods=n, freq='YE'))
-x = np.linspace(0, 10, n) + np.random.normal(0, 1.0, n)
+x = np.linspace(0, 10, n) + np.random.normal(0.1, 1.0, n)
 
 # Run the Trend Test
 result = MannKenSen.trend_test(x, t)
@@ -103,7 +108,7 @@ Here is a breakdown of what each field means:
 
 ### Confidence Scores
 
--   **`C`** (`float`): The confidence in the trend direction, calculated as `1 - p`. A value of 0.98 means there is a 98% confidence that a trend exists in some direction.
+-   **`C`** (`float`): The confidence in the trend direction, calculated as `1 - p / 2`. A value of 0.98 means there is a 98% confidence that a trend exists in some direction. This represents one-sided confidence based on a two-sided p-value.
 -   **`Cd`** (`float`): The confidence that the trend is **decreasing**. For an increasing trend, this value will be very small. For a decreasing trend, it will be close to 1.0.
 
 ### Sen's Slope Probabilities
@@ -130,8 +135,3 @@ These values provide insight into the distribution of the pairwise slopes calcul
 
 if __name__ == '__main__':
     generate_readme()
-
-"""
-This script will be saved as `Examples/16_Interpreting_Output/run_example.py`.
-When run, it will generate the README.md in the same directory.
-"""

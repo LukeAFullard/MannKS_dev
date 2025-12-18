@@ -87,7 +87,7 @@ print(result.analysis_notes)
 
 ### Sen's Slope Influenced by Censored Data
 
-**Analysis Note Produced:** `['< 5 Non-censored values', 'sample size (4) below minimum (10)']`
+**Analysis Note Produced:** `['< 5 Non-censored values', 'sample size (4) below minimum (10)', 'WARNING: Sen slope influenced by left-censored values.']`
 
 **Explanation:** This is a `WARNING` that the median Sen's slope was calculated from a pair of data points where at least one was censored. The slope's value is therefore an estimate based on the `lt_mult` or `gt_mult` parameters.
 
@@ -97,7 +97,7 @@ import pandas as pd
 import MannKenSen
 
 # Data
-x_censored = ['<1', 10, 12, 14]\nx = MannKenSen.prepare_censored_data(x_censored)
+x_censored = ['<10', 15, 5, 25]\nx = MannKenSen.prepare_censored_data(x_censored)
 t = [2000, 2001, 2002, 2003]
 
 # Analysis

@@ -99,9 +99,11 @@ This example demonstrates how to trigger and interpret the most common notes.
     readme_content += generate_readme_for_scenario(**sc4)
 
     # --- Scenario 5: Sen's Slope Influenced by Censored Data ---
+    # This dataset is carefully crafted to ensure the median slope is between
+    # the censored point (<10) and the value 15.
     sc5 = {
         'title': "Sen's Slope Influenced by Censored Data",
-        'data_dict': {'x_censored': ['<1', 10, 12, 14], 't': [2000, 2001, 2002, 2003]},
+        'data_dict': {'x_censored': ['<10', 15, 5, 25], 't': [2000, 2001, 2002, 2003]},
         'trend_test_kwargs': {},
         'explanation': "This is a `WARNING` that the median Sen's slope was calculated from a pair of data points where at least one was censored. The slope's value is therefore an estimate based on the `lt_mult` or `gt_mult` parameters."
     }
