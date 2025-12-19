@@ -39,7 +39,7 @@ The `MannKenSen` package includes a system of "Analysis Notes" to provide data q
 -   **Usefulness and Implications:** This is a critical warning. The Sen's slope is calculated from the slopes of all pairs of points. If two points have the same timestamp, the slope denominator (`t_j - t_i`) is zero, leading to an infinite slope (`inf`), which breaks the calculation. The `MannKenSen` package removes these pairs, but this can **bias the result**. It effectively ignores some of your data in an unmanaged way.
 -   **Limitations and Nuances:** This is especially problematic if the tied values are not identical. If you have `(t1, x1)` and `(t1, x2)`, the package cannot know which value truly represents that time point.
 -   **Recommended Actions:**
-    1.  **Aggregate:** This is the best solution. Use the `agg_method` parameter to combine the duplicate-time observations into a single, representative point. See [Example 8](./08_Aggregation_Tied_Clustered_Data/README.md) for a detailed guide.
+    1.  **Aggregate:** This is the best solution. Use the `agg_method` parameter to combine the duplicate-time observations into a single, representative point. See [Example 9](./09_Aggregation_Tied_Clustered_Data/README.md) for a detailed guide.
 
 ---
 
@@ -49,7 +49,7 @@ The `MannKenSen` package includes a system of "Analysis Notes" to provide data q
 -   **Limitations and Nuances:** This is very common in censored datasets and is not necessarily an error, but it requires careful interpretation.
 -   **Recommended Actions:**
     1.  **Acknowledge Uncertainty:** When reporting the Sen's slope, mention that its magnitude is an estimate influenced by censored values.
-    2.  **Sensitivity Analysis:** As a best practice, re-run the test with different multipliers (e.g., `lt_mult=0.55`, `lt_mult=0.6`) to see how sensitive your slope estimate is. If it changes dramatically, be more cautious. See [Example 12](./12_Censored_Data_Multipliers/README.md).
+    2.  **Sensitivity Analysis:** As a best practice, re-run the test with different multipliers (e.g., `lt_mult=0.55`, `lt_mult=0.6`) to see how sensitive your slope estimate is. If it changes dramatically, be more cautious. See [Example 13](./13_Censored_Data_Multipliers/README.md).
 
 ---
 
@@ -59,7 +59,7 @@ The `MannKenSen` package includes a system of "Analysis Notes" to provide data q
 -   **Limitations and Nuances:** The default `min_size=10` is a configurable parameter. In some disciplines, a different minimum may be standard. This check is about the total sample size, not just the uncensored portion.
 -   **Recommended Actions:**
     1.  **Justify a Smaller Sample:** If you proceed, you should have a strong reason for trusting the results from such a small dataset.
-    2.  **Adjust the Threshold:** You can change the `min_size` parameter in `trend_test` if your analysis has different requirements. See [Example 25](./25_advanced_parameter_nuances/README.md).
+    2.  **Adjust the Threshold:** You can change the `min_size` parameter in `trend_test` if your analysis has different requirements. See [Example 26](./26_advanced_parameter_nuances/README.md).
 
 ---
 

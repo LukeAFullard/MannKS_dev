@@ -38,25 +38,25 @@ These parameters control how the test handles censored data.
 -   **Type:** `bool` or `float`, **Default:** `False`
 -   **Description:** Activates the "high censor" rule, a conservative method to handle improving detection limits over time.
 -   **Usefulness:** Imagine your detection limit improved from `<10` in the 1990s to `<1` in the 2010s. An actual concentration of `3` would be recorded as `<10` in 1995 but `3` in 2015. This can create a misleading "increasing" trend. `hicensor=True` mitigates this by treating all values (censored or not) below the highest detection limit (`10` in this case) as being censored at that high limit. This provides a more conservative and potentially more accurate assessment of the true underlying trend.
--   **Limitations:** By being conservative, this rule can sometimes mask a real but weak trend. It is most appropriate when you have a clear history of changing detection limits. See **[Example 7](./07_High_Censor_Rule/README.md)**.
+-   **Limitations:** By being conservative, this rule can sometimes mask a real but weak trend. It is most appropriate when you have a clear history of changing detection limits. See **[Example 8](./08_High_Censor_Rule/README.md)**.
 
 #### `lt_mult` and `gt_mult`
 -   **Type:** `float`, **Defaults:** `lt_mult=0.5`, `gt_mult=1.1`
 -   **Description:** Multipliers used to substitute censored values **only for the Sen's slope calculation**. They do **not** affect the p-value or trend significance.
 -   **Usefulness and Nuances:** To calculate a slope, you need two numbers. A value like `"<10"` is temporarily replaced by `10 * 0.5 = 5`. The default `lt_mult=0.5` is chosen because it's the midpoint of the possible range `[0, 10]`, representing a neutral estimate. `gt_mult=1.1` is used to place the substituted value slightly outside the uncensored range. These parameters allow you to perform a sensitivity analysis by seeing how the slope magnitude changes with different multipliers.
--   **Limitations:** This is a simple substitution, not a statistical model like Regression on Order Statistics (ROS). The resulting slope is an estimate whose accuracy depends on how well the multiplier reflects the true underlying values. See **[Example 12](./12_Censored_Data_Multipliers/README.md)**.
+-   **Limitations:** This is a simple substitution, not a statistical model like Regression on Order Statistics (ROS). The resulting slope is an estimate whose accuracy depends on how well the multiplier reflects the true underlying values. See **[Example 13](./13_Censored_Data_Multipliers/README.md)**.
 
 #### `sens_slope_method`
 -   **Type:** `str`, **Default:** `'nan'`
 -   **Description:** Controls how to handle the ambiguous case of calculating a slope between two censored points.
 -   **Usefulness:** A slope between `<5` and `<10` is ambiguous. The default `'nan'` treats this slope as unknown and excludes it from the final median calculation. This is the most statistically neutral and recommended approach. The `'lwp'` option sets these ambiguous slopes to `0`, which is provided for reproducibility against an older R script.
--   **Limitations:** The `'lwp'` method can bias the final Sen's slope towards zero, especially in heavily censored datasets. It should be used with caution. See **[Example 20](./20_Sens_Slope_Methods/README.md)**.
+-   **Limitations:** The `'lwp'` method can bias the final Sen's slope towards zero, especially in heavily censored datasets. It should be used with caution. See **[Example 21](./21_Sens_Slope_Methods/README.md)**.
 
 #### `mk_test_method`
 -   **Type:** `str`, **Default:** `'robust'`
 -   **Description:** Controls how the Mann-Kendall test ranks right-censored data (`>`).
 -   **Usefulness:** The default `'robust'` method uses a statistically sound approach where a value like `>100` is treated as having a rank higher than any value below 100, but its exact rank relative to other right-censored values is handled by specific tie-correction rules. The `'lwp'` method uses a simpler heuristic that replaces all `>` values with a single number slightly larger than the max uncensored value. This is less robust but is provided for compatibility with the LWP-TRENDS script.
--   **Limitations:** The `'lwp'` heuristic can be sensitive to outliers and is generally not recommended unless direct comparison to that specific script is the primary goal. See **[Example 9](./09_Right_Censored_Methods/README.md)**.
+-   **Limitations:** The `'lwp'` heuristic can be sensitive to outliers and is generally not recommended unless direct comparison to that specific script is the primary goal. See **[Example 10](./10_Right_Censored_Methods/README.md)**.
 
 ---
 
@@ -68,12 +68,12 @@ These parameters control how the test handles censored data.
 -   **Usefulness:** This is critical for two scenarios:
     1.  **Tied Timestamps:** If you have multiple measurements for the exact same timestamp, you must aggregate them to avoid calculation errors.
     2.  **Clustered Data:** If you have high-frequency data (e.g., daily samples for one month, then monthly for years), it can bias the trend result. The `'lwp'` method, used with `agg_period`, aggregates all data within a period (e.g., a year) to a single point, ensuring each period has equal weight.
--   **Limitations:** Aggregation, by definition, reduces the amount of data used in the test, which can lower its statistical power. For censored data, `'robust_median'` is the recommended method, but be aware that aggregating censored values is a difficult statistical problem and the result should be interpreted with care. See **[Example 8](./08_Aggregation_Tied_Clustered_Data/README.md)**.
+-   **Limitations:** Aggregation, by definition, reduces the amount of data used in the test, which can lower its statistical power. For censored data, `'robust_median'` is the recommended method, but be aware that aggregating censored values is a difficult statistical problem and the result should be interpreted with care. See **[Example 9](./09_Aggregation_Tied_Clustered_Data/README.md)**.
 
 #### `agg_period`
 -   **Type:** `str`, **Default:** `'year'`
 -   **Description:** Defines the time window for aggregation **only when `agg_method='lwp'`**.
--   **Usefulness:** This allows you to define the granularity of your analysis when dealing with clustered data. You can analyze trends on an aggregated `'year'`, `'month'`, or `'day'` basis. This requires that your time vector `t` contains datetime objects.
+-   **Usefulness:** This allows you to define the granularity of your analysis whendealing with clustered data. You can analyze trends on an aggregated `'year'`, `'month'`, or `'day'` basis. This requires that your time vector `t` contains datetime objects.
 
 ---
 
@@ -89,7 +89,7 @@ Defaults are recommended for most users.
 #### `ci_method`
 -   **Type:** `str`, **Default:** `'direct'`
 -   **Description:** Controls the method for calculating the Sen's slope confidence intervals.
--   **Usefulness:** The confidence interval gives you a range of plausible values for the true slope. The `'direct'` method is a standard, statistically robust approach. The `'lwp'` method uses a specific interpolation technique designed to replicate the LWP-TRENDS R script. Unless you need that specific replication, `'direct'` is recommended. See **[Example 13](./13_Confidence_Interval_Methods/README.md)**.
+-   **Usefulness:** The confidence interval gives you a range of plausible values for the true slope. The `'direct'` method is a standard, statistically robust approach. The `'lwp'` method uses a specific interpolation technique designed to replicate the LWP-TRENDS R script. Unless you need that specific replication, `'direct'` is recommended. See **[Example 14](./14_Confidence_Interval_Methods/README.md)**.
 
 ---
 

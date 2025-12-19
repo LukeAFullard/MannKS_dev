@@ -33,7 +33,7 @@ These parameters are crucial for defining the seasonal structure of your data. T
     -   `'day_of_week'`: For cycles within a week, like Monday vs. Tuesday (7 seasons).
     -   `'week_of_year'`: For weekly patterns across a year (52/53 seasons).
     -   `'day_of_year'`: For daily patterns across a year (365/366 seasons).
-    The choice is critical: using `'day_of_year'` for data collected over five years means you are testing for a trend in Jan 1st across those five years, Jan 2nd across those five years, and so on. See **[Example 11: Advanced Seasonality](./11_Advanced_Seasonality/README.md)**.
+    The choice is critical: using `'day_of_year'` for data collected over five years means you are testing for a trend in Jan 1st across those five years, Jan 2nd across those five years, and so on. See **[Example 12: Advanced Seasonality](./12_Advanced_Seasonality/README.md)**.
 
 ---
 
@@ -49,7 +49,7 @@ Aggregation in a seasonal context is about ensuring that you have **one represen
     -   `'none'`: Use this only if your data is already structured as one observation per season per cycle (e.g., one measurement every month).
     -   `'lwp'` / `'median'`: These methods are common for aggregating environmental data. They are provided for compatibility with the LWP-TRENDS R script's methodology, which aggregates data before performing the test.
     -   `'robust_median'`: This is the recommended method if your data is censored.
--   **Limitations:** **Aggregating censored data is statistically complex and can introduce bias.** For example, the median of `['<2', '5', '10']` is `5`, but the median of `['<2', '<5', '10']` is ambiguous. The `'robust_median'` method uses a reasonable heuristic, but you should be aware of this underlying uncertainty. See **[Example 8](./08_Aggregation_Tied_Clustered_Data/README.md)**.
+-   **Limitations:** **Aggregating censored data is statistically complex and can introduce bias.** For example, the median of `['<2', '5', '10']` is `5`, but the median of `['<2', '<5', '10']` is ambiguous. The `'robust_median'` method uses a reasonable heuristic, but you should be aware of this underlying uncertainty. See **[Example 9](./09_Aggregation_Tied_Clustered_Data/README.md)**.
 
 ---
 
