@@ -45,4 +45,16 @@ Each example is a self-contained "chapter" that includes the full Python code, t
 *   [**Example 25: Advanced Parameter Nuances**](./25_advanced_parameter_nuances/README.md)
 
 ---
+
+### Detailed Guides
+
+For a deeper dive into specific topics, see our detailed guides:
+
+*   [**A Comprehensive Guide to Analysis Notes**](./Detailed_Guides/analysis_notes_guide.md)
+*   [**A Comprehensive Guide to Trend Classification**](./Detailed_Guides/trend_classification_guide.md)
+*   [**A Comprehensive Guide to `trend_test` Parameters**](./Detailed_Guides/trend_test_parameters_guide.md)
+*   [**A Comprehensive Guide to `seasonal_trend_test` Parameters**](./Detailed_Guides/seasonal_trend_test_parameters_guide.md)
+
+
+---
 *This guide is programmatically generated. To update an example, modify the `run_example.py` in the respective directory.*
