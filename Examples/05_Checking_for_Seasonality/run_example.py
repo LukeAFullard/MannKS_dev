@@ -70,8 +70,13 @@ This example demonstrates the critical first step before performing a seasonal t
     -   The **p-value** is extremely small (`< 0.001`). In simple terms, this means it is virtually impossible that the seasonal pattern we see in the plot is due to random chance.
     -   Because the p-value is less than our significance level (alpha, default 0.05), the function concludes that the data is seasonal, returning `is_seasonal=True`.
 
-**Conclusion:**
-With both strong visual and statistical evidence of seasonality, we can confidently proceed with a `seasonal_trend_test` to determine if there is a long-term trend *within* this seasonal structure. This check prevents us from incorrectly applying a seasonal test to non-seasonal data.
+3.  **Understanding the Season Format:**
+    -   The output field `seasons_tested=[1, 2, ..., 12]` confirms which seasons were included in the test.
+    -   When using `season_type='month'`, the function uses **integer representations for the seasons** (1 for January, 2 for February, etc.). This is the format the package uses internally for grouping data.
+
+**Conclusion: What to do Next**
+
+With both strong visual and statistical evidence of seasonality, the next logical step is to perform a seasonal trend test. Based on these results, you should use `seasonal_trend_test` with `season_type='month'` to determine if there is a long-term trend *within* this monthly seasonal structure. This check prevents us from incorrectly applying a seasonal test to non-seasonal data, or from using the wrong seasonal definition.
 """
 
 # Create the README content
