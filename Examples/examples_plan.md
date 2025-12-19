@@ -96,9 +96,9 @@ Each example will be self-contained in its own directory within `Examples/` and 
 - **Goal:** Show users how to "read" the output of `plot_trend` to diagnose issues.
 - **Scenarios:** Generate plots showing wide confidence intervals (high uncertainty), clear trends, and no trend.
 
-#### Example 20: Cross-Validation with `pyMannKendall`
-- **Goal:** Provide a simple cross-validation against another Python package for a basic, non-censored case.
-- **Comparison:** `MannKenSen.trend_test` vs. `pyMannKendall.original_test`.
+#### Example 20: Sen's Slope Methods for Censored Data (`sens_slope_method`)
+- **Goal:** Demonstrate the difference between the `'nan'` and `'lwp'` methods for calculating the Sen's slope with censored data.
+- **Comparison:** `sens_slope_method='nan'` vs. `sens_slope_method='lwp'`.
 
 ---
 
