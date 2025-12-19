@@ -48,12 +48,23 @@ Each example is a self-contained "chapter" that includes the full Python code, t
 
 ### Detailed Guides
 
-For a deeper dive into specific topics, see our detailed guides:
+For a deeper dive into specific topics, see our detailed reference guides. These explain the key concepts and optional parameters in much greater detail than the examples.
 
 *   [**A Comprehensive Guide to Analysis Notes**](./Detailed_Guides/analysis_notes_guide.md)
+    -   **What is it?** This guide explains the data quality warnings (e.g., `"Long run of single value"`) that the package might return with your results.
+    -   **When to read:** Read this if you get a warning in your `analysis_notes` output and want to understand what it means and what actions you should take.
+
 *   [**A Comprehensive Guide to Trend Classification**](./Detailed_Guides/trend_classification_guide.md)
+    -   **What is it?** This guide explains how the package automatically assigns a descriptive trend category (like `"Likely Increasing"` or `"Stable"`) based on the statistical results.
+    -   **When to read:** Read this to understand the default classification system (inspired by the IPCC) or if you want to learn how to define your own custom classification rules.
+
 *   [**A Comprehensive Guide to `trend_test` Parameters**](./Detailed_Guides/trend_test_parameters_guide.md)
+    -   **What is it?** This is a detailed reference for every optional parameter in the main `trend_test` function.
+    -   **When to read:** Read this when you want to move beyond a basic analysis and fine-tune the test by handling censored data, aggregation, or other advanced features.
+
 *   [**A Comprehensive Guide to `seasonal_trend_test` Parameters**](./Detailed_Guides/seasonal_trend_test_parameters_guide.md)
+    -   **What is it?** This is a detailed reference for every optional parameter in the `seasonal_trend_test` function, focusing on seasonality and aggregation.
+    -   **When to read:** Read this when you need to configure a seasonal analysis for a specific data structure (e.g., daily, weekly) or customize how the function handles data within each season.
 
 
 ---
