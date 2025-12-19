@@ -51,6 +51,10 @@ Each example is a self-contained "chapter" that includes the full Python code, t
 
 For a deeper dive into specific topics, see our detailed reference guides. These explain the key concepts and optional parameters in much greater detail than the examples.
 
+*   [**A Guide to Core Concepts in MannKenSen**](./Detailed_guides/core_concepts_guide.md)
+    -   **What is it?** This guide explains the fundamental data model of the package, including the correct data types for your time (`t`) and data (`x`) vectors.
+    -   **When to read:** Read this first if you are new to the package or if you have questions about `datetime` objects vs. strings.
+
 *   [**A Comprehensive Guide to Analysis Notes**](./Detailed_Guides/analysis_notes_guide.md)
     -   **What is it?** This guide explains the data quality warnings (e.g., `"Long run of single value"`) that the package might return with your results.
     -   **When to read:** Read this if you get a warning in your `analysis_notes` output and want to understand what it means and what actions you should take.

@@ -46,6 +46,8 @@ By default, the package uses a classification scheme inspired by the Intergovern
 
 **Note:** The `alpha` parameter you provide to `trend_test` (default is `0.05`) directly defines the threshold for the highest confidence category (`Increasing/Decreasing`).
 
+See **[Example 17: Interpreting the Full Output](./17_Interpreting_Output/README.md)** for a practical demonstration of these categories.
+
 ### Usefulness and Limitations of Classification
 
 -   **Usefulness:** Classification is extremely useful for **summarization**. If you are analyzing hundreds of sites, a table of trend categories gives you an immediate overview. It also provides a standardized vocabulary for reporting results.
@@ -71,3 +73,5 @@ You would pass this to the test function: `mks.trend_test(..., category_map=my_m
 1.  The values are confidence levels (`1 - p`), from 0 to 1.
 2.  The function finds the category with the highest minimum confidence that your result still meets or exceeds.
 3.  You **must** include a "zero" threshold (e.g., `"Indeterminate": 0.0`) to act as a catch-all for results that don't meet any other criteria.
+
+See **[Example 19: Standalone Trend Classification](./19_Standalone_Classification/README.md)** for a hands-on guide to creating and using custom maps.
