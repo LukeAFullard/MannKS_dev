@@ -249,3 +249,27 @@ def test_check_seasonality_only_one_valid_season():
     assert result.seasons_tested == [1]
     # Check that all other months were skipped
     assert all(s in result.seasons_skipped for s in range(2, 13))
+
+def test_check_seasonality_aggregation():
+    """
+    Test the aggregation functionality in check_seasonality.
+    """
+    # Create a dataset with multiple observations per month
+    dates = pd.to_datetime(['2020-01-10', '2020-01-20', '2021-01-15', '2022-01-05', '2022-01-25',
+                            '2020-02-10', '2020-02-20', '2021-02-15', '2022-02-05', '2022-02-25'])
+    # Make January seasonal, February not
+    values = [1, 1.1, 1.2, 1.3, 1.4,  # Jan
+              5, 15, 7, 12, 9]       # Feb
+
+    # Without aggregation, Jan should be non-seasonal (low variance), Feb is seasonal
+    # The test should find seasonality overall
+    result_none = check_seasonality(x=values, t=dates, period=12, season_type='month')
+
+    # With monthly aggregation, we get one value per year-month
+    # Jan: median([1, 1.1])=1.05, 1.2, median([1.3, 1.4])=1.35 -> still low variance
+    # Feb: median([5, 15])=10, 7, median([12, 9])=10.5
+    result_agg = check_seasonality(x=values, t=dates, period=12, season_type='month',
+                                   agg_method='median', agg_period='month')
+
+    # The H-statistic should be different due to aggregation changing the data
+    assert result_none.h_statistic != result_agg.h_statistic
