@@ -105,3 +105,25 @@ def _get_theoretical_midpoint(datetime_series):
 
     midpoint = start_of_period + (end_of_period - start_of_period) / 2
     return midpoint
+
+def _get_agg_func(agg_period: str):
+    """
+    Returns a function to extract aggregation period identifiers from a
+    datetime series.
+    """
+    def get_dt_prop(dt, prop):
+        return getattr(dt.dt, prop) if isinstance(dt, pd.Series) else getattr(dt, prop)
+
+    agg_map = {
+        'year': lambda dt: get_dt_prop(dt, 'year'),
+        'month': lambda dt: get_dt_prop(dt, 'year') * 100 + get_dt_prop(dt, 'month'),
+        'day': lambda dt: get_dt_prop(dt, 'date'),
+        'week': lambda dt: get_dt_prop(dt, 'isocalendar')().year * 100 + get_dt_prop(dt, 'isocalendar')().week,
+        'quarter': lambda dt: get_dt_prop(dt, 'year') * 10 + get_dt_prop(dt, 'quarter'),
+    }
+    agg_period_lower = agg_period.lower()
+
+    if agg_period_lower not in agg_map:
+        raise ValueError(f"Unknown agg_period: '{agg_period}'. Must be one of {list(agg_map.keys())}")
+
+    return agg_map[agg_period_lower]
