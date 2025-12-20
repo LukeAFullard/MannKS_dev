@@ -122,6 +122,14 @@ def regional_test(
     sum_var_tau = np.sum(results['p_modal'] * (1 - results['p_modal']))
     VarTAU = (1 / M**2) * sum_var_tau
 
+    # Site alignment validation
+    sites_in_trends = set(results[site_col].unique())
+    sites_in_ts = set(time_series_data[site_col].unique())
+
+    if not sites_in_trends.issubset(sites_in_ts):
+        missing_sites = sites_in_trends - sites_in_ts
+        raise ValueError(f"Sites in trend_results not found in time_series_data: {missing_sites}")
+
     # Pivot the time series data to a wide format
     ts_wide = time_series_data.pivot_table(index=time_col,
                                            columns=site_col,
@@ -130,6 +138,11 @@ def regional_test(
     # Align columns with trend_results
     sites_in_common = results[site_col].unique()
     ts_wide = ts_wide[sites_in_common]
+
+    if ts_wide.empty:
+        import warnings
+        warnings.warn("Time series pivot resulted in empty DataFrame. Check that timestamps align across sites.", UserWarning)
+        return RegionalTrendResult(M, TAU, VarTAU, np.nan, DT, np.nan)
 
     # Calculate the pairwise correlation matrix
     cor_matrix = ts_wide.corr(method='pearson')
