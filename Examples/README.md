@@ -71,6 +71,10 @@ For a deeper dive into specific topics, see our detailed reference guides. These
     -   **What is it?** This is a detailed reference for every field in the result object returned by the test functions.
     -   **When to read:** Read this to understand the meaning of `p`, `z`, `Tau`, `slope`, and all other output values.
 
+*   [**A Comprehensive Guide to `regional_test`**](./Detailed_Guides/regional_test_guide/README.md)
+    -   **What is it?** This guide explains how to perform a regional trend analysis, which aggregates results from multiple sites to determine an overall trend.
+    -   **When to read:** Read this when you have data from multiple locations and want to know if there is a consistent trend across the entire region.
+
 *   [**A Comprehensive Guide to `trend_test` Parameters**](./Detailed_Guides/trend_test_parameters_guide.md)
     -   **What is it?** This is a detailed reference for every optional parameter in the main `trend_test` function.
     -   **When to read:** Read this when you want to move beyond a basic analysis and fine-tune the test by handling censored data, aggregation, or other advanced features.
