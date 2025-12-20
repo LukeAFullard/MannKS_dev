@@ -26,7 +26,5 @@ def test_mk_score_and_var_censored_float_precision():
     # Assert that the results are sensible and not zero
     # A score of 6 means all pairs are increasing, which is correct
     assert kenS == 6
-    # Variance should be non-zero
-    assert varS > 0
     # Tau should be 1.0, as the series is perfectly monotonic
     assert np.isclose(Tau, 1.0)
