@@ -8,22 +8,22 @@ import seaborn as sns
 from ._helpers import _preprocessing
 from ._datetime import _get_season_func, _is_datetime_like, _get_cycle_identifier
 
-def plot_seasonal_distribution(x_old, t_old, period=12, season_type='month', save_path='seasonal_distribution.png'):
+def plot_seasonal_distribution(x, t, period=12, season_type='month', plot_path='seasonal_distribution.png'):
     """
     Generates and saves a box plot to visualize the distribution of values
     across different seasons.
 
     Input:
-        x_old: a vector of data
-        t_old: a vector of timestamps
+        x: a vector of data
+        t: a vector of timestamps
         period: seasonal cycle (default 12)
         season_type: For datetime inputs, specifies the type of seasonality.
-        save_path: The file path to save the plot.
+        plot_path: The file path to save the plot.
     Output:
         The file path where the plot was saved.
     """
-    x_raw = np.asarray(x_old)
-    t_raw = np.asarray(t_old)
+    x_raw = np.asarray(x)
+    t_raw = np.asarray(t)
 
     is_datetime = _is_datetime_like(t_raw)
 
@@ -53,10 +53,10 @@ def plot_seasonal_distribution(x_old, t_old, period=12, season_type='month', sav
     plt.xlabel('Season')
     plt.ylabel('Value')
 
-    plt.savefig(save_path)
+    plt.savefig(plot_path)
     plt.close()
 
-    return save_path
+    return plot_path
 
 
 def plot_inspection_data(data, save_path, value_col, time_col, time_increment, increment_map):

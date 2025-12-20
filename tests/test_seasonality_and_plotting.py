@@ -38,19 +38,19 @@ def test_check_seasonality_rejects_non_seasonal(non_seasonal_data):
 
 def test_plot_seasonal_distribution(seasonal_data):
     x, t = seasonal_data
-    save_path = "test_plot.png"
+    plot_path = "test_plot.png"
 
     # Ensure the file does not exist before the test
-    if os.path.exists(save_path):
-        os.remove(save_path)
+    if os.path.exists(plot_path):
+        os.remove(plot_path)
 
-    returned_path = plot_seasonal_distribution(x, t, save_path=save_path)
+    returned_path = plot_seasonal_distribution(x, t, plot_path=plot_path)
 
-    assert returned_path == save_path
-    assert os.path.exists(save_path)
+    assert returned_path == plot_path
+    assert os.path.exists(plot_path)
 
     # Clean up the created file
-    os.remove(save_path)
+    os.remove(plot_path)
 
 def test_trend_plotting():
     """
@@ -202,7 +202,7 @@ def test_plot_seasonal_distribution_insufficient_data():
     """Test plot_seasonal_distribution with insufficient data."""
     x = [1]
     t = [pd.to_datetime('2020-01-01')]
-    result = plot_seasonal_distribution(x, t, save_path='test.png')
+    result = plot_seasonal_distribution(x, t, plot_path='test.png')
     assert result is None
 
 def test_check_seasonality_insufficient_unique_values():

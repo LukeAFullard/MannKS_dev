@@ -28,7 +28,7 @@ def test_plot_seasonal_distribution_numeric_seasons(temp_plot_path):
     """Test plot_seasonal_distribution with numeric season data."""
     x = np.random.rand(20)
     t = np.arange(20)
-    result = plot_seasonal_distribution(x, t, period=4, save_path=temp_plot_path)
+    result = plot_seasonal_distribution(x, t, period=4, plot_path=temp_plot_path)
     assert os.path.exists(result)
 
 def test_plot_inspection_data_non_datetime(temp_plot_path):

@@ -36,7 +36,7 @@ def generate_readme():
         # 2. Visualize the Seasonal Distribution
         dist_plot_file = 'seasonal_distribution_plot.png'
         mks.plot_seasonal_distribution(
-            x_old=values, t_old=dates, season_type='day_of_week', period=7, save_path=dist_plot_file
+            x=values, t=dates, season_type='day_of_week', period=7, plot_path=dist_plot_file
         )
 
         # 3. Perform the Seasonal Trend Test
