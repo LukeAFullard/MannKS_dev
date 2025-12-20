@@ -213,9 +213,13 @@ def plot_trend(data, results, save_path, alpha):
         plt.fill_between(x_line, lower_line, upper_line, color='gray', alpha=0.3, label=ci_label)
 
     # Add statistics text box
+    slope_str = f"{results.slope:.4f}"
+    if results.slope_units:
+        slope_str += f" ({results.slope_units})"
+
     stats_text = (f"Trend: {results.trend}\n"
                   f"Tau: {results.Tau:.4f}\n"
-                  f"Slope: {results.slope:.4f}\n"
+                  f"Slope: {slope_str}\n"
                   f"P-value: {results.p:.4f}")
     plt.gca().text(0.05, 0.95, stats_text, transform=plt.gca().transAxes,
                    fontsize=10, verticalalignment='top',

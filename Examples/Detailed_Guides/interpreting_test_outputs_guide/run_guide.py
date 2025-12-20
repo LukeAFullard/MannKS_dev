@@ -37,9 +37,15 @@ def generate_guide():
 
     -   **`var_s`** (`float`): The variance of the S-statistic. This value accounts for ties in the data and is used to calculate the `z` score.
 
-    -   **`slope`** (`float`): The Sen's slope, which is the median of the slopes of all pairs of data points. It represents the magnitude of the trend (e.g., change in units per year).
+    -   **`slope`** (`float`): The Sen's slope, representing the magnitude of the trend. By default, this is the same as `scaled_slope`.
 
     -   **`intercept`** (`float`): The intercept of the Sen's slope line.
+
+    -   **`slope_per_second`** (`float`): The raw Sen's slope, always expressed in **units per second**. This is useful for analyses that require a consistent, unscaled time unit.
+
+    -   **`scaled_slope`** (`float`): The Sen's slope, scaled to a more intuitive time unit as specified by the `slope_scaling` parameter. For example, if you set `slope_scaling='year'`, this field will contain the slope in units per year.
+
+    -   **`slope_units`** (`str`): A string describing the units of the `scaled_slope`, combining the `x_unit` and `slope_scaling` parameters (e.g., "mg/L per year").
 
     -   **`lower_ci`** (`float`): The lower confidence interval of the Sen's slope. This provides a lower bound on the estimated slope at the specified confidence level (e.g., 95%).
 

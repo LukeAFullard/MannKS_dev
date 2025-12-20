@@ -271,3 +271,30 @@ def _aggregate_by_group(group, agg_method, is_datetime):
             closest_idx = np.argmin(np.abs(group['t_original'] - theoretical_mid))
             return group.iloc[[closest_idx]]
     return group
+
+
+def _get_slope_scaling_factor(unit: str) -> float:
+    """Returns the scaling factor to convert units/sec to units/[unit]."""
+    if not isinstance(unit, str):
+        raise TypeError("Time unit for scaling must be a string.")
+
+    unit = unit.lower()
+    if unit in ['year', 'years', 'yr', 'y', 'annum']:
+        return 365.25 * 24 * 60 * 60
+    elif unit in ['month', 'months', 'mon']:
+        return 30.44 * 24 * 60 * 60 # Average month length
+    elif unit in ['week', 'weeks', 'wk', 'w']:
+        return 7 * 24 * 60 * 60
+    elif unit in ['day', 'days', 'd']:
+        return 24 * 60 * 60
+    elif unit in ['hour', 'hours', 'hr', 'h']:
+        return 60 * 60
+    elif unit in ['minute', 'minutes', 'min', 'm']:
+        return 60
+    elif unit in ['second', 'seconds', 'sec', 's']:
+        return 1.0
+    else:
+        raise ValueError(
+            f"Invalid time unit for slope scaling: '{unit}'. "
+            "Must be one of: year, month, week, day, hour, minute, second."
+        )

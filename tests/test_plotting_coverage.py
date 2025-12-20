@@ -69,8 +69,8 @@ def test_plot_trend_no_save_path():
 
 def test_plot_trend_with_numeric_time(temp_plot_path):
     """Test plot_trend with numeric time data."""
-    TrendResult = namedtuple('TrendResult', ['trend', 'Tau', 'slope', 'intercept', 'lower_ci', 'upper_ci', 'p'])
-    results = TrendResult('increasing', 0.5, 1.0, 0.0, 0.5, 1.5, 0.01)
+    TrendResult = namedtuple('TrendResult', ['trend', 'Tau', 'slope', 'intercept', 'lower_ci', 'upper_ci', 'p', 'slope_units'])
+    results = TrendResult('increasing', 0.5, 1.0, 0.0, 0.5, 1.5, 0.01, 'units per year')
     data = pd.DataFrame({
         'value': [1, 2, 3, 4, 5],
         't': [1, 2, 3, 4, 5],

@@ -37,7 +37,9 @@ def seasonal_trend_test(
     min_size_per_season: Optional[int] = 5,
     mk_test_method: str = 'robust',
     ci_method: str = 'direct',
-    category_map: Optional[dict] = None
+    category_map: Optional[dict] = None,
+    x_unit: str = "units",
+    slope_scaling: Optional[str] = None
 ) -> namedtuple:
     """
     Seasonal Mann-Kendall test for unequally spaced time series.
@@ -104,6 +106,12 @@ def seasonal_trend_test(
               ranks to the nearest integer.
             - 'lwp': An interpolation method that mimics the LWP-TRENDS R
               script's `approx` function.
+        x_unit (str): A string representing the units of the data vector `x`.
+                      This is used to create an informative `slope_units` string in the output.
+        slope_scaling (str, optional): The time unit to which the Sen's slope should be scaled.
+                                       For example, if `slope_scaling='year'`, the slope will be
+                                       converted to units per year. This only applies when using
+                                       a datetime-like time vector `t`.
     Output:
         A namedtuple containing the following fields:
         - trend: The trend of the data ('increasing', 'decreasing', or 'no trend').
@@ -168,7 +176,8 @@ def seasonal_trend_test(
         'trend', 'h', 'p', 'z', 'Tau', 's', 'var_s', 'slope', 'intercept',
         'lower_ci', 'upper_ci', 'C', 'Cd', 'classification', 'analysis_notes',
         'sen_probability', 'sen_probability_max', 'sen_probability_min',
-        'prop_censored', 'prop_unique', 'n_censor_levels'
+        'prop_censored', 'prop_unique', 'n_censor_levels',
+        'slope_per_second', 'scaled_slope', 'slope_units'
     ])
 
     # --- Method String Validation ---
@@ -204,7 +213,7 @@ def seasonal_trend_test(
     if len(data_filtered) < 2:
         return res('no trend', False, np.nan, 0, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
                    'insufficient data', analysis_notes,
-                   np.nan, np.nan, np.nan, 0, 0, 0)
+                   np.nan, np.nan, np.nan, 0, 0, 0, np.nan, np.nan, '')
 
     # --- Aggregation Logic ---
     if agg_method == 'lwp':
@@ -348,9 +357,37 @@ def seasonal_trend_test(
     censored_values = data_filtered['value'][data_filtered['censored']]
     n_censor_levels = len(censored_values.unique()) if not censored_values.empty else 0
 
-    results = res(trend, h, p, z, Tau, s, var_s, slope, intercept, lower_ci, upper_ci, C, Cd,
+    # --- Slope Scaling ---
+    slope_per_second = slope
+    scaled_slope = slope
+    slope_units = ""
+
+    if slope_scaling and pd.notna(slope):
+        if is_datetime:
+            from ._helpers import _get_slope_scaling_factor
+            try:
+                factor = _get_slope_scaling_factor(slope_scaling)
+                scaled_slope = slope * factor
+                slope_units = f"{x_unit} per {slope_scaling.lower()}"
+            except (ValueError, TypeError) as e:
+                warnings.warn(f"Slope scaling failed: {e}", UserWarning)
+                slope_units = f"{x_unit} per second" # Fallback
+        else:
+            warnings.warn(
+                "Cannot apply `slope_scaling` to a numeric (non-datetime) "
+                "time vector `t`. The slope's unit is inherited from `t`.",
+                UserWarning
+            )
+            slope_units = f"{x_unit} per unit of t" # Clarify for numeric time
+    elif is_datetime:
+        slope_units = f"{x_unit} per second"
+    else: # Numeric time without scaling
+        slope_units = f"{x_unit} per unit of t"
+
+    results = res(trend, h, p, z, Tau, s, var_s, scaled_slope, intercept, lower_ci, upper_ci, C, Cd,
                   '', [], sen_prob, sen_prob_max, sen_prob_min,
-                  prop_censored, prop_unique, n_censor_levels) # Placeholder
+                  prop_censored, prop_unique, n_censor_levels,
+                  slope_per_second, scaled_slope, slope_units)
 
     # Final Classification and Notes
     classification = classify_trend(results, category_map=category_map)

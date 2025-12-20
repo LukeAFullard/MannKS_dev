@@ -72,3 +72,15 @@ These parameters function identically to their `trend_test` counterparts but are
 -   **Type:** `dict` (optional), **Default:** `None`
 -   **Description:** Allows you to provide your own custom rules for trend classification, applied to the final overall trend result.
 -   **Usefulness:** Same as in `trend_test`, this allows you to align the output with specific reporting requirements. See our **[Trend Classification Guide](./trend_classification_guide.md)**.
+
+---
+
+### Slope Scaling Parameters
+
+#### `x_unit` and `slope_scaling`
+These parameters function identically to their counterparts in `trend_test`. They allow you to provide a unit for your data (`x_unit`) and specify a desired time unit for the final Sen's slope (`slope_scaling`), such as `'year'`. This is a powerful convenience feature that removes the need for manual slope conversion when working with datetime objects.
+
+-   **Usefulness:** Automatically get an interpretable slope like "mg/L per year" directly in the output and on the plot.
+-   **Limitations:** `slope_scaling` is only effective when your time vector `t` is datetime-like.
+
+For a full explanation, please see the **[Slope Scaling Parameters section in the `trend_test` guide](./trend_test_parameters_guide.md#slope-scaling-parameters)**.
