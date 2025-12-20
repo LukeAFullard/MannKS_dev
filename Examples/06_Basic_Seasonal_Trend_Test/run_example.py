@@ -39,14 +39,14 @@ def generate_readme():
 
         # 2. Step 1: Statistically Check for Seasonality
         print("--- 1. Seasonality Check ---")
-        seasonality_result = mks.check_seasonality(x_old=values, t_old=dates, season_type='month')
+        seasonality_result = mks.check_seasonality(x=values, t=dates, season_type='month')
         print(f"Is Seasonal?: {seasonality_result.is_seasonal} (p={seasonality_result.p_value:.2e})")
 
         # 3. Step 2: Visualize Seasonal Distribution
         print("\\n--- 2. Visualizing Seasonality ---")
         print(f"Generating seasonal distribution plot: {dist_plot_file}")
         mks.plot_seasonal_distribution(
-            x_old=values, t_old=dates, season_type='month', save_path=dist_plot_file
+            x=values, t=dates, season_type='month', plot_path=dist_plot_file
         )
 
         # 4. Step 3: Perform Seasonal Trend Test
