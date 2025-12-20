@@ -190,8 +190,11 @@ def plot_trend(data, results, save_path, alpha):
         t_numeric = data['t'].values
         t_min, t_max = t_numeric.min(), t_numeric.max()
 
+        # Use the unscaled slope for plotting against the numeric time axis
+        plot_slope = results.slope_per_second if hasattr(results, 'slope_per_second') else results.slope
+
         # Trend line
-        trend_line = results.slope * np.array([t_min, t_max]) + results.intercept
+        trend_line = plot_slope * np.array([t_min, t_max]) + results.intercept
 
         # Confidence interval lines, pivoted around the median data point
         # Note: These represent the confidence interval for the slope at x=tmed,
