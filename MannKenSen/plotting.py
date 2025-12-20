@@ -59,7 +59,7 @@ def plot_seasonal_distribution(x, t, period=12, season_type='month', plot_path='
     return plot_path
 
 
-def plot_inspection_data(data, save_path, value_col, time_col, time_increment, increment_map):
+def plot_inspection_data(data, plot_path, value_col, time_col, time_increment, increment_map):
     """
     Creates and saves a 2x2 grid of data inspection plots.
     """
@@ -151,10 +151,10 @@ def plot_inspection_data(data, save_path, value_col, time_col, time_increment, i
             ax4.text(0.5, 0.5, f"Could not generate count matrix:\n{e}", ha='center', va='center')
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
     plt.close()
 
-    return save_path
+    return plot_path
 
 def plot_trend(data, results, save_path, alpha):
     """
