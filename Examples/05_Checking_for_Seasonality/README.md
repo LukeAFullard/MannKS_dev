@@ -26,12 +26,12 @@ data = 50 + seasonal_cycle + noise
 # Step 1: Visually inspect the data for a suspected seasonal pattern.
 # We suspect a 'month' pattern, so we specify it explicitly.
 plot_filename = "seasonal_distribution_plot.png"
-mks.plot_seasonal_distribution(x_old=data, t_old=dates, season_type='month', save_path=plot_filename)
+mks.plot_seasonal_distribution(x=data, t=dates, season_type='month', plot_path=plot_filename)
 print(f"Plot saved to {plot_filename}")
 
 # Step 2: Statistically verify the suspected seasonal pattern.
 # We explicitly test for 'month' seasonality.
-seasonality_result = mks.check_seasonality(x_old=data, t_old=dates, season_type='month')
+seasonality_result = mks.check_seasonality(x=data, t=dates, season_type='month')
 print("\n--- Statistical Seasonality Check ---")
 print(seasonality_result)
 ```
