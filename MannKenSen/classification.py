@@ -10,6 +10,7 @@ DEFAULT_CATEGORY_MAP = {
     0.0:  "As Likely as Not"
 }
 
+import numpy as np
 from typing import Optional, Dict, NamedTuple
 
 def classify_trend(result: NamedTuple, category_map: Optional[Dict[float, str]] = None) -> str:
@@ -33,6 +34,9 @@ def classify_trend(result: NamedTuple, category_map: Optional[Dict[float, str]] 
     """
     if not result.h:
         return "No Trend"
+
+    if np.isnan(result.C):
+        return "Insufficient Data"
 
     if category_map is None:
         category_map = DEFAULT_CATEGORY_MAP

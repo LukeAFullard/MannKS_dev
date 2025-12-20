@@ -301,6 +301,26 @@ def _sens_estimator_unequal_spacing(x, t):
         constant over time.
     """
     n = len(x)
+
+    # Add a hard limit to prevent integer overflow on large n*n arrays
+    MAX_SAFE_N = 46340
+    if n > MAX_SAFE_N:
+        raise ValueError(
+            f"Sample size n={n} exceeds maximum safe size of {MAX_SAFE_N}. "
+            f"This would cause an integer overflow during pairwise calculations. "
+            f"Consider using the regional_test() function for aggregation or subsampling your data."
+        )
+
+    if n > 5000:
+        import warnings
+        mem_gb = (n**2 * 8 / 1e9)
+        warnings.warn(
+            f"Large sample size (n={n}) requires ~{mem_gb:.1f} GB memory "
+            f"for pairwise calculations. Maximum safe n is {MAX_SAFE_N}. "
+            f"Consider using regional_test() for aggregating multiple smaller sites.",
+            UserWarning
+        )
+
     if n < 2:
         return np.array([])
 
@@ -363,6 +383,26 @@ def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_m
             approach, as it does not bias the slope towards zero.
     """
     n = len(x)
+
+    # Add a hard limit to prevent integer overflow on large n*n arrays
+    MAX_SAFE_N = 46340
+    if n > MAX_SAFE_N:
+        raise ValueError(
+            f"Sample size n={n} exceeds maximum safe size of {MAX_SAFE_N}. "
+            f"This would cause an integer overflow during pairwise calculations. "
+            f"Consider using the regional_test() function for aggregation or subsampling your data."
+        )
+
+    if n > 5000:
+        import warnings
+        mem_gb = (n**2 * 8 / 1e9)
+        warnings.warn(
+            f"Large sample size (n={n}) requires ~{mem_gb:.1f} GB memory "
+            f"for pairwise calculations. Maximum safe n is {MAX_SAFE_N}. "
+            f"Consider using regional_test() for aggregating multiple smaller sites.",
+            UserWarning
+        )
+
     if n < 2:
         return np.array([])
 
