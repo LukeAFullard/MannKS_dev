@@ -170,7 +170,7 @@ def plot_trend(data, results, save_path, alpha):
     if save_path is None:
         return
 
-    plt.figure(figsize=(10, 6))
+    fig = plt.figure(figsize=(10, 6))
 
     # Determine x-axis values (datetime or numeric)
     is_datetime = 't_original' in data.columns and _is_datetime_like(data['t_original'].values)
@@ -221,11 +221,17 @@ def plot_trend(data, results, save_path, alpha):
                    fontsize=10, verticalalignment='top',
                    bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.5))
 
+    # Add annotation for Sen's slope interpretation
+    annotation_text = "Trend line is the Sen's slope (median of all pairwise slopes)."
+    plt.figtext(0.99, 0.01, annotation_text, ha="right", fontsize=8, style='italic')
+
+
     plt.title('Trend Analysis')
     plt.xlabel('Time')
     plt.ylabel('Value')
     plt.legend()
     plt.grid(True)
 
+    plt.tight_layout(rect=[0, 0.03, 1, 1])
     plt.savefig(save_path)
     plt.close()
