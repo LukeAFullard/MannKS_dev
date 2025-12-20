@@ -191,7 +191,7 @@ def inspect_trend_data(
 
         plot_inspection_data(
             data=plot_df,
-            save_path=plot_path,
+            plot_path=plot_path,
             value_col=value_col,
             time_col=time_col,
             time_increment=best_time_incr,
