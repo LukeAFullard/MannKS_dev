@@ -105,3 +105,21 @@ Defaults are recommended for most users.
 -   **Type:** `dict` (optional), **Default:** `None`
 -   **Description:** Allows you to provide your own rules for trend classification.
 -   **Usefulness:** If your organization or project has a specific set of reporting standards (e.g., "Improving", "Degrading", "No Change"), you can use this to map the statistical results directly to your required terminology. See our **[Trend Classification Guide](./trend_classification_guide.md)** for a full explanation.
+
+---
+
+### Slope Scaling Parameters
+
+These parameters make the Sen's slope output more intuitive and readable.
+
+#### `x_unit`
+-   **Type:** `str`, **Default:** `"units"`
+-   **Description:** A string to describe the units of your data `x`.
+-   **Usefulness:** This string is used to construct the final `slope_units` field in the output. For example, if you provide `x_unit="mg/L"`, the output units will be formatted like `"mg/L per year"`, making the result and any plots much clearer.
+
+#### `slope_scaling`
+-   **Type:** `str` (optional), **Default:** `None`
+-   **Description:** Specifies the desired time unit for the Sen's slope.
+-   **Usefulness:** This is a powerful convenience feature. When your time vector `t` is made of datetimes, the raw slope is calculated in units per second. By setting `slope_scaling="year"`, the function will automatically multiply the raw slope by the number of seconds in a year and return a value in "units per year".
+-   **Valid Units:** `year`, `month`, `week`, `day`, `hour`, `minute`, `second`.
+-   **Limitations:** This parameter **only works** when `t` is a datetime-like array. It has no effect and will raise a `UserWarning` if `t` is numeric, because the function cannot know the underlying unit of a numeric time vector. See **[Example 3](./03_Non_Seasonal_Timestamps/README.md)**.
