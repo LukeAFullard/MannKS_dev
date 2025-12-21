@@ -291,6 +291,8 @@ def trend_test(
     slope_per_second = slope
     scaled_slope = slope
     slope_units = ""
+    scaled_lower_ci = lower_ci
+    scaled_upper_ci = upper_ci
 
     if slope_scaling and pd.notna(slope):
         if is_datetime:
@@ -298,6 +300,8 @@ def trend_test(
             try:
                 factor = _get_slope_scaling_factor(slope_scaling)
                 scaled_slope = slope * factor
+                scaled_lower_ci = lower_ci * factor
+                scaled_upper_ci = upper_ci * factor
                 slope_units = f"{x_unit} per {slope_scaling.lower()}"
             except (ValueError, TypeError) as e:
                 warnings.warn(f"Slope scaling failed: {e}", UserWarning)
@@ -320,7 +324,7 @@ def trend_test(
     prop_unique = len(np.unique(x_filtered)) / n if n > 0 else 0
     n_censor_levels = len(np.unique(x_filtered[censored_filtered])) if np.sum(censored_filtered) > 0 else 0
 
-    results = res(trend, h, p, z, Tau, s, var_s, scaled_slope, intercept, lower_ci, upper_ci, C, Cd,
+    results = res(trend, h, p, z, Tau, s, var_s, scaled_slope, intercept, scaled_lower_ci, scaled_upper_ci, C, Cd,
                   '', [], sen_prob, sen_prob_max, sen_prob_min,
                   prop_censored, prop_unique, n_censor_levels,
                   slope_per_second, scaled_slope, slope_units)
