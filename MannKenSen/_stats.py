@@ -430,20 +430,28 @@ def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_m
     slopes_mod = x_diff_mod / t_diff
 
     # 3. Create censor labels for pairs and apply rules
-    cen_type_pairs = cen_type[i_indices] + " " + cen_type[j_indices]
+    # The order MUST be j, i to match the R script's lower.tri() logic,
+    # which pairs (later_time, earlier_time).
+    cen_type_pairs = cen_type[j_indices] + " " + cen_type[i_indices]
     slopes_final = slopes_mod.copy()
 
     # Determine the value to assign to ambiguous slopes based on the method
     ambiguous_slope_value = 0 if method == 'lwp' else np.nan
 
-    # Rule 1: No slope between two censored values of the same type
+    # Rule 1: No slope between two censored values of the same type.
     slopes_final[(cen_type_pairs == 'gt gt') | (cen_type_pairs == 'lt lt')] = ambiguous_slope_value
 
-    # Rules 2 & 3: Ambiguous slopes between left-censored and non-censored
-    slopes_final[(slopes_raw > 0) & ((cen_type_pairs == 'not lt') | (cen_type_pairs == 'lt not'))] = ambiguous_slope_value
+    # Rule 2: Ambiguous if later value is left-censored ('lt') and slope is positive.
+    slopes_final[(slopes_raw > 0) & (cen_type_pairs == 'lt not')] = ambiguous_slope_value
 
-    # Rules 4 & 5: Ambiguous slopes between right-censored and non-censored
-    slopes_final[(slopes_raw < 0) & ((cen_type_pairs == 'not gt') | (cen_type_pairs == 'gt not'))] = ambiguous_slope_value
+    # Rule 3: Ambiguous if earlier value is left-censored ('lt') and slope is negative.
+    slopes_final[(slopes_raw < 0) & (cen_type_pairs == 'not lt')] = ambiguous_slope_value
+
+    # Rule 4: Ambiguous if earlier value is right-censored ('gt') and slope is positive.
+    slopes_final[(slopes_raw > 0) & (cen_type_pairs == 'not gt')] = ambiguous_slope_value
+
+    # Rule 5: Ambiguous if later value is right-censored ('gt') and slope is negative.
+    slopes_final[(slopes_raw < 0) & (cen_type_pairs == 'gt not')] = ambiguous_slope_value
 
     return slopes_final
 
