@@ -216,6 +216,19 @@ def seasonal_trend_test(
                    np.nan, np.nan, np.nan, 0, 0, 0, np.nan, np.nan, '')
 
     # --- Aggregation Logic ---
+    if agg_method != 'none':
+        if is_datetime:
+            t_pd = pd.to_datetime(data_filtered['t_original'])
+            cycles = _get_cycle_identifier(t_pd, season_type)
+            seasons_agg = season_func(t_pd) if season_type != 'year' else np.ones(len(t_pd))
+        else:
+            t_numeric_agg = data_filtered['t'].to_numpy()
+            t_normalized = t_numeric_agg - t_numeric_agg[0]
+            cycles = np.floor(t_normalized / period)
+            seasons_agg = np.floor(t_normalized % period)
+        data_filtered['cycle'] = cycles
+        data_filtered['season'] = seasons_agg
+
     if agg_method == 'lwp':
         # The 'lwp' method uses a specific aggregation that chooses one value per time increment.
         data_filtered = _value_for_time_increment(data_filtered, is_datetime, season_type)
@@ -361,6 +374,9 @@ def seasonal_trend_test(
     slope_per_second = slope
     scaled_slope = slope
     slope_units = ""
+    scaled_lower_ci = lower_ci
+    scaled_upper_ci = upper_ci
+
 
     if slope_scaling and pd.notna(slope):
         if is_datetime:
@@ -368,6 +384,9 @@ def seasonal_trend_test(
             try:
                 factor = _get_slope_scaling_factor(slope_scaling)
                 scaled_slope = slope * factor
+                scaled_lower_ci = lower_ci * factor if pd.notna(lower_ci) else lower_ci
+                scaled_upper_ci = upper_ci * factor if pd.notna(upper_ci) else upper_ci
+
                 slope_units = f"{x_unit} per {slope_scaling.lower()}"
             except (ValueError, TypeError) as e:
                 warnings.warn(f"Slope scaling failed: {e}", UserWarning)
@@ -384,7 +403,7 @@ def seasonal_trend_test(
     else: # Numeric time without scaling
         slope_units = f"{x_unit} per unit of t"
 
-    results = res(trend, h, p, z, Tau, s, var_s, scaled_slope, intercept, lower_ci, upper_ci, C, Cd,
+    results = res(trend, h, p, z, Tau, s, var_s, scaled_slope, intercept, scaled_lower_ci, scaled_upper_ci, C, Cd,
                   '', [], sen_prob, sen_prob_max, sen_prob_min,
                   prop_censored, prop_unique, n_censor_levels,
                   slope_per_second, scaled_slope, slope_units)
