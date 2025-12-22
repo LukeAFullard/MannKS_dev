@@ -190,30 +190,33 @@ def plot_trend(data, results, save_path, alpha):
         t_numeric = data['t'].values
         t_min, t_max = t_numeric.min(), t_numeric.max()
 
-        # Use the unscaled slope for plotting against the numeric time axis
-        plot_slope = results.slope_per_second if hasattr(results, 'slope_per_second') else results.slope
+        # ALWAYS use unscaled slope/CI for internal plotting calculations
+        plot_slope = getattr(results, 'slope_per_second', results.slope)
+        plot_lower_ci = getattr(results, 'lower_ci_per_second', results.lower_ci)
+        plot_upper_ci = getattr(results, 'upper_ci_per_second', results.upper_ci)
 
-        # Trend line
-        trend_line = plot_slope * np.array([t_min, t_max]) + results.intercept
-
-        # Confidence interval lines, pivoted around the median data point
-        # Note: These represent the confidence interval for the slope at x=tmed,
-        # which is mathematically equivalent to parallel CI lines but more interpretable
+        # All lines (trend and CI) must be pivoted around the median data point
+        # to be correct when dealing with large timestamp values.
         ymed = np.nanmedian(data['value'])
         tmed = np.nanmedian(data['t'])
 
-        # Correctly calculate intercepts so lines pass through (tmed, ymed)
-        intercept_lower = ymed - results.lower_ci * tmed
-        intercept_upper = ymed - results.upper_ci * tmed
+        # Correctly calculate intercept for the main trend line
+        intercept_trend = ymed - plot_slope * tmed
+        trend_line = plot_slope * np.array([t_min, t_max]) + intercept_trend
 
-        lower_line = results.lower_ci * np.array([t_min, t_max]) + intercept_lower
-        upper_line = results.upper_ci * np.array([t_min, t_max]) + intercept_upper
+        # Confidence interval lines
+        intercept_lower = ymed - plot_lower_ci * tmed
+        intercept_upper = ymed - plot_upper_ci * tmed
+
+        lower_line = plot_lower_ci * np.array([t_min, t_max]) + intercept_lower
+        upper_line = plot_upper_ci * np.array([t_min, t_max]) + intercept_upper
 
         x_line = pd.to_datetime([t_min, t_max], unit='s') if is_datetime else [t_min, t_max]
 
         plt.plot(x_line, trend_line, color='black', linestyle='--', label="Sen's Slope")
         ci_label = f'{int((1 - alpha) * 100)}% CI'
         plt.fill_between(x_line, lower_line, upper_line, color='gray', alpha=0.3, label=ci_label)
+
 
     # Add statistics text box
     slope_str = f"{results.slope:.4f}"
@@ -238,6 +241,14 @@ def plot_trend(data, results, save_path, alpha):
     plt.ylabel('Value')
     plt.legend()
     plt.grid(True)
+
+    # Manually set y-limits to override matplotlib's auto-scaling, which can
+    # fail with the large float values of Unix timestamps on the x-axis.
+    min_val = np.nanmin(data['value'])
+    max_val = np.nanmax(data['value'])
+    padding = (max_val - min_val) * 0.1
+    plt.ylim(min_val - padding, max_val + padding)
+
 
     plt.tight_layout(rect=[0, 0.03, 1, 1])
     plt.savefig(save_path)

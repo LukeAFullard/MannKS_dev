@@ -173,7 +173,8 @@ def trend_test(
         'lower_ci', 'upper_ci', 'C', 'Cd', 'classification', 'analysis_notes',
         'sen_probability', 'sen_probability_max', 'sen_probability_min',
         'prop_censored', 'prop_unique', 'n_censor_levels',
-        'slope_per_second', 'scaled_slope', 'slope_units'
+        'slope_per_second', 'lower_ci_per_second', 'upper_ci_per_second',
+        'scaled_slope', 'slope_units'
     ])
 
     # --- Method String Validation ---
@@ -327,7 +328,8 @@ def trend_test(
     results = res(trend, h, p, z, Tau, s, var_s, scaled_slope, intercept, scaled_lower_ci, scaled_upper_ci, C, Cd,
                   '', [], sen_prob, sen_prob_max, sen_prob_min,
                   prop_censored, prop_unique, n_censor_levels,
-                  slope_per_second, scaled_slope, slope_units)
+                  slope_per_second, lower_ci, upper_ci,
+                  scaled_slope, slope_units)
 
 
     # Final Classification and Notes
