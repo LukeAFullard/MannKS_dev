@@ -214,7 +214,7 @@ def trend_test(
     if n < 2:
         return res('no trend', False, np.nan, 0, 0, 0, 0, np.nan, np.nan,
                    np.nan, np.nan, np.nan, np.nan, 'insufficient data', analysis_notes,
-                   np.nan, np.nan, np.nan, 0, 0, 0, np.nan, np.nan, '')
+                   np.nan, np.nan, np.nan, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, '')
 
     if min_size is not None and n < min_size:
         analysis_notes.append(f'sample size ({n}) below minimum ({min_size})')
@@ -252,7 +252,7 @@ def trend_test(
     if len(x_filtered) < 2:
         return res('no trend', False, np.nan, 0, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
                    'insufficient data post-aggregation', analysis_notes,
-                   np.nan, np.nan, np.nan, 0, 0, 0, np.nan, np.nan, '')
+                   np.nan, np.nan, np.nan, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, '')
 
     s, var_s, D, Tau = _mk_score_and_var_censored(
         x_filtered, t_filtered, censored_filtered, cen_type_filtered,
