@@ -214,7 +214,8 @@ def seasonal_trend_test(
     if len(data_filtered) < 2:
         return res('no trend', False, np.nan, 0, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
                    'insufficient data', analysis_notes,
-                   np.nan, np.nan, np.nan, 0, 0, 0, np.nan, np.nan, '')
+                   np.nan, np.nan, np.nan, 0, 0, 0, np.nan, np.nan, '',
+                   np.nan, np.nan)
 
     # --- Aggregation Logic ---
     if agg_method != 'none':
