@@ -177,7 +177,8 @@ def seasonal_trend_test(
         'lower_ci', 'upper_ci', 'C', 'Cd', 'classification', 'analysis_notes',
         'sen_probability', 'sen_probability_max', 'sen_probability_min',
         'prop_censored', 'prop_unique', 'n_censor_levels',
-        'slope_per_second', 'scaled_slope', 'slope_units'
+        'slope_per_second', 'scaled_slope', 'slope_units',
+        'lower_ci_per_second', 'upper_ci_per_second'
     ])
 
     # --- Method String Validation ---
@@ -213,7 +214,8 @@ def seasonal_trend_test(
     if len(data_filtered) < 2:
         return res('no trend', False, np.nan, 0, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
                    'insufficient data', analysis_notes,
-                   np.nan, np.nan, np.nan, 0, 0, 0, np.nan, np.nan, '')
+                   np.nan, np.nan, np.nan, 0, 0, 0, np.nan, np.nan, '',
+                   np.nan, np.nan)
 
     # --- Aggregation Logic ---
     if agg_method != 'none':
@@ -372,6 +374,8 @@ def seasonal_trend_test(
 
     # --- Slope Scaling ---
     slope_per_second = slope
+    lower_ci_per_second = lower_ci
+    upper_ci_per_second = upper_ci
     scaled_slope = slope
     slope_units = ""
     scaled_lower_ci = lower_ci
@@ -406,7 +410,8 @@ def seasonal_trend_test(
     results = res(trend, h, p, z, Tau, s, var_s, scaled_slope, intercept, scaled_lower_ci, scaled_upper_ci, C, Cd,
                   '', [], sen_prob, sen_prob_max, sen_prob_min,
                   prop_censored, prop_unique, n_censor_levels,
-                  slope_per_second, scaled_slope, slope_units)
+                  slope_per_second, scaled_slope, slope_units,
+                  lower_ci_per_second, upper_ci_per_second)
 
     # Final Classification and Notes
     classification = classify_trend(results, category_map=category_map)
