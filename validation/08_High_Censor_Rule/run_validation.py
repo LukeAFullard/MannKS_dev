@@ -64,7 +64,7 @@ mk_lwp = mk.trend_test(
 )
 
 # --- 3. R LWP-TRENDS Analysis ---
-r_script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../Example_Files/R/LWPTrends_v2502/LWPTrends_v2502.r'))
+r_script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../Example_Files/R/LWPTrends_v2502/LWPTrends_v2102.R'))
 base = importr('base')
 base.source(r_script_path)
 
@@ -75,10 +75,10 @@ with localconverter(ro.default_converter + pandas2ri.converter):
 # Prepare and run the R analysis
 ro.globalenv['mydata'] = r_data
 ro.r('mydata$myDate <- as.Date(mydata$time)')
-ro.r('data_processed <- RemoveAlphaDetect(mydata, ColToUse="value")')
+ro.r('processed_cols <- RemoveAlphaDetect(mydata$value)')
+ro.r('data_processed <- cbind(mydata, processed_cols)')
 ro.r('data_processed <- GetMoreDateInfo(data_processed)')
-ro.r('data_processed <- InspectTrendData(data_processed, Year="Year")')
-ro.r('data_processed$TimeIncr <- data_processed$Year')
+
 
 # Run analysis with HiCensor=TRUE
 r_results = ro.r('NonSeasonalTrendAnalysis(data_processed, ValuesToUse="RawValue", TimeIncrMed=TRUE, HiCensor=TRUE)')

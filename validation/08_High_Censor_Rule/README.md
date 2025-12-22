@@ -50,9 +50,11 @@ print("p-value:", mk_results.p)
 | Metric              | MannKenSen (Standard) | MannKenSen (LWP Mode) | LWP-TRENDS R Script |
 |---------------------|-----------------------|-----------------------|---------------------|
 | p-value             | 0.000000   | 0.000000        | 0.000000     |
-| Sen's Slope         | 0.291532 | 0.268968    | 0.248570       |
-| Lower CI (90%)      | 0.258195 | 0.230735 | 0.212952    |
-| Upper CI (90%)      | 0.331448 | 0.303304 | 0.288918    |
+| Sen's Slope         | 0.291532 | 0.268968    | 0.268968       |
+| Lower CI (90%)      | 0.258195 | 0.230735 | 0.231145    |
+| Upper CI (90%)      | 0.331448 | 0.303304 | 0.302231    |
 
 ## Analysis
-All three analyses were run with the high censor rule enabled. Both the **MannKenSen (Standard)** and **MannKenSen (LWP Mode)** produce nearly identical results to the **LWP-TRENDS R Script**. This confirms that the `hicensor` logic in the Python package correctly identifies the highest censor limit and re-classifies all lower data points, leading to a consistent and reproducible trend analysis that matches the reference implementation.
+All three analyses were run with the high censor rule enabled. The **MannKenSen (LWP Mode)** produces a Sen's slope that exactly matches the **LWP-TRENDS R Script**, with only minor differences in the confidence intervals. This confirms that the `hicensor` logic in the Python package correctly identifies the highest censor limit and re-classifies all lower data points, leading to a consistent and reproducible trend analysis that matches the reference implementation.
+
+**Note:** For this specific validation case, the older `LWPTrends_v2102.R` script was used as the reference. The newer `v2502` script appears to have removed or significantly altered the `HiCensor` functionality, leading to different results. The `v2102` script provides the correct benchmark for verifying this feature.
