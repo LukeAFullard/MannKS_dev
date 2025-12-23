@@ -137,94 +137,49 @@ def _prepare_data(x, t, hicensor):
     return data_filtered, is_datetime
 
 
-def _value_for_time_increment(df: DataFrame, is_datetime: bool, season_type: str) -> DataFrame:
+def _value_for_time_increment(df: DataFrame, group_key: pd.Series, period: str) -> DataFrame:
     """
-    Aggregates data to one observation per time increment.
+    Aggregates data to one observation per time increment using the LWP method.
 
     This function replicates the `ValueForTimeIncr` logic from the LWP-TRENDS
-    R script. For each unique time increment (e.g., 'Jan-2000'), it selects
-    the single observation that is closest in time to the midpoint of that
-    increment. This is the default aggregation method used for Sen's slope
-    in the R script.
+    R script. For each unique time increment (defined by `group_key`), it
+    selects the single observation that is closest in time to the theoretical
+    midpoint of that increment.
 
     Args:
-        df (pd.DataFrame): The input data frame, which must contain 't_original',
-                           'cycle', and 'season' columns.
-        is_datetime (bool): Flag indicating if 't_original' contains datetime objects.
-        season_type (str): The type of season ('month', 'quarter', etc.).
+        df (pd.DataFrame): The input data frame, must contain 't_original'.
+        group_key (pd.Series): A Series that defines the grouping for aggregation
+                               (e.g., year for annual, or a tuple of
+                               (year, month) for seasonal).
+        period (str): The pandas frequency string for the period ('Y', 'M', 'Q', etc.).
 
     Returns:
-        pd.DataFrame: An aggregated DataFrame with one row per time increment.
+        pd.DataFrame: An aggregated DataFrame with one row per unique group.
     """
-    if is_datetime:
-        season_to_freq = {
-            'month': 'M',
-            'quarter': 'Q',
-            'year': 'Y',
-            'day_of_week': 'W-SUN',
-            'week_of_year': 'W-SUN',
-            'biweekly': '2W-SUN',
-            'day_of_year': 'Y', # No direct daily freq, use year
-            # Add other frequencies as needed
-        }
-        freq = season_to_freq.get(season_type)
+    grouped = df.groupby(group_key)
+    aggregated_dfs = []
 
-        if not freq:
-             # Fallback for less common frequencies: use mean time
-            grouped = df.groupby(['cycle', 'season'])
-            aggregated_dfs = []
-            for name, group in grouped:
-                if len(group) == 1:
-                    aggregated_dfs.append(group)
-                    continue
-                mean_time = group['t'].mean()
-                closest_idx = (group['t'] - mean_time).abs().idxmin()
-                aggregated_dfs.append(group.loc[[closest_idx]])
-            return pd.concat(aggregated_dfs).reset_index(drop=True)
+    for name, group in grouped:
+        if len(group) == 1:
+            aggregated_dfs.append(group)
+            continue
 
+        # Convert to datetime if not already, to use period logic
+        if not pd.api.types.is_datetime64_any_dtype(group['t_original']):
+            group['t_original'] = pd.to_datetime(group['t_original'])
 
-        # Convert to datetime if not already
-        if not pd.api.types.is_datetime64_any_dtype(df['t_original']):
-            df['t_original'] = pd.to_datetime(df['t_original'])
+        # Get the start and end of the period for the group's first timestamp
+        # This defines the theoretical window for the entire group
+        ref_date = group['t_original'].min()
+        period_start = ref_date.to_period(period).start_time
+        period_end = ref_date.to_period(period).end_time
+        midpoint = period_start + (period_end - period_start) / 2
 
-        # Group by the unique time increment (cycle and season)
-        grouped = df.groupby(['cycle', 'season'])
+        # Find the observation closest to the midpoint
+        closest_idx = (group['t_original'] - midpoint).abs().idxmin()
+        aggregated_dfs.append(group.loc[[closest_idx]])
 
-        aggregated_dfs = []
-        for name, group in grouped:
-            if len(group) == 1:
-                aggregated_dfs.append(group)
-                continue
-
-            # Get the start and end of the period for the group
-            min_date = group['t_original'].min()
-            period_start = min_date.to_period(freq).start_time
-            period_end = min_date.to_period(freq).end_time
-
-            # Calculate the midpoint of the period
-            midpoint = period_start + (period_end - period_start) / 2
-
-            # Find the observation closest to the midpoint
-            closest_idx = (group['t_original'] - midpoint).abs().idxmin()
-            aggregated_dfs.append(group.loc[[closest_idx]])
-
-        return pd.concat(aggregated_dfs).reset_index(drop=True)
-    else:
-        # For numeric time, calculate the midpoint of the group's time range
-        grouped = df.groupby(['cycle', 'season'])
-        aggregated_dfs = []
-        for name, group in grouped:
-            if len(group) == 1:
-                aggregated_dfs.append(group)
-                continue
-
-            min_time = group['t'].min()
-            max_time = group['t'].max()
-            midpoint = min_time + (max_time - min_time) / 2
-            closest_idx = (group['t'] - midpoint).abs().idxmin()
-            aggregated_dfs.append(group.loc[[closest_idx]])
-
-        return pd.concat(aggregated_dfs).reset_index(drop=True)
+    return pd.concat(aggregated_dfs).reset_index(drop=True)
 
 
 def _aggregate_by_group(group, agg_method, is_datetime):
