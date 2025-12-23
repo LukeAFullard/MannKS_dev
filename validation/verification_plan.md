@@ -46,7 +46,7 @@ This master file will provide a quantitative, high-level overview of the LWP-mod
 
 **V-01: Simple Trend**
 *   **Objective:** Verify that all methods correctly identify trends in a simple, non-seasonal, uncensored dataset.
-*   **Data Description:** Monthly linear data with random noise.
+*   **Data Description:** Annual linear data with random noise. This test uses annual data to ensure compatibility with the `NonSeasonalTrendAnalysis` function in the R script, which is brittle with other data frequencies.
 
 **V-02: Data with Tied Values**
 *   **Objective:** Test the handling of tied values in the data vector.
