@@ -53,17 +53,24 @@ def test_aggregate_censored_median_empty_mode():
 
 # --- Tests for _value_for_time_increment ---
 
-def test_value_for_time_increment_numeric_time():
-    """Test _value_for_time_increment with numeric time data."""
+def test_value_for_time_increment_datetime():
+    """Test _value_for_time_increment with datetime data."""
     df = pd.DataFrame({
-        't': np.array([2000.1, 2000.8, 2001.5, 2001.6]),
-        'cycle': [2000, 2000, 2001, 2001],
-        'season': [1, 1, 1, 1]
+        't_original': pd.to_datetime(['2000-02-01', '2000-08-01', '2001-09-01', '2001-05-01']),
+        'value': [10, 20, 30, 40]
     })
-    result_df = _value_for_time_increment(df, is_datetime=False, season_type='month')
+    # Add a dummy 't' column as the function doesn't use it directly but it's part of the data model
+    df['t'] = df['t_original'].astype('int64') // 10**9
+
+    group_key = df['t_original'].dt.to_period('Y')
+    result_df = _value_for_time_increment(df, group_key, 'Y')
+
+    # Midpoint of 2000 is ~July 2nd. 2000-08-01 is closer than 2000-02-01.
+    # Midpoint of 2001 is ~July 2nd. 2001-09-01 is closer than 2001-05-01.
+    expected_values = [20, 30]
+
     assert len(result_df) == 2
-    assert 2000.1 in result_df['t'].values
-    assert 2001.5 in result_df['t'].values
+    assert all(item in result_df['value'].values for item in expected_values)
 
 # --- Tests for _aggregate_by_group ---
 

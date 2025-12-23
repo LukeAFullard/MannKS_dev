@@ -224,8 +224,21 @@ def trend_test(
     if agg_method == 'lwp':
         if not is_datetime:
             raise ValueError("`agg_method='lwp'` can only be used with datetime-like inputs for `t`.")
+
         # LWP aggregation selects one value per time period (e.g., year, month).
-        data_filtered = _value_for_time_increment(data_filtered, is_datetime=True, season_type=agg_period)
+        t_datetime = pd.to_datetime(data_filtered['t_original'])
+        period_map = {
+            'year': 'Y', 'month': 'M', 'quarter': 'Q',
+            'week': 'W', 'day': 'D'
+        }
+        if agg_period not in period_map:
+            raise ValueError(f"Invalid `agg_period` for LWP aggregation: {agg_period}. "
+                             f"Must be one of {list(period_map.keys())}.")
+
+        period_freq = period_map[agg_period]
+        group_key = t_datetime.dt.to_period(period_freq)
+        data_filtered = _value_for_time_increment(data_filtered, group_key, period_freq)
+
     elif len(data_filtered['t']) != len(np.unique(data_filtered['t'])):
         if agg_method == 'none':
             analysis_notes.append('tied timestamps present without aggregation')
