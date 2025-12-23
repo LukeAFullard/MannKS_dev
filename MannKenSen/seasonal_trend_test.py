@@ -12,6 +12,7 @@ from ._stats import (_z_score, _p_value,
                    _sens_estimator_unequal_spacing, _confidence_intervals,
                    _mk_probability, _mk_score_and_var_censored,
                    _sens_estimator_censored, _sen_probability)
+from ._ats import ats_slope
 from ._datetime import (_get_season_func, _get_cycle_identifier, _get_time_ranks)
 from ._helpers import (_prepare_data, _aggregate_by_group, _value_for_time_increment)
 from .plotting import plot_trend
@@ -86,6 +87,13 @@ def seasonal_trend_test(
             - 'lwp': Sets ambiguous slopes to 0, mimicking the LWP-TRENDS R script.
                      This may bias the slope towards zero and is primarily available
                      for replicating results from that script.
+            - 'ats': A statistically robust method that implements the
+                     Akritas-Theil-Sen (ATS) estimator for each season. The final
+                     slope is the median of the individual seasonal slopes.
+                     **Limitations**: This method is computationally intensive.
+                     Confidence intervals and Sen's probability are not available
+                     for the seasonal ATS method due to the complexity of
+                     combining bootstrap results from multiple seasons.
         tau_method (str): The method for calculating Kendall's Tau ('a' or 'b').
                           Default is 'b', which accounts for ties in the data and is
                           the recommended method.
@@ -186,7 +194,7 @@ def seasonal_trend_test(
     if agg_method not in valid_agg_methods:
         raise ValueError(f"Invalid `agg_method`. Must be one of {valid_agg_methods}.")
 
-    valid_sens_slope_methods = ['nan', 'lwp']
+    valid_sens_slope_methods = ['nan', 'lwp', 'ats']
     if sens_slope_method not in valid_sens_slope_methods:
         raise ValueError(f"Invalid `sens_slope_method`. Must be one of {valid_sens_slope_methods}.")
 
@@ -296,6 +304,7 @@ def seasonal_trend_test(
 
     s, var_s, denom = 0, 0, 0
     all_slopes = []
+    seasonal_slopes = []  # For ATS method
     tau_weighted_sum = 0
     denom_sum = 0
     sens_slope_notes = set()
@@ -317,53 +326,80 @@ def seasonal_trend_test(
                 tau_weighted_sum += tau_season * d_season
                 denom_sum += d_season
 
-    # Sen's slope calculation uses the data after any user-specified aggregation.
-    # The variance for CIs should be based on the same data.
+    # Sen's slope calculation
     slope_data = data_filtered
     var_s_for_ci = var_s
 
     for i in season_range:
         season_mask = slope_data['season'] == i
         season_data = slope_data[season_mask]
-        season_x = season_data['value'].to_numpy()
-        season_t = season_data['t'].to_numpy()
-        season_censored = season_data['censored'].to_numpy()
-        season_cen_type = season_data['cen_type'].to_numpy()
-        n = len(season_x)
-
+        n = len(season_data)
         if n > 1:
-            if np.any(season_censored):
-                slopes = _sens_estimator_censored(
-                    season_x, season_t, season_cen_type,
-                    lt_mult=lt_mult, gt_mult=gt_mult, method=sens_slope_method
-                )
-            else:
-                slopes = _sens_estimator_unequal_spacing(season_x, season_t)
-
-            note = get_sens_slope_analysis_note(slopes, season_t, season_cen_type)
-            if note != "ok":
-                sens_slope_notes.add(note)
-
-            all_slopes.extend(slopes)
+            if sens_slope_method == 'ats':
+                if season_data['censored'].any():
+                    ats_results = ats_slope(
+                        x=season_data['t'].to_numpy(),
+                        y=season_data['value'].to_numpy(),
+                        censored=season_data['censored'].to_numpy(),
+                        cen_type=season_data['cen_type'].to_numpy(),
+                        lod=season_data['value'].to_numpy(),
+                        ci_alpha=alpha,
+                        bootstrap_ci=False
+                    )
+                    seasonal_slopes.append(ats_results['beta'])
+                    if ats_results.get('notes'):
+                        sens_slope_notes.update(ats_results['notes'])
+                else:
+                    pairwise_slopes = _sens_estimator_unequal_spacing(
+                        season_data['value'].to_numpy(), season_data['t'].to_numpy()
+                    )
+                    if len(pairwise_slopes) > 0:
+                        seasonal_slopes.append(np.nanmedian(pairwise_slopes))
+            else: # lwp or nan methods
+                season_x = season_data['value'].to_numpy()
+                season_t = season_data['t'].to_numpy()
+                season_censored = season_data['censored'].to_numpy()
+                season_cen_type = season_data['cen_type'].to_numpy()
+                if np.any(season_censored):
+                    slopes = _sens_estimator_censored(
+                        season_x, season_t, season_cen_type,
+                        lt_mult=lt_mult, gt_mult=gt_mult, method=sens_slope_method
+                    )
+                else:
+                    slopes = _sens_estimator_unequal_spacing(season_x, season_t)
+                note = get_sens_slope_analysis_note(slopes, season_t, season_cen_type)
+                if note != "ok":
+                    sens_slope_notes.add(note)
+                all_slopes.extend(slopes)
 
     if sens_slope_notes:
         analysis_notes.extend(list(sens_slope_notes))
-
 
     Tau = tau_weighted_sum / denom_sum if denom_sum > 0 else 0
     z = _z_score(s, var_s)
     p, h, trend = _p_value(z, alpha)
     C, Cd = _mk_probability(p, s)
 
-    if not all_slopes:
-        slope, intercept, lower_ci, upper_ci = np.nan, np.nan, np.nan, np.nan
-        sen_prob, sen_prob_max, sen_prob_min = np.nan, np.nan, np.nan
-    else:
-        all_slopes_arr = np.asarray(all_slopes)
-        slope = np.nanmedian(all_slopes_arr)
-        intercept = np.nanmedian(data_filtered['value']) - np.nanmedian(data_filtered['t']) * slope
-        lower_ci, upper_ci = _confidence_intervals(all_slopes_arr, var_s_for_ci, alpha, method=ci_method)
-        sen_prob, sen_prob_max, sen_prob_min = _sen_probability(all_slopes_arr, var_s_for_ci)
+    if sens_slope_method == 'ats':
+        if not seasonal_slopes:
+            slope, intercept, lower_ci, upper_ci = np.nan, np.nan, np.nan, np.nan
+            sen_prob, sen_prob_max, sen_prob_min = np.nan, np.nan, np.nan
+        else:
+            slope = np.nanmedian(seasonal_slopes)
+            intercept = np.nanmedian(data_filtered['value']) - np.nanmedian(data_filtered['t']) * slope if pd.notna(slope) else np.nan
+            lower_ci, upper_ci = np.nan, np.nan
+            sen_prob, sen_prob_max, sen_prob_min = np.nan, np.nan, np.nan
+            analysis_notes.append("Confidence intervals and Sen's probability are not available for the seasonal ATS method.")
+    else: # lwp or nan methods
+        if not all_slopes:
+            slope, intercept, lower_ci, upper_ci = np.nan, np.nan, np.nan, np.nan
+            sen_prob, sen_prob_max, sen_prob_min = np.nan, np.nan, np.nan
+        else:
+            all_slopes_arr = np.asarray(all_slopes)
+            slope = np.nanmedian(all_slopes_arr)
+            intercept = np.nanmedian(data_filtered['value']) - np.nanmedian(data_filtered['t']) * slope
+            lower_ci, upper_ci = _confidence_intervals(all_slopes_arr, var_s_for_ci, alpha, method=ci_method)
+            sen_prob, sen_prob_max, sen_prob_min = _sen_probability(all_slopes_arr, var_s_for_ci)
 
     # Calculate metadata fields
     n_total = len(data_filtered)

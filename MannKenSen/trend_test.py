@@ -10,6 +10,7 @@ from ._stats import (_z_score, _p_value, _sens_estimator_unequal_spacing,
                      _confidence_intervals, _mk_probability,
                      _mk_score_and_var_censored, _sens_estimator_censored,
                      _sen_probability)
+from ._ats import ats_slope
 from ._helpers import (_prepare_data, _aggregate_by_group, _value_for_time_increment)
 from .plotting import plot_trend
 from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
@@ -63,6 +64,15 @@ def trend_test(
             - 'lwp': Sets ambiguous slopes to 0, mimicking the LWP-TRENDS R script.
                      This may bias the slope towards zero and is primarily available
                      for replicating results from that script.
+            - 'ats': A statistically robust method for censored data that implements
+                     the Akritas-Theil-Sen (ATS) estimator. It computes the slope
+                     by finding the value that makes the censored Kendall's S
+                     statistic of the residuals equal to zero. This is a formal
+                     censored-data extension of the Theil-Sen estimator and is
+                     recommended for datasets with moderate to heavy censoring.
+                     **Limitations**: This method is computationally more intensive
+                     than the others and relies on a bootstrap procedure for
+                     confidence intervals, which can be slow for large datasets.
         tau_method (str): The method for calculating Kendall's Tau ('a' or 'b').
                           Default is 'b', which accounts for ties in the data and is
                           the recommended method.
@@ -178,7 +188,7 @@ def trend_test(
     ])
 
     # --- Method String Validation ---
-    valid_sens_slope_methods = ['nan', 'lwp']
+    valid_sens_slope_methods = ['nan', 'lwp', 'ats']
     if sens_slope_method not in valid_sens_slope_methods:
         raise ValueError(f"Invalid `sens_slope_method`. Must be one of {valid_sens_slope_methods}.")
 
@@ -277,29 +287,55 @@ def trend_test(
     p, h, trend = _p_value(z, alpha)
     C, Cd = _mk_probability(p, s)
 
-    if np.any(censored_filtered):
-        slopes = _sens_estimator_censored(
-            x_filtered, t_filtered, cen_type_filtered,
-            lt_mult=lt_mult, gt_mult=gt_mult, method=sens_slope_method
-        )
-    else:
-        slopes = _sens_estimator_unequal_spacing(x_filtered, t_filtered)
+    # --- Slope Calculation ---
+    slope, intercept, lower_ci, upper_ci = np.nan, np.nan, np.nan, np.nan
+    sen_prob, sen_prob_max, sen_prob_min = np.nan, np.nan, np.nan
 
-    slope = np.nanmedian(slopes) if len(slopes) > 0 else np.nan
+    if sens_slope_method == 'ats':
+        # ATS method is designed for censored data. If no censored data is present,
+        # it falls back to the high-performance standard estimator.
+        if np.any(censored_filtered):
+            ats_results = ats_slope(
+                x=t_filtered,
+                y=x_filtered,
+                censored=censored_filtered,
+                cen_type=cen_type_filtered,
+                lod=x_filtered,
+                ci_alpha=alpha
+            )
+            slope = ats_results['beta']
+            intercept = ats_results['intercept']
+            lower_ci = ats_results.get('ci_lower', np.nan)
+            upper_ci = ats_results.get('ci_upper', np.nan)
+            if ats_results.get('notes'):
+                analysis_notes.extend(ats_results['notes'])
+            # Note: sen_probability is not calculated by the ATS bootstrap method.
+        else:
+            slopes = _sens_estimator_unequal_spacing(x_filtered, t_filtered)
+            slope = np.nanmedian(slopes) if len(slopes) > 0 else np.nan
+            if not np.isnan(slope):
+                intercept = np.nanmedian(x_filtered) - np.nanmedian(t_filtered) * slope
+            lower_ci, upper_ci = _confidence_intervals(slopes, var_s, alpha, method=ci_method)
+            sen_prob, sen_prob_max, sen_prob_min = _sen_probability(slopes, var_s)
 
-    note = get_sens_slope_analysis_note(slopes, t_filtered, cen_type_filtered)
-    analysis_notes.append(note)
+    else: # Existing 'lwp' or 'nan' methods
+        if np.any(censored_filtered):
+            slopes = _sens_estimator_censored(
+                x_filtered, t_filtered, cen_type_filtered,
+                lt_mult=lt_mult, gt_mult=gt_mult, method=sens_slope_method
+            )
+        else:
+            slopes = _sens_estimator_unequal_spacing(x_filtered, t_filtered)
 
+        slope = np.nanmedian(slopes) if len(slopes) > 0 else np.nan
+        note = get_sens_slope_analysis_note(slopes, t_filtered, cen_type_filtered)
+        analysis_notes.append(note)
 
-    if np.isnan(slope):
-        intercept = np.nan
-    else:
-        intercept = np.nanmedian(x_filtered) - np.nanmedian(t_filtered) * slope
+        if not np.isnan(slope):
+            intercept = np.nanmedian(x_filtered) - np.nanmedian(t_filtered) * slope
 
-    lower_ci, upper_ci = _confidence_intervals(slopes, var_s, alpha, method=ci_method)
-
-    # Sen's slope probability
-    sen_prob, sen_prob_max, sen_prob_min = _sen_probability(slopes, var_s)
+        lower_ci, upper_ci = _confidence_intervals(slopes, var_s, alpha, method=ci_method)
+        sen_prob, sen_prob_max, sen_prob_min = _sen_probability(slopes, var_s)
 
     # --- Slope Scaling ---
     slope_per_second = slope
