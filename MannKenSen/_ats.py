@@ -77,106 +77,133 @@ def bracket_and_bisect(x: np.ndarray, lower: np.ndarray, upper: np.ndarray,
                        beta0: Optional[float]=None, max_expand=50, tol=1e-8,
                        maxiter=60) -> float:
     """
-    Find beta* with bisection:
-    - choose initial bracket (low, high) that gives S(low) and S(high) with opposite signs.
-    - if no bracket found, expand search.
-    - return beta where S(beta) == 0 (within tol) or approximate where sign changes.
+    Find beta* with bisection. This is a numerically robust implementation that:
+    - Uses a data-driven initial bracket based on uncensored data.
+    - Scales bracket expansion proportionally to avoid runaway values.
+    - Uses a fallback grid search scaled to the final bracket size.
     """
-    n = len(x)
-    # initial guess: standard Theil-Sen on uncensored pairs where both are exact
-    # build simple slope list from detected points
+    # Calculate slopes from all uncensored pairs to define the initial search space
     detected_idx = np.where(np.isfinite(lower) & np.isfinite(upper) & (lower == upper))[0]
+    slopes = []
     if len(detected_idx) >= 2:
-        slopes = []
-        di = detected_idx
-        for i in range(len(di)):
-            for j in range(i+1, len(di)):
-                xi, xj = x[di[i]], x[di[j]]
-                if xj == xi:
-                    continue
-                yi, yj = lower[di[i]], lower[di[j]]
-                slopes.append((yj - yi) / (xj - xi))
-        if len(slopes) > 0:
-            median_slope = np.median(slopes)
-        else:
-            median_slope = 0.0
+        for i in range(len(detected_idx)):
+            for j in range(i + 1, len(detected_idx)):
+                xi, xj = x[detected_idx[i]], x[detected_idx[j]]
+                if not np.isclose(xj, xi):
+                    yi, yj = lower[detected_idx[i]], lower[detected_idx[j]]
+                    slopes.append((yj - yi) / (xj - xi))
+
+    # Define the initial search bracket. Using percentiles is robust to
+    # extreme outliers that can be generated during bootstrap resampling.
+    if slopes:
+        low = np.percentile(slopes, 5)
+        high = np.percentile(slopes, 95)
+        if np.isclose(low, high):
+            # If slopes are very similar, create a reasonable bracket around them
+            bracket_width = max(1.0, abs(low) * 0.5)
+            low -= bracket_width
+            high += bracket_width
     else:
-        median_slope = 0.0
+        # Fallback if no uncensored slopes are available.
+        # This is a critical edge case for bootstrap resampling. The default
+        # must be small to avoid numerical instability with datetime slopes.
+        low, high = -1e-5, 1e-5
 
-    if beta0 is None:
-        beta0 = median_slope
-
-    # start bracket around beta0
-    low = beta0 - max(1.0, abs(beta0))*1.0
-    high = beta0 + max(1.0, abs(beta0))*1.0
     s_low = S_of_beta(low, x, lower, upper)
     s_high = S_of_beta(high, x, lower, upper)
 
-    # expand outward until sign change or max_expand iterations
-    expand_factor = 2.0
+    # Expand the bracket until the signs of S(low) and S(high) differ
+    expand_factor = 1.6
     it = 0
     while s_low * s_high > 0 and it < max_expand:
-        # expand
-        low = low - (abs(low) + 1.0) * expand_factor
-        high = high + (abs(high) + 1.0) * expand_factor
+        width = high - low
+        # Expand proportionally to the current bracket width
+        low -= width * expand_factor
+        high += width * expand_factor
         s_low = S_of_beta(low, x, lower, upper)
         s_high = S_of_beta(high, x, lower, upper)
         it += 1
 
+    # If no sign change was found, perform a grid search over the final bracket
     if s_low * s_high > 0:
-        # no sign change found; pick beta where S is closest to zero
-        # scan a grid and pick argmin |S|
-        grid = np.linspace(beta0 - 1000, beta0 + 1000, num=201)
-        Svals = np.array([abs(S_of_beta(g, x, lower, upper)) for g in grid])
-        best_idx = np.argmin(Svals)
+        grid = np.linspace(low, high, num=201)
+        s_vals = np.array([abs(S_of_beta(g, x, lower, upper)) for g in grid])
+        best_idx = np.argmin(s_vals)
         return float(grid[best_idx])
 
-    # bisection
+    # Perform bisection search to find the root
     a, b = low, high
-    Sa, Sb = s_low, s_high
-    for it in range(maxiter):
+    sa, sb = s_low, s_high
+    for _ in range(maxiter):
         m = (a + b) / 2.0
-        Sm = S_of_beta(m, x, lower, upper)
-        if abs(Sm) == 0 or (b - a) / 2.0 < tol:
+        sm = S_of_beta(m, x, lower, upper)
+        if sm == 0 or (b - a) / 2.0 < tol:
             return float(m)
-        # decide which side to keep
-        if Sa * Sm <= 0:
-            b = m
-            Sb = Sm
+
+        if sa * sm <= 0:
+            b, sb = m, sm
         else:
-            a = m
-            Sa = Sm
-    # return midpoint if not converged
+            a, sa = m, sm
+
     return float((a + b) / 2.0)
 
 # ---------- Turnbull-style intercept (practical approach) ----------
-def estimate_intercept(beta: float, x: np.ndarray, lower: np.ndarray, upper: np.ndarray) -> float:
+def estimate_intercept_turnbull(residual_lower: np.ndarray, residual_upper: np.ndarray, tol=1e-6, max_iter=100) -> float:
     """
-    Practical intercept estimate: compute interval residuals R_i = [l_i - beta*x_i, u_i - beta*x_i],
-    then take a Turnbull-like median: find median of the (interval) distribution via midpoint heuristic:
-    - When many intervals non-overlapping, pick median of midpoints (safe),
-    - Otherwise pick midpoint of medians of lower and upper arrays.
-    This is a pragmatic choice; more exact Turnbull EM can be added if required.
+    Estimates the median of interval-censored data using a Turnbull-style approach.
+    This is a pragmatic implementation of the core logic, not a full port of a library like Icens.
+    It finds the ECDF and returns the 0.5 quantile (median).
     """
-    r_lower = lower - beta * x
-    r_upper = upper - beta * x
-    # Midpoints for finite intervals (for -inf/+inf we ignore)
-    finite_mask = np.isfinite(r_lower) & np.isfinite(r_upper)
-    if np.any(finite_mask):
-        midpoints = 0.5 * (r_lower[finite_mask] + r_upper[finite_mask])
-        return float(np.median(midpoints))
-    else:
-        # if none finite, fall-back: median of finite bounds
-        finite_l = r_lower[np.isfinite(r_lower)]
-        finite_u = r_upper[np.isfinite(r_upper)]
-        vals = []
-        if finite_l.size:
-            vals.append(np.median(finite_l))
-        if finite_u.size:
-            vals.append(np.median(finite_u))
-        if vals:
-            return float(np.median(vals))
+    # Get all unique, finite interval endpoints
+    endpoints = np.unique(np.concatenate([residual_lower[np.isfinite(residual_lower)],
+                                          residual_upper[np.isfinite(residual_upper)]]))
+
+    if len(endpoints) == 0:
         return 0.0
+    if len(endpoints) == 1:
+        return endpoints[0]
+
+    # The Turnbull sets (intervals between endpoints)
+    turnbull_intervals = np.array([(endpoints[i], endpoints[i+1]) for i in range(len(endpoints)-1)])
+    midpoints = np.mean(turnbull_intervals, axis=1)
+
+    n_obs = len(residual_lower)
+    n_intervals = len(turnbull_intervals)
+
+    # Initialize probabilities for each interval
+    p = np.full(n_intervals, 1.0 / n_intervals)
+
+    for _ in range(max_iter):
+        p_old = p.copy()
+
+        # E-step: Calculate expected number of observations in each interval
+        alpha = np.zeros((n_obs, n_intervals))
+        for i in range(n_obs):
+            # Find which turnbull intervals are contained within the i-th observation's residual interval
+            contained_mask = (turnbull_intervals[:, 0] >= residual_lower[i]) & (turnbull_intervals[:, 1] <= residual_upper[i])
+
+            sum_p_contained = np.sum(p[contained_mask])
+            if sum_p_contained > 0:
+                alpha[i, contained_mask] = p[contained_mask] / sum_p_contained
+
+        # M-step: Update probabilities
+        p = np.sum(alpha, axis=0) / n_obs
+
+        # Check for convergence
+        if np.sum(np.abs(p - p_old)) < tol:
+            break
+
+    # Calculate ECDF and find the median
+    ecdf = np.cumsum(p)
+
+    # Find the first midpoint where the ECDF crosses 0.5
+    median_idx = np.where(ecdf >= 0.5)[0]
+    if len(median_idx) == 0:
+        # If all probabilities are tiny, return the last midpoint
+        return midpoints[-1]
+
+    return midpoints[median_idx[0]]
+
 
 # ---------- Public wrapper ----------
 def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
@@ -187,9 +214,21 @@ def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
     Compute ATS slope estimate and bootstrap CI.
     Returns dict with keys: beta, intercept, ci_lower, ci_upper, prop_censored, notes
     """
+    # Normalize the time vector to prevent floating point precision issues with large timestamps
+    x_min = np.min(x)
+    x_norm = x - x_min
+
     lower, upper = make_intervals(y, censored, cen_type=cen_type, lod=lod)
-    beta_hat = bracket_and_bisect(x, lower, upper, beta0=None)
-    intercept = estimate_intercept(beta_hat, x, lower, upper)
+    beta_hat = bracket_and_bisect(x_norm, lower, upper, beta0=None)
+
+    # Calculate residuals and estimate intercept using Turnbull method
+    r_lower = lower - beta_hat * x_norm
+    r_upper = upper - beta_hat * x_norm
+    intercept_norm = estimate_intercept_turnbull(r_lower, r_upper)
+
+    # De-normalize the intercept to correspond to the original time vector
+    intercept = intercept_norm - beta_hat * x_min
+
     prop_cen = float(np.mean(censored))
 
     result = {'beta': beta_hat, 'intercept': intercept,
@@ -197,8 +236,8 @@ def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
 
     # simple diagnostics: fraction of pairwise comparisons that were ties at final beta
     n = len(x)
-    lower_r = lower - beta_hat * x
-    upper_r = upper - beta_hat * x
+    lower_r = lower - beta_hat * x_norm
+    upper_r = upper - beta_hat * x_norm
     ties = 0
     total_pairs = 0
     for i in range(n):
@@ -209,25 +248,37 @@ def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
                 ties += 1
     result['pairwise_ties_frac'] = ties / total_pairs if total_pairs > 0 else np.nan
 
-    # bootstrap CI (resampling indices with replacement, keep censoring info)
-    if bootstrap_ci:
+    # Bootstrap CI using residual resampling to avoid issues with duplicate timestamps
+    if bootstrap_ci and n >= 10:
         boot_betas = []
         rng = np.random.default_rng()
+
+        # Calculate fitted values and residual intervals from the original fit
+        fitted = intercept_norm + beta_hat * x_norm
+        resid_lower = lower - fitted
+        resid_upper = upper - fitted
+
         for b in range(n_boot):
-            idx = rng.integers(0, n, n)
-            x_b = x[idx]
-            y_b = y[idx]
-            cens_b = censored[idx]
-            cen_t_b = cen_type[idx] if cen_type is not None else None
-            lod_b = lod[idx] if lod is not None else None
             try:
-                lower_b, upper_b = make_intervals(y_b, cens_b, cen_type=cen_t_b, lod=lod_b)
-                beta_b = bracket_and_bisect(x_b, lower_b, upper_b)
-                boot_betas.append(beta_b)
+                # Resample residual indices
+                resid_idx = rng.integers(0, n, n)
+
+                # Create a bootstrap sample by adding resampled residuals to fitted values
+                y_boot_lower = fitted + resid_lower[resid_idx]
+                y_boot_upper = fitted + resid_upper[resid_idx]
+
+                # Refit the model on the bootstrap sample
+                # Note: We use the original, un-resampled (but normalized) time vector
+                beta_b = bracket_and_bisect(x_norm, y_boot_lower, y_boot_upper)
+
+                # Filter out extreme outliers that can still occur in rare cases
+                if np.isfinite(beta_b) and abs(beta_b) < (abs(beta_hat) + 1) * 100:
+                     boot_betas.append(beta_b)
             except Exception:
-                # skip sample if root-finding fails
+                # Skip sample if root-finding fails
                 pass
-        if len(boot_betas) >= max(10, int(0.1 * n_boot)):
+
+        if len(boot_betas) >= max(20, int(0.1 * n_boot)):
             lo = np.quantile(boot_betas, ci_alpha/2)
             hi = np.quantile(boot_betas, 1 - ci_alpha/2)
             result['ci_lower'] = float(lo)
@@ -236,5 +287,8 @@ def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
         else:
             result['ci_lower'] = None
             result['ci_upper'] = None
-            result['notes'].append('bootstrap failed to produce enough valid samples for CI')
+            result['notes'].append(
+                f'bootstrap produced only {len(boot_betas)} valid samples '
+                f'(need >= {max(20, int(0.1 * n_boot))})'
+            )
     return result
