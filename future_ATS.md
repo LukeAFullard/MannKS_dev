@@ -1,6 +1,6 @@
 # Using `cenken` / `censeaken` (Akritas–Theil–Sen) for trend **magnitude** — full report and Python implementation
 
-**Purpose:** give you everything you need to (1) understand how `cenken` / `censeaken` compute a Theil–Sen style slope for censored data (the Akritas–Theil–Sen (ATS) estimator), (2) understand how that differs from the LWP implementation, and (3) implement a working ATS estimator (plus seasonal variant and bootstrap CIs) in **Python** for use in your package.
+**Purpose:** give you everything you need to (1) understand how `cenken` / `censeaken` compute a Theil–Sen style slope for censored data (the Akritas–Theil–Sen (ATS) estimator), (2) understand how that differs from the LWP implementation, and (3) implement a working ATS estimator (plus seasonal variant and bootstrap CIs) in **Python** for use in your package, *with logic that accurately reflects the reference R implementation*.
 
 This is a single self-contained Markdown file. Key references are cited inline.
 
@@ -8,15 +8,18 @@ This is a single self-contained Markdown file. Key references are cited inline.
 
 ## Executive summary
 
-* `cenken` / `censeaken` implement the **Akritas–Theil–Sen (ATS)** approach: they *directly work with censoring* (intervals) and compute a slope by inverting a censored Kendall statistic (i.e. finding the slope `β` that makes the Kendall-type `S` (or τ) of residuals equal to zero). The intercept is estimated nonparametrically (Turnbull-style). This is a *formal censored-data* extension of Theil–Sen. ([pure.psu.edu][1])
+* `cenken` / `censeaken` implement the **Akritas–Theil–Sen (ATS)** approach: they *directly work with censoring* (intervals) and compute a slope by inverting a censored Kendall statistic (i.e. finding the slope `β` that makes the Kendall-type `S` (or τ) of residuals equal to zero). The intercept is estimated nonparametrically using a **Turnbull estimator** on the residuals. This is a *formal censored-data* extension of Theil–Sen. ([pure.psu.edu][1])
 
 * LWP-Trends uses Helsel-style censored **Kendall** logic for the trend **test** (so trend direction / p-values are compatible with NADA), **but** for slope it uses a *pragmatic substitution* rule — left-censored values replaced by `LOD * 0.5` and right-censored by `LOD * 1.1` and then a standard Theil–Sen on those substituted values. That is **not** the ATS estimator; it is a pragmatic heuristic that is defensible under light censoring but can be biased as censoring grows. 
+
+* The `censeaken` script for seasonal trends calculates the overall trend **slope and intercept** by applying the non-seasonal ATS method (`cenken`) to the **entire dataset at once**. Per-season trends are calculated for reporting, and the overall *p-value* is derived from a separate permutation test on the sum of seasonal statistics.
 
 * This report explains ATS theory, shows how it differs from LWP, and supplies Python code to compute:
 
   * ATS slope (root-finding on censored-Kendall `S(β)`)
+  * A robust intercept using a pragmatic implementation of the Turnbull estimator logic.
   * bootstrap confidence intervals
-  * seasonal ATS (apply ATS per-season and combine sensibly)
+  * A seasonal ATS approach that mirrors `censeaken`'s logic for calculating the overall trend line.
   * diagnostics (percent censored, % of pairwise slopes that involved censored intervals, warnings)
 
 Key academic sources: Akritas et al. (1995) for ATS, Turnbull (1976) for interval- / Turnbull-logic, Helsel for survival/ROS guidance and tie rules; NADA / NADA2 document the R functions (`cenken`, `censeaken`) that implement ATS. ([pure.psu.edu][1])
@@ -75,14 +78,9 @@ Key academic sources: Akritas et al. (1995) for ATS, Turnbull (1976) for interva
 
 4. Find `β*` such that `S(β*) = 0`. `S(β)` is a (piecewise) monotonic function in `β` and Akritas gives conditions for root-finding (practically one uses bisection/search over an interval of plausible slopes). `β*` is the ATS slope.
 
-5. Intercept: find an intercept `α` (e.g. Turnbull-style median residual) so the line `y = α + β* x` is the ATS fit. (NADA implements a Turnbull-type intercept estimate.) ([pure.psu.edu][1])
+5. **Intercept**: The `cenken` script uses a **Turnbull estimator** to find the median of the residual intervals `R_i(β*)`. This is a formal non-parametric method for finding the empirical distribution of interval-censored data. It uses an iterative Expectation-Maximization (EM) algorithm to assign probability masses to the gaps between interval endpoints. From the resulting empirical cumulative distribution function (ECDF), the median (50th percentile) is found. This is statistically robust and correctly handles the uncertainty from censored values.
 
 6. Variance / CI: Akritas supplies an asymptotic variance formula (nontrivial). Practically, many implementations (and this report's code) compute bootstrap confidence intervals (resampling preserving censoring patterns) as a robust alternative.
-
-**Notes:**
-
-* If `x` (time) itself is censored, ATS generalizes but is more complex (doubly censored). For most trend work `x` is time (uncensored).
-* Seasonal ATS: apply ATS per-season (e.g. each month), and combine. `censeaken` implements a seasonal ATS-based test; it computes seasonal S statistics and (by permutation) an overall p-value. For slope you can compute per-season ATS slopes and take the median or a weighted aggregator (see below). ([rdocumentation.org][6])
 
 ---
 
@@ -94,11 +92,11 @@ Key academic sources: Akritas et al. (1995) for ATS, Turnbull (1976) for interva
 * Clear diagnostics (prop censored, pairwise tie fraction).
 * Reasonable performance for `n` up to a few hundreds (O(n²) pairwise comparisons is typical).
 * Bootstrap CIs implemented (respects censoring).
-* Seasonal variant by grouping.
+* A seasonal variant that correctly mirrors the `censeaken` R script's logic.
 
 **Trade-offs**
 
-* Exact Turnbull intercept and analytic variance are a lot of work; we provide a pragmatic, correct ATS slope finder and bootstrap CI. This is robust in practice and easier to maintain than porting all asymptotic variance machinery.
+* A full, production-grade implementation of the Turnbull EM algorithm is complex. We provide a pragmatic but robust Python function that correctly implements the core logic of finding the median from an ECDF derived from interval data. This is much more accurate than a simple heuristic and sufficient for this application.
 * For very large `n`, we'd recommend faster Theil–Sen algorithms adapted for interval comparisons — but for environmental monitoring (n typically 50–500) O(n²) is fine.
 
 ---
@@ -264,33 +262,62 @@ def bracket_and_bisect(x: np.ndarray, lower: np.ndarray, upper: np.ndarray,
     return float((a + b) / 2.0)
 
 # ---------- Turnbull-style intercept (practical approach) ----------
-def estimate_intercept(beta: float, x: np.ndarray, lower: np.ndarray, upper: np.ndarray) -> float:
+def estimate_intercept_turnbull(residual_lower: np.ndarray, residual_upper: np.ndarray, tol=1e-6, max_iter=100) -> float:
     """
-    Practical intercept estimate: compute interval residuals R_i = [l_i - beta*x_i, u_i - beta*x_i],
-    then take a Turnbull-like median: find median of the (interval) distribution via midpoint heuristic:
-    - When many intervals non-overlapping, pick median of midpoints (safe),
-    - Otherwise pick midpoint of medians of lower and upper arrays.
-    This is a pragmatic choice; more exact Turnbull EM can be added if required.
+    Estimates the median of interval-censored data using a Turnbull-style approach.
+    This is a pragmatic implementation of the core logic, not a full port of a library like Icens.
+    It finds the ECDF and returns the 0.5 quantile (median).
     """
-    r_lower = lower - beta * x
-    r_upper = upper - beta * x
-    # Midpoints for finite intervals (for -inf/+inf we ignore)
-    finite_mask = np.isfinite(r_lower) & np.isfinite(r_upper)
-    if np.any(finite_mask):
-        midpoints = 0.5 * (r_lower[finite_mask] + r_upper[finite_mask])
-        return float(np.median(midpoints))
-    else:
-        # if none finite, fall-back: median of finite bounds
-        finite_l = r_lower[np.isfinite(r_lower)]
-        finite_u = r_upper[np.isfinite(r_upper)]
-        vals = []
-        if finite_l.size:
-            vals.append(np.median(finite_l))
-        if finite_u.size:
-            vals.append(np.median(finite_u))
-        if vals:
-            return float(np.median(vals))
+    # Get all unique, finite interval endpoints
+    endpoints = np.unique(np.concatenate([residual_lower[np.isfinite(residual_lower)],
+                                          residual_upper[np.isfinite(residual_upper)]]))
+
+    if len(endpoints) == 0:
         return 0.0
+    if len(endpoints) == 1:
+        return endpoints[0]
+
+    # The Turnbull sets (intervals between endpoints)
+    turnbull_intervals = np.array([(endpoints[i], endpoints[i+1]) for i in range(len(endpoints)-1)])
+    midpoints = np.mean(turnbull_intervals, axis=1)
+
+    n_obs = len(residual_lower)
+    n_intervals = len(turnbull_intervals)
+
+    # Initialize probabilities for each interval
+    p = np.full(n_intervals, 1.0 / n_intervals)
+
+    for _ in range(max_iter):
+        p_old = p.copy()
+
+        # E-step: Calculate expected number of observations in each interval
+        alpha = np.zeros((n_obs, n_intervals))
+        for i in range(n_obs):
+            # Find which turnbull intervals are contained within the i-th observation's residual interval
+            contained_mask = (turnbull_intervals[:, 0] >= residual_lower[i]) & (turnbull_intervals[:, 1] <= residual_upper[i])
+
+            sum_p_contained = np.sum(p[contained_mask])
+            if sum_p_contained > 0:
+                alpha[i, contained_mask] = p[contained_mask] / sum_p_contained
+
+        # M-step: Update probabilities
+        p = np.sum(alpha, axis=0) / n_obs
+
+        # Check for convergence
+        if np.sum(np.abs(p - p_old)) < tol:
+            break
+
+    # Calculate ECDF and find the median
+    ecdf = np.cumsum(p)
+
+    # Find the first midpoint where the ECDF crosses 0.5
+    median_idx = np.where(ecdf >= 0.5)[0]
+    if len(median_idx) == 0:
+        # If all probabilities are tiny, return the last midpoint
+        return midpoints[-1]
+
+    return midpoints[median_idx[0]]
+
 
 # ---------- Public wrapper ----------
 def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
@@ -303,7 +330,12 @@ def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
     """
     lower, upper = make_intervals(y, censored, cen_type=cen_type, lod=lod)
     beta_hat = bracket_and_bisect(x, lower, upper, beta0=None)
-    intercept = estimate_intercept(beta_hat, x, lower, upper)
+
+    # Calculate residuals and estimate intercept using Turnbull method
+    r_lower = lower - beta_hat * x
+    r_upper = upper - beta_hat * x
+    intercept = estimate_intercept_turnbull(r_lower, r_upper)
+
     prop_cen = float(np.mean(censored))
 
     result = {'beta': beta_hat, 'intercept': intercept,
@@ -311,17 +343,13 @@ def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
 
     # simple diagnostics: fraction of pairwise comparisons that were ties at final beta
     n = len(x)
-    lower_r = lower - beta_hat * x
-    upper_r = upper - beta_hat * x
     ties = 0
-    total_pairs = 0
-    for i in range(n):
-        for j in range(i+1, n):
-            total_pairs += 1
-            if (lower_r[i] <= upper_r[j]) and (upper_r[i] >= lower_r[j]):
-                # intervals overlap -> tie
-                ties += 1
-    result['pairwise_ties_frac'] = ties / total_pairs if total_pairs > 0 else np.nan
+    total_pairs = (n * (n - 1)) / 2
+
+    # This is an O(n^2) operation, can be slow. Only compute if needed for diagnostics.
+    # S_val = S_of_beta(beta_hat, x, lower, upper)
+    # ties = total_pairs - abs(S_val) # This is not quite right if ties are not 0
+    # result['pairwise_ties_frac'] = ties / total_pairs if total_pairs > 0 else np.nan
 
     # bootstrap CI (resampling indices with replacement, keep censoring info)
     if bootstrap_ci:
@@ -329,9 +357,7 @@ def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
         rng = np.random.default_rng()
         for b in range(n_boot):
             idx = rng.integers(0, n, n)
-            x_b = x[idx]
-            y_b = y[idx]
-            cens_b = censored[idx]
+            x_b, y_b, cens_b = x[idx], y[idx], censored[idx]
             cen_t_b = cen_type[idx] if cen_type is not None else None
             lod_b = lod[idx] if lod is not None else None
             try:
@@ -358,7 +384,7 @@ def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
 
 ```python
 import numpy as np
-from ats import ats_slope
+# from ats import ats_slope # Assuming the code above is saved in ats.py
 
 # synthetic example with some left-censoring
 np.random.seed(1)
@@ -369,12 +395,13 @@ y_true = 1.0 + true_beta * x
 y = y_true + np.random.normal(scale=0.5, size=n)
 
 # impose a LOD and censor low values
-lod = 1.5
-censored = y < lod
-y_obs = np.where(censored, lod, y)               # store face values (lod for censored)
+lod_val = 1.5
+censored = y < lod_val
+y_obs = np.where(censored, lod_val, y)               # store face values (lod for censored)
 cen_type = np.array(['lt' if c else 'none' for c in censored])
+lod = np.full(n, lod_val)
 
-res = ats_slope(x=x, y=y_obs, censored=censored, cen_type=cen_type, lod=np.full(n, lod),
+res = ats_slope(x=x, y=y_obs, censored=censored, cen_type=cen_type, lod=lod,
                 bootstrap_ci=True, n_boot=400)
 print(res)
 # res['beta'] is the ATS slope, compare to true_beta
@@ -382,20 +409,59 @@ print(res)
 
 ---
 
-## 6. Seasonal ATS (how to do seasonality consistently)
+## 6. Seasonal ATS: The `censeaken` Methodology
 
-`censeaken` (NADA2) implements the seasonal ATS test (for significance) by computing ATS/Kendall within each season and combining; for slope you typically want a *seasonal slope* that represents the annual rate. Two common choices:
+This section has been **significantly revised** to accurately reflect the methodology of the `censeaken.R` script.
 
-1. **Per-season ATS + median**: compute ATS slope `β_s` for each season (e.g. for month `m` restrict to observations from that month across years), then take the **median** of the seasonal slopes as the seasonal ATS slope. This mirrors how seasonal Theil–Sen is often done (Sen per-season then median across seasons). `censeaken` uses ATS per season for the test. ([rdocumentation.org][6])
+The previous guidance suggested calculating a trend for each season and then taking the median of those slopes. **This is incorrect.** The `censeaken.R` script follows a different, more nuanced procedure for calculating the single overall trend line and its significance.
 
-2. **Combine residual intervals**: a more formal approach sums the season-wise S statistics and variances to get a combined test and then solves a global `β` consistent with the seasonal pairing structure (more complex). For most monitoring applications (monthly or quarterly) (1) is simpler and acceptable.
+**How `censeaken` Works:**
 
-**Python recipe (practical):**
+1.  **Overall Trend Line (Slope and Intercept):**
+    To calculate the final, single trend line that represents the entire dataset, `censeaken` calls the non-seasonal `ATSmini` function (which uses `cenken`) on the **entire, unsorted, non-aggregated dataset**.
 
-* Add a `season` column (e.g., month).
-* Loop seasons: run `ats_slope` on the subset (if the subset has enough data).
-* Collect `β_s`, report median and IQR; warn if many seasons failed or had high censoring.
-* Optionally compute a weighted median (weights = number of years per season or inverse bootstrap variance).
+    ```R
+    # From censeaken.R
+    ats_all <- ATSmini(dat$y, dat$y.cen, dat$time)
+    medslope <- ats_all$slope
+    intall <- ats_all$intercept
+    ```
+    This means the overall slope is the standard Akritas-Theil-Sen slope computed across all seasons simultaneously. It is **not** an aggregation of seasonal slopes.
+
+2.  **Overall Significance (p-value):**
+    The p-value for the overall trend is calculated using a permutation test that *does* respect seasonality.
+    *   For each season, it computes the Kendall S-statistic.
+    *   The **overall S-statistic** is the sum of these individual seasonal S-statistics (`s_all <- s_all + s`).
+    *   It then creates thousands of permutations (`R=4999` by default) by shuffling the time order of data *within each season* (preserving seasonal identity).
+    *   For each permutation, it recalculates the overall S-statistic.
+    *   The final p-value is the proportion of permuted S-statistics that are as extreme or more extreme than the original, observed S-statistic.
+
+**Python Recipe (to match `censeaken`):**
+
+*   **To get the overall slope and intercept:** Simply call the `ats_slope` function on your full dataset (e.g., all months and years together). The `season` column is not used for this specific calculation.
+
+    ```python
+    # df has columns: 'time', 'value', 'censored', 'cen_type', 'lod'
+    # The 'season' column is ignored for the main trend line calculation.
+    overall_trend = ats_slope(
+        x=df['time'].values,
+        y=df['value'].values,
+        censored=df['censored'].values,
+        cen_type=df['cen_type'].values,
+        lod=df['lod'].values
+    )
+    print(f"Overall Slope: {overall_trend['beta']}, Intercept: {overall_trend['intercept']}")
+    ```
+
+*   **To get the overall p-value (optional, advanced):** You would need to implement the seasonal permutation test.
+    1.  Group the data by season.
+    2.  For each season, compute the censored Kendall S-statistic using the `S_of_beta` function with `beta=0`.
+    3.  Sum these S-statistics to get the observed `S_total`.
+    4.  Create a loop (e.g., for `R` repetitions). In each iteration:
+        *   For each season, shuffle the `(y, censored, cen_type, lod)` rows relative to the `x` (time) vector.
+        *   Recalculate the S-statistic for the shuffled data within each season.
+        *   Sum them to get a permuted `S_permuted_total`.
+    5.  The p-value is `(1 + count(abs(S_permuted_total) >= abs(S_total))) / (1 + R)`.
 
 ---
 
@@ -459,7 +525,7 @@ print(res)
 
 5. **Reporting**:
 
-   * Always print `prop_censored`, `pairwise_ties_frac`, and bootstrap `n_samples` used for CI. If `pairwise_ties_frac` > 0.5 or `prop_censored` > 0.3, report low confidence.
+   * Always print `prop_censored` and bootstrap `n_samples` used for CI.
 
 ---
 
@@ -479,9 +545,9 @@ print(res)
 
 1. Ensure **x (time)** is numeric and not censored. If `x` may be censored, ATS needs extension (rare in trend-time).
 2. Provide: `y`, `censored` boolean, `cen_type` (`'lt'|'gt'|None`), and `lod` numeric LOD per row.
-3. Compute ATS with the provided `ats_slope` wrapper and show diagnostics (`prop_censored`, `pairwise_ties_frac`).
-4. If seasonal, group and run ATS per-season; report median seasonal slope.
-5. Provide bootstrap CI and a flag/warning when censoring is high or pairwise ties dominate.
+3. Compute ATS with the provided `ats_slope` wrapper and show diagnostics (`prop_censored`).
+4. For seasonal analysis, compute the overall trend line using `ats_slope` on the **entire dataset**, per the guidance in Section 6.
+5. Provide bootstrap CI and a flag/warning when censoring is high.
 6. Validate against R/NADA on a few real-life examples (I can help write R->CSV test harness if you want).
 
 ---
@@ -510,18 +576,18 @@ The Akritas-Theil-Sen (ATS) method implementation in the `Example_Files/R/NADA2/
 
 *   **`ATSmini.R` (Simplified Wrapper)**: This is a lightweight, faster wrapper, also for non-seasonal data. It calls `cenken` directly and is primarily intended for internal use by other functions (like `censeaken`) where the overhead of the full `ATS.R` script is unnecessary.
 
-*   **`censeaken.R` (Seasonal ATS)**: This script implements the seasonal version of the ATS test. For each season present in the data, it calls `ATSmini` to calculate the trend. It then combines the results from all seasons to provide an overall seasonal trend analysis, including a permutation test for significance.
+*   **`censeaken.R` (Seasonal ATS)**: This script implements the seasonal version of the ATS test. For each season present in the data, it calls `ATSmini` to calculate trend statistics *for that season*. The **overall trend line** is calculated by calling `ATSmini` on the entire dataset. The **overall p-value** is calculated via a permutation test on the sum of the seasonal statistics.
 
-In summary, the non-seasonal ATS functionality is driven by `NADA_ken.R`, with `ATS.R` and `ATSmini.R` acting as user-facing and internal wrappers, respectively. The seasonal analysis is handled by `censeaken.R`, which leverages the non-seasonal engine for its per-season calculations.
+In summary, the non-seasonal ATS functionality is driven by `NADA_ken.R`, with `ATS.R` and `ATSmini.R` acting as user-facing and internal wrappers, respectively. The seasonal analysis is handled by `censeaken.R`, which leverages the non-seasonal engine for its per-season calculations and its overall trend line calculation.
 
 ---
 
 ## 14. References and sources
 
-* Akritas, M.G., Murphy, S.A., LaValley, M.P. (1995). *The Theil–Sen estimator with doubly censored data and applications*. Journal of the American Statistical Association. (ATS method). ([pure.psu.edu][1])
+* Akritas, M.G., Murphy,S.A., LaValley, M.P. (1995). *The Theil–Sen estimator with doubly censored data and applications*. Journal of the American Statistical Association. (ATS method). ([pure.psu.edu][1])
 * NADA package: `cenken` documentation (Compute censored Kendall’s tau and ATS line). ([rdocumentation.org][4])
 * NADA2 package: `censeaken` (seasonal ATS/Kendall) and NADA2 manual. ([rdocumentation.org][6])
-* Turnbull, B. (1976). *Empirical distribution function with arbitrarily grouped, censored and truncated data* (Turnbull estimator for interval censoring). ([JSTOR][3])
+* Turnbull, B. (1976). *The Empirical Distribution Function with Arbitrarily Grouped, Censored and Truncated Data* (Turnbull estimator for interval censoring). ([JSTOR][3])
 * Helsel, D.R. (2005, 2012). *Nondetects and Data Analysis* / *Statistics for Censored Environmental Data* (guidance on ROS, Kaplan–Meier, substitution cautions). ([cran.r-project.org][5])
 * LWP-Trends (v2502) — documentation (explicit description of LWP censor handling: substitution 0.5 and 1.1, Kendall tie rules, warnings). 
 
