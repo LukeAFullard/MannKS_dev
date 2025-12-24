@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 from math import inf
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, Callable
 from random import randint
 
 # ---------- Utilities: interval representation ----------
@@ -73,70 +73,53 @@ def S_of_beta(beta: float, x: np.ndarray, lower: np.ndarray, upper: np.ndarray) 
     return concordant - discordant
 
 # ---------- Root-finding to solve S(beta) = 0 ----------
-def bracket_and_bisect(x: np.ndarray, lower: np.ndarray, upper: np.ndarray,
-                       beta0: Optional[float]=None, max_expand=50, tol=1e-8,
-                       maxiter=60) -> float:
+def bracket_and_bisect_generic(score_func: Callable[[float], float],
+                               slopes_hint: List[float],
+                               max_expand=50, tol=1e-8,
+                               maxiter=60) -> float:
     """
-    Find beta* with bisection. This is a numerically robust implementation that:
-    - Uses a data-driven initial bracket based on uncensored data.
-    - Scales bracket expansion proportionally to avoid runaway values.
-    - Uses a fallback grid search scaled to the final bracket size.
+    Find beta* such that score_func(beta*) = 0 using bisection.
+    Generic version that takes a score function and a list of slopes for initial bracket.
     """
-    # Calculate slopes from all uncensored pairs to define the initial search space
-    detected_idx = np.where(np.isfinite(lower) & np.isfinite(upper) & (lower == upper))[0]
-    slopes = []
-    if len(detected_idx) >= 2:
-        for i in range(len(detected_idx)):
-            for j in range(i + 1, len(detected_idx)):
-                xi, xj = x[detected_idx[i]], x[detected_idx[j]]
-                if not np.isclose(xj, xi):
-                    yi, yj = lower[detected_idx[i]], lower[detected_idx[j]]
-                    slopes.append((yj - yi) / (xj - xi))
-
-    # Define the initial search bracket. Using percentiles is robust to
-    # extreme outliers that can be generated during bootstrap resampling.
-    if slopes:
-        low = np.percentile(slopes, 5)
-        high = np.percentile(slopes, 95)
+    # Define the initial search bracket.
+    if slopes_hint:
+        low = np.percentile(slopes_hint, 5)
+        high = np.percentile(slopes_hint, 95)
         if np.isclose(low, high):
-            # If slopes are very similar, create a reasonable bracket around them
             bracket_width = max(1.0, abs(low) * 0.5)
             low -= bracket_width
             high += bracket_width
     else:
-        # Fallback if no uncensored slopes are available.
-        # This is a critical edge case for bootstrap resampling. The default
-        # must be small to avoid numerical instability with datetime slopes.
+        # Fallback if no slopes are available.
         low, high = -1e-5, 1e-5
 
-    s_low = S_of_beta(low, x, lower, upper)
-    s_high = S_of_beta(high, x, lower, upper)
+    s_low = score_func(low)
+    s_high = score_func(high)
 
-    # Expand the bracket until the signs of S(low) and S(high) differ
+    # Expand the bracket until the signs differ
     expand_factor = 1.6
     it = 0
     while s_low * s_high > 0 and it < max_expand:
         width = high - low
-        # Expand proportionally to the current bracket width
         low -= width * expand_factor
         high += width * expand_factor
-        s_low = S_of_beta(low, x, lower, upper)
-        s_high = S_of_beta(high, x, lower, upper)
+        s_low = score_func(low)
+        s_high = score_func(high)
         it += 1
 
-    # If no sign change was found, perform a grid search over the final bracket
+    # Grid search fallback
     if s_low * s_high > 0:
         grid = np.linspace(low, high, num=201)
-        s_vals = np.array([abs(S_of_beta(g, x, lower, upper)) for g in grid])
+        s_vals = np.array([abs(score_func(g)) for g in grid])
         best_idx = np.argmin(s_vals)
         return float(grid[best_idx])
 
-    # Perform bisection search to find the root
+    # Bisection
     a, b = low, high
     sa, sb = s_low, s_high
     for _ in range(maxiter):
         m = (a + b) / 2.0
-        sm = S_of_beta(m, x, lower, upper)
+        sm = score_func(m)
         if sm == 0 or (b - a) / 2.0 < tol:
             return float(m)
 
@@ -146,6 +129,37 @@ def bracket_and_bisect(x: np.ndarray, lower: np.ndarray, upper: np.ndarray,
             a, sa = m, sm
 
     return float((a + b) / 2.0)
+
+def bracket_and_bisect(x: np.ndarray, lower: np.ndarray, upper: np.ndarray,
+                       beta0: Optional[float]=None, max_expand=50, tol=1e-8,
+                       maxiter=60) -> float:
+    """
+    Backward compatible wrapper for the single-season case.
+    """
+    # Normalize x to improve numerical stability in slope calculation
+    x_min = np.min(x)
+    x_range = np.ptp(x) if np.ptp(x) > 0 else 1.0
+    x_norm = (x - x_min) / x_range
+
+    # Calculate slopes from all uncensored pairs to define the initial search space (on normalized data)
+    detected_idx = np.where(np.isfinite(lower) & np.isfinite(upper) & (lower == upper))[0]
+    slopes = []
+    if len(detected_idx) >= 2:
+        for i in range(len(detected_idx)):
+            for j in range(i + 1, len(detected_idx)):
+                xi, xj = x_norm[detected_idx[i]], x_norm[detected_idx[j]]
+                if not np.isclose(xj, xi):
+                    yi, yj = lower[detected_idx[i]], lower[detected_idx[j]]
+                    slopes.append((yj - yi) / (xj - xi))
+
+    def score_func(b):
+        return S_of_beta(b, x_norm, lower, upper)
+
+    beta_hat_norm = bracket_and_bisect_generic(score_func, slopes, max_expand, tol, maxiter)
+
+    # De-normalize slope
+    return beta_hat_norm / x_range
+
 
 # ---------- Turnbull-style intercept (practical approach) ----------
 def estimate_intercept_turnbull(residual_lower: np.ndarray, residual_upper: np.ndarray, tol=1e-6, max_iter=100) -> float:
@@ -205,7 +219,7 @@ def estimate_intercept_turnbull(residual_lower: np.ndarray, residual_upper: np.n
     return midpoints[median_idx[0]]
 
 
-# ---------- Public wrapper ----------
+# ---------- Public wrapper (Non-Seasonal) ----------
 def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
               cen_type: Optional[np.ndarray] = None, lod: Optional[np.ndarray] = None,
               bootstrap_ci: bool = True, n_boot: int = 500,
@@ -214,20 +228,24 @@ def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
     Compute ATS slope estimate and bootstrap CI.
     Returns dict with keys: beta, intercept, ci_lower, ci_upper, prop_censored, notes
     """
-    # Normalize the time vector to prevent floating point precision issues with large timestamps
-    x_min = np.min(x)
-    x_norm = x - x_min
-
     lower, upper = make_intervals(y, censored, cen_type=cen_type, lod=lod)
-    beta_hat = bracket_and_bisect(x_norm, lower, upper, beta0=None)
+
+    # Calculate beta using the (now internally normalized) bisection wrapper
+    beta_hat = bracket_and_bisect(x, lower, upper, beta0=None)
 
     # Calculate residuals and estimate intercept using Turnbull method
-    r_lower = lower - beta_hat * x_norm
-    r_upper = upper - beta_hat * x_norm
-    intercept_norm = estimate_intercept_turnbull(r_lower, r_upper)
+    # r = y - beta * x.  Use x - x_min for numerical stability in residual calculation
+    x_min = np.min(x)
+    x_shifted = x - x_min
 
-    # De-normalize the intercept to correspond to the original time vector
-    intercept = intercept_norm - beta_hat * x_min
+    r_lower = lower - beta_hat * x_shifted
+    r_upper = upper - beta_hat * x_shifted
+    intercept_shifted = estimate_intercept_turnbull(r_lower, r_upper)
+
+    # The intercept we want is for the model y = I + beta * x
+    # We found I_shifted such that y = I_shifted + beta * (x - x_min)
+    # y = (I_shifted - beta * x_min) + beta * x
+    intercept = intercept_shifted - beta_hat * x_min
 
     prop_cen = float(np.mean(censored))
 
@@ -236,8 +254,12 @@ def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
 
     # simple diagnostics: fraction of pairwise comparisons that were ties at final beta
     n = len(x)
-    lower_r = lower - beta_hat * x_norm
-    upper_r = upper - beta_hat * x_norm
+
+    # Use normalized x for S_of_beta to be consistent with internal checks,
+    # but strictly S_of_beta is scale-invariant if beta is scaled.
+    # Here we just use original x and beta, as tie check is relative.
+    lower_r = lower - beta_hat * x
+    upper_r = upper - beta_hat * x
     ties = 0
     total_pairs = 0
     for i in range(n):
@@ -248,34 +270,29 @@ def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
                 ties += 1
     result['pairwise_ties_frac'] = ties / total_pairs if total_pairs > 0 else np.nan
 
-    # Bootstrap CI using residual resampling to avoid issues with duplicate timestamps
+    # Bootstrap CI using residual resampling
     if bootstrap_ci and n >= 10:
         boot_betas = []
         rng = np.random.default_rng()
 
-        # Calculate fitted values and residual intervals from the original fit
-        fitted = intercept_norm + beta_hat * x_norm
+        # Calculate fitted values and residuals for the WHOLE dataset
+        # fitted = intercept + beta * x
+        fitted = intercept_shifted + beta_hat * x_shifted
         resid_lower = lower - fitted
         resid_upper = upper - fitted
 
         for b in range(n_boot):
             try:
-                # Resample residual indices
                 resid_idx = rng.integers(0, n, n)
-
-                # Create a bootstrap sample by adding resampled residuals to fitted values
                 y_boot_lower = fitted + resid_lower[resid_idx]
                 y_boot_upper = fitted + resid_upper[resid_idx]
 
-                # Refit the model on the bootstrap sample
-                # Note: We use the original, un-resampled (but normalized) time vector
-                beta_b = bracket_and_bisect(x_norm, y_boot_lower, y_boot_upper)
+                # bracket_and_bisect handles normalization internally
+                beta_b = bracket_and_bisect(x, y_boot_lower, y_boot_upper)
 
-                # Filter out extreme outliers that can still occur in rare cases
                 if np.isfinite(beta_b) and abs(beta_b) < (abs(beta_hat) + 1) * 100:
                      boot_betas.append(beta_b)
             except Exception:
-                # Skip sample if root-finding fails
                 pass
 
         if len(boot_betas) >= max(20, int(0.1 * n_boot)):
@@ -291,4 +308,148 @@ def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
                 f'bootstrap produced only {len(boot_betas)} valid samples '
                 f'(need >= {max(20, int(0.1 * n_boot))})'
             )
+    return result
+
+
+# ---------- Public wrapper (Seasonal) ----------
+def seasonal_ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray, seasons: np.ndarray,
+                       cen_type: Optional[np.ndarray] = None, lod: Optional[np.ndarray] = None,
+                       bootstrap_ci: bool = True, n_boot: int = 500,
+                       ci_alpha: float = 0.05) -> dict:
+    """
+    Compute Stratified ATS slope estimate for seasonal data.
+    The overall slope is the root of the sum of the individual seasonal score functions.
+    Returns dict with keys: beta, intercept, ci_lower, ci_upper, prop_censored, notes
+    """
+    x_min = np.min(x)
+    x_range = np.ptp(x) if np.ptp(x) > 0 else 1.0
+    x_norm = (x - x_min) / x_range
+
+    unique_seasons = np.unique(seasons)
+
+    # Pre-process data for each season:
+    # We store the normalized x, lower, upper arrays for each season.
+    season_data = {}
+    slopes_hint_norm = []
+
+    # Process full dataset to get interval bounds
+    full_lower, full_upper = make_intervals(y, censored, cen_type=cen_type, lod=lod)
+
+    for s in unique_seasons:
+        idx = np.where(seasons == s)[0]
+        if len(idx) < 2:
+            continue
+
+        x_s = x_norm[idx]
+        lower_s = full_lower[idx]
+        upper_s = full_upper[idx]
+        season_data[s] = (x_s, lower_s, upper_s)
+
+        # Collect slopes for initial bracket hint (using normalized x)
+        detected_idx = np.where(np.isfinite(lower_s) & np.isfinite(upper_s) & (lower_s == upper_s))[0]
+        if len(detected_idx) >= 2:
+             for i in range(len(detected_idx)):
+                for j in range(i + 1, len(detected_idx)):
+                    xi, xj = x_s[detected_idx[i]], x_s[detected_idx[j]]
+                    if not np.isclose(xj, xi):
+                        yi, yj = lower_s[detected_idx[i]], lower_s[detected_idx[j]]
+                        slopes_hint_norm.append((yj - yi) / (xj - xi))
+
+    # Define the global score function (on normalized beta)
+    def global_score_func(beta):
+        total_score = 0
+        for s in season_data:
+            x_s, lower_s, upper_s = season_data[s]
+            total_score += S_of_beta(beta, x_s, lower_s, upper_s)
+        return total_score
+
+    # Find the stratified ATS slope (normalized)
+    beta_hat_norm = bracket_and_bisect_generic(global_score_func, slopes_hint_norm)
+
+    # De-normalize beta
+    beta_hat = beta_hat_norm / x_range
+
+    # Estimate Intercept: Median of residuals across the ENTIRE dataset
+    # r = y - beta * x. Use x_shifted for stability.
+    x_shifted = x - x_min
+    r_lower = full_lower - beta_hat * x_shifted
+    r_upper = full_upper - beta_hat * x_shifted
+    intercept_shifted = estimate_intercept_turnbull(r_lower, r_upper)
+    intercept = intercept_shifted - beta_hat * x_min
+
+    prop_cen = float(np.mean(censored))
+    result = {'beta': beta_hat, 'intercept': intercept,
+              'prop_censored': prop_cen, 'notes': []}
+
+    # Stratified Bootstrap
+    n = len(x)
+    if bootstrap_ci and n >= 10:
+        boot_betas = []
+        rng = np.random.default_rng()
+
+        # Calculate fitted values and residuals for the WHOLE dataset
+        fitted = intercept_shifted + beta_hat * x_shifted
+        resid_lower = full_lower - fitted
+        resid_upper = full_upper - fitted
+
+        for b in range(n_boot):
+            try:
+                # Stratified resampling of residuals
+                boot_season_data = {}
+
+                for s in season_data:
+                    x_s_norm, _, _ = season_data[s]
+
+                    # Original indices for this season
+                    idx_s = np.where(seasons == s)[0]
+                    n_s = len(idx_s)
+
+                    # Resample residuals within this season
+                    resampled_indices = rng.choice(idx_s, size=n_s, replace=True)
+
+                    # Construct bootstrapped intervals for this season
+                    # Note: x_s_norm is already normalized
+                    # fitted values must be grabbed corresponding to idx_s
+                    fitted_s = fitted[idx_s]
+                    resid_lower_s_resampled = resid_lower[resampled_indices]
+                    resid_upper_s_resampled = resid_upper[resampled_indices]
+
+                    y_boot_lower_s = fitted_s + resid_lower_s_resampled
+                    y_boot_upper_s = fitted_s + resid_upper_s_resampled
+
+                    boot_season_data[s] = (x_s_norm, y_boot_lower_s, y_boot_upper_s)
+
+                def boot_score_func(beta):
+                    total_score = 0
+                    for s in boot_season_data:
+                        x_b, l_b, u_b = boot_season_data[s]
+                        total_score += S_of_beta(beta, x_b, l_b, u_b)
+                    return total_score
+
+                # Solve for beta_boot (normalized)
+                beta_b_norm = bracket_and_bisect_generic(boot_score_func, slopes_hint_norm)
+
+                # De-normalize
+                beta_b = beta_b_norm / x_range
+
+                if np.isfinite(beta_b) and abs(beta_b) < (abs(beta_hat) + 1) * 100:
+                     boot_betas.append(beta_b)
+
+            except Exception:
+                pass
+
+        if len(boot_betas) >= max(20, int(0.1 * n_boot)):
+            lo = np.quantile(boot_betas, ci_alpha/2)
+            hi = np.quantile(boot_betas, 1 - ci_alpha/2)
+            result['ci_lower'] = float(lo)
+            result['ci_upper'] = float(hi)
+            result['bootstrap_samples'] = len(boot_betas)
+        else:
+            result['ci_lower'] = None
+            result['ci_upper'] = None
+            result['notes'].append(
+                f'bootstrap produced only {len(boot_betas)} valid samples '
+                f'(need >= {max(20, int(0.1 * n_boot))})'
+            )
+
     return result

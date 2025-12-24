@@ -82,9 +82,9 @@ Slope (per year): 0.0961
 --- Akritas-Theil-Sen (ATS) Method Results ---
 Trend: increasing
 P-value: 0.0007
-Overall ATS Slope (per year): 0.2295
-Intercept: -5.5707
-95% CI for Slope: (-0.0329, 0.4835)
+Overall ATS Slope (per year): 0.0780
+Intercept: 1.0796
+95% CI for Slope: (0.0615, 0.0974)
 ```
 
 ##
