@@ -80,7 +80,7 @@ Trend: increasing
 P-value: 0.0000
 ATS Slope: 0.0872
 Intercept: 2.7060
-95% CI for Slope: (0.0658, 0.1085)
+95% CI for Slope: (0.0659, 0.1082)
 ```
 
 ##

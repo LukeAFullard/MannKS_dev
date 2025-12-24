@@ -81,7 +81,7 @@ def test_ats_slope_seasonal_refactored():
     #    The ATS estimator on seasonal data with censoring can have some variance,
     #    so we use a slightly larger tolerance for the point estimate.
     assert pd.notna(res.slope)
-    assert np.isclose(res.slope, true_beta_per_year, atol=0.3)
+    assert np.isclose(res.slope, true_beta_per_year, atol=0.2)
 
     # 2. **Crucially**, verify that the confidence intervals are now calculated and not NaN,
     #    confirming the refactor to enable bootstrap CIs was successful.

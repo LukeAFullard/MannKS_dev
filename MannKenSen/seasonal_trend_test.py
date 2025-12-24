@@ -331,18 +331,28 @@ def seasonal_trend_test(
     var_s_for_ci = var_s
 
     if sens_slope_method == 'ats':
-        # For ATS, call on the entire dataset at once, per censeaken.R logic
+        # For ATS, de-season the data before running the test to get a more accurate slope
+        deseasoned_data = slope_data.copy()
+        seasonal_medians = deseasoned_data.groupby('season')['value'].median()
+        deseasoned_data['value'] = deseasoned_data.apply(
+            lambda row: row['value'] - seasonal_medians[row['season']],
+            axis=1
+        )
+
+        # Run ATS on the de-seasoned data, ensuring the LOD is also scaled
         overall_ats = ats_slope(
-            x=slope_data['t'].to_numpy(),
-            y=slope_data['value'].to_numpy(),
-            censored=slope_data['censored'].to_numpy(),
-            cen_type=slope_data['cen_type'].to_numpy(),
-            lod=slope_data['value'].to_numpy(),
+            x=deseasoned_data['t'].to_numpy(),
+            y=deseasoned_data['value'].to_numpy(),
+            censored=deseasoned_data['censored'].to_numpy(),
+            cen_type=deseasoned_data['cen_type'].to_numpy(),
+            lod=deseasoned_data['value'].to_numpy(), # Use the de-seasoned value as the LOD for censored data
             bootstrap_ci=True,
             ci_alpha=alpha
         )
         slope = overall_ats['beta']
-        intercept = overall_ats['intercept']
+        # The intercept from ATS on de-seasoned data is near zero; a more meaningful
+        # intercept is calculated later from the original, non-deseasoned data.
+        intercept = np.nan
         lower_ci = overall_ats.get('ci_lower', np.nan)
         upper_ci = overall_ats.get('ci_upper', np.nan)
         sen_prob, sen_prob_max, sen_prob_min = np.nan, np.nan, np.nan # Not calculated by ATS
@@ -380,7 +390,11 @@ def seasonal_trend_test(
     C, Cd = _mk_probability(p, s)
 
     # Assign slope, intercept, CIs based on method
-    if sens_slope_method != 'ats':
+    if sens_slope_method == 'ats':
+        # For ATS, the slope is already calculated. We now calculate a meaningful intercept.
+        if pd.notna(slope):
+            intercept = np.nanmedian(data_filtered['value']) - np.nanmedian(data_filtered['t']) * slope
+    else:
         # This block now only applies to 'lwp' and 'nan' methods
         if not all_slopes:
             slope, intercept, lower_ci, upper_ci = np.nan, np.nan, np.nan, np.nan
