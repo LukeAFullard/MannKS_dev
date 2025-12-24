@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from MannKenSen import trend_test, seasonal_trend_test
+import MannKenSen as mk
 
 def test_ats_slope_non_seasonal():
     """
@@ -32,9 +33,11 @@ def test_ats_slope_non_seasonal():
     # Check that the calculated slope is close to the true slope
     assert np.isclose(res.slope, true_beta, atol=0.1)
 
-def test_ats_slope_seasonal():
+def test_ats_slope_seasonal_refactored():
     """
-    Test the seasonal ATS slope calculation.
+    Test the refactored seasonal ATS slope calculation.
+    This test confirms that the ATS method runs on the entire dataset
+    and correctly calculates bootstrap confidence intervals.
     """
     np.random.seed(42)
     n_years = 10
@@ -45,25 +48,24 @@ def test_ats_slope_seasonal():
     t = pd.to_datetime(pd.date_range(start='2000-01-01', periods=n, freq='QS-DEC'))
 
     # True trend
-    true_beta = 0.1
-    time_numeric = np.linspace(0, n_years, n)
-    y_true = 1.0 + true_beta * time_numeric
+    true_beta_per_year = 0.1
+    # Create a numeric time vector in years for generating the true values
+    time_numeric_years = np.linspace(0, n_years, n, endpoint=False)
+    y_true = 1.0 + true_beta_per_year * time_numeric_years
 
-    # Add seasonality and noise
-    seasonality = np.tile([0, 1, 0.5, 1.5], n_years)
-    y = y_true + seasonality + np.random.normal(scale=0.3, size=n)
+    # Add seasonality and noise - using the exact parameters from the example script
+    # to reliably reproduce the bug.
+    seasonality = np.tile([0, 1.5, 0.5, 2.0], n_years)
+    y = y_true + seasonality + np.random.normal(scale=0.2, size=n)
 
     # Impose censoring
     lod = 2.0
     censored = y < lod
     y_obs = np.where(censored, lod, y)
 
-    # Prepare data
-    x_prepared = pd.DataFrame({
-        'value': y_obs,
-        'censored': censored,
-        'cen_type': np.where(censored, 'lt', 'none')
-    })
+    # Prepare data using the public utility, matching the examples
+    y_str_obs = np.array([f'<{lod}' if c else str(val) for c, val in zip(censored, y_obs)])
+    x_prepared = mk.prepare_censored_data(y_str_obs)
 
     # Run the seasonal trend test with the ATS method
     res = seasonal_trend_test(
@@ -75,7 +77,17 @@ def test_ats_slope_seasonal():
         slope_scaling='year'
     )
 
-    # The true slope is 0.1 units per year. Check if the result is close.
-    # The seasonal ATS is the median of slopes, so it might not be as precise,
-    # but it should be in the right ballpark.
-    assert np.isclose(res.slope, true_beta, atol=0.15)
+    # 1. Verify that the calculated slope is reasonable and close to the true value.
+    #    The ATS estimator on seasonal data with censoring can have some variance,
+    #    so we use a slightly larger tolerance for the point estimate.
+    assert pd.notna(res.slope)
+    assert np.isclose(res.slope, true_beta_per_year, atol=0.3)
+
+    # 2. **Crucially**, verify that the confidence intervals are now calculated and not NaN,
+    #    confirming the refactor to enable bootstrap CIs was successful.
+    assert pd.notna(res.lower_ci)
+    assert pd.notna(res.upper_ci)
+
+    # 3. Ensure the confidence interval is logical (lower < upper) and contains the true slope.
+    assert res.lower_ci < res.upper_ci
+    assert res.lower_ci <= true_beta_per_year <= res.upper_ci

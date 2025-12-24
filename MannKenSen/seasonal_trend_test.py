@@ -330,32 +330,31 @@ def seasonal_trend_test(
     slope_data = data_filtered
     var_s_for_ci = var_s
 
-    for i in season_range:
-        season_mask = slope_data['season'] == i
-        season_data = slope_data[season_mask]
-        n = len(season_data)
-        if n > 1:
-            if sens_slope_method == 'ats':
-                if season_data['censored'].any():
-                    ats_results = ats_slope(
-                        x=season_data['t'].to_numpy(),
-                        y=season_data['value'].to_numpy(),
-                        censored=season_data['censored'].to_numpy(),
-                        cen_type=season_data['cen_type'].to_numpy(),
-                        lod=season_data['value'].to_numpy(),
-                        ci_alpha=alpha,
-                        bootstrap_ci=False
-                    )
-                    seasonal_slopes.append(ats_results['beta'])
-                    if ats_results.get('notes'):
-                        sens_slope_notes.update(ats_results['notes'])
-                else:
-                    pairwise_slopes = _sens_estimator_unequal_spacing(
-                        season_data['value'].to_numpy(), season_data['t'].to_numpy()
-                    )
-                    if len(pairwise_slopes) > 0:
-                        seasonal_slopes.append(np.nanmedian(pairwise_slopes))
-            else: # lwp or nan methods
+    if sens_slope_method == 'ats':
+        # For ATS, call on the entire dataset at once, per censeaken.R logic
+        overall_ats = ats_slope(
+            x=slope_data['t'].to_numpy(),
+            y=slope_data['value'].to_numpy(),
+            censored=slope_data['censored'].to_numpy(),
+            cen_type=slope_data['cen_type'].to_numpy(),
+            lod=slope_data['value'].to_numpy(),
+            bootstrap_ci=True,
+            ci_alpha=alpha
+        )
+        slope = overall_ats['beta']
+        intercept = overall_ats['intercept']
+        lower_ci = overall_ats.get('ci_lower', np.nan)
+        upper_ci = overall_ats.get('ci_upper', np.nan)
+        sen_prob, sen_prob_max, sen_prob_min = np.nan, np.nan, np.nan # Not calculated by ATS
+        if overall_ats.get('notes'):
+            sens_slope_notes.update(overall_ats['notes'])
+
+    else: # For 'lwp' or 'nan' methods, keep existing per-season logic
+        for i in season_range:
+            season_mask = slope_data['season'] == i
+            season_data = slope_data[season_mask]
+            n = len(season_data)
+            if n > 1:
                 season_x = season_data['value'].to_numpy()
                 season_t = season_data['t'].to_numpy()
                 season_censored = season_data['censored'].to_numpy()
@@ -380,24 +379,16 @@ def seasonal_trend_test(
     p, h, trend = _p_value(z, alpha)
     C, Cd = _mk_probability(p, s)
 
-    if sens_slope_method == 'ats':
-        if not seasonal_slopes:
-            slope, intercept, lower_ci, upper_ci = np.nan, np.nan, np.nan, np.nan
-            sen_prob, sen_prob_max, sen_prob_min = np.nan, np.nan, np.nan
-        else:
-            slope = np.nanmedian(seasonal_slopes)
-            intercept = np.nanmedian(data_filtered['value']) - np.nanmedian(data_filtered['t']) * slope if pd.notna(slope) else np.nan
-            lower_ci, upper_ci = np.nan, np.nan
-            sen_prob, sen_prob_max, sen_prob_min = np.nan, np.nan, np.nan
-            analysis_notes.append("Confidence intervals and Sen's probability are not available for the seasonal ATS method.")
-    else: # lwp or nan methods
+    # Assign slope, intercept, CIs based on method
+    if sens_slope_method != 'ats':
+        # This block now only applies to 'lwp' and 'nan' methods
         if not all_slopes:
             slope, intercept, lower_ci, upper_ci = np.nan, np.nan, np.nan, np.nan
             sen_prob, sen_prob_max, sen_prob_min = np.nan, np.nan, np.nan
         else:
             all_slopes_arr = np.asarray(all_slopes)
             slope = np.nanmedian(all_slopes_arr)
-            intercept = np.nanmedian(data_filtered['value']) - np.nanmedian(data_filtered['t']) * slope
+            intercept = np.nanmedian(data_filtered['value']) - np.nanmedian(data_filtered['t']) * slope if pd.notna(slope) else np.nan
             lower_ci, upper_ci = _confidence_intervals(all_slopes_arr, var_s_for_ci, alpha, method=ci_method)
             sen_prob, sen_prob_max, sen_prob_min = _sen_probability(all_slopes_arr, var_s_for_ci)
 

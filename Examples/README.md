@@ -45,6 +45,10 @@ Each example is a self-contained "chapter" that includes the full Python code, t
 ### Part 6: Advanced Parameter Nuances
 *   [**Example 26: Advanced Parameter Nuances**](./26_advanced_parameter_nuances/README.md)
 
+### Part 7: Advanced Slope Estimators
+*   [**Example 27: Akritas-Theil-Sen (ATS) Trend Analysis**](./27_Akritas_Theil_Sen_ATS_Trend/README.md)
+*   [**Example 28: Seasonal Akritas-Theil-Sen (ATS) Trend Analysis**](./28_Seasonal_Akritas_Theil_Sen_ATS_Trend/README.md)
+
 ---
 
 ### Detailed Guides
