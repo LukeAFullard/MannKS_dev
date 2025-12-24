@@ -19,7 +19,7 @@ This is a single self-contained Markdown file. Key references are cited inline.
   * ATS slope (root-finding on censored-Kendall `S(β)`)
   * A robust intercept using a pragmatic implementation of the Turnbull estimator logic.
   * bootstrap confidence intervals
-  * A seasonal ATS approach that mirrors `censeaken`'s logic for calculating the overall trend line.
+  * A **Stratified ATS** approach for seasonal data, which improves upon the `censeaken` methodology by strictly enforcing seasonal boundaries during slope calculation.
   * diagnostics (percent censored, % of pairwise slopes that involved censored intervals, warnings)
 
 Key academic sources: Akritas et al. (1995) for ATS, Turnbull (1976) for interval- / Turnbull-logic, Helsel for survival/ROS guidance and tie rules; NADA / NADA2 document the R functions (`cenken`, `censeaken`) that implement ATS. ([pure.psu.edu][1])
@@ -107,361 +107,56 @@ Key academic sources: Akritas et al. (1995) for ATS, Turnbull (1976) for interva
 
 Copy into a `.py` or use directly in a Jupyter notebook.
 
-```python
-# ats.py  -- Akritas-Theil-Sen implementation (single-file, dependency-light)
-import numpy as np
-import pandas as pd
-from math import inf
-from typing import Tuple, List, Optional
-from random import randint
-import multiprocessing
-from functools import partial
-
-# ---------- Utilities: interval representation ----------
-def make_intervals(y: np.ndarray,
-                   censored: np.ndarray,
-                   cen_type: Optional[np.ndarray] = None,
-                   lod: Optional[np.ndarray] = None) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Build intervals [a_i, b_i] for each observation.
-    Arguments:
-      y: numeric face values (for censored rows this should be the numeric reporting value)
-      censored: boolean array (True when censored)
-      cen_type: None or array of 'lt' / 'gt' / 'none' strings (if None, assume all censored are 'lt')
-      lod: numeric detection limits associated with censored observations (len same as y)
-    Returns:
-      (lower, upper) arrays where lower[i] <= upper[i]; may include +-inf for left/right censor.
-    """
-    n = len(y)
-    lower = np.empty(n, dtype=float)
-    upper = np.empty(n, dtype=float)
-    if cen_type is None:
-        cen_type = np.array(['lt' if c else 'none' for c in censored])
-    if lod is None:
-        lod = np.array([y_i for y_i in y])
-
-    for i in range(n):
-        if not censored[i]:
-            lower[i] = upper[i] = y[i]
-        else:
-            t = cen_type[i]
-            d = lod[i]
-            if t == 'lt' or t == '<' or t.lower() == 'left':
-                lower[i] = -inf
-                upper[i] = d
-            elif t == 'gt' or t == '>' or t.lower() == 'right':
-                lower[i] = d
-                upper[i] = +inf
-            else:
-                # default to left-censor
-                lower[i] = -inf
-                upper[i] = d
-    return lower, upper
-
-# ---------- Pairwise interval comparison on residuals ----------
-def S_of_beta(beta: float, x: np.ndarray, lower: np.ndarray, upper: np.ndarray) -> int:
-    """
-    Compute S(beta) = (#concordant) - (#discordant) using residual intervals:
-      R_i(beta) = [lower_i - beta*x_i, upper_i - beta*x_i]
-    Definitive comparisons only when intervals do not overlap.
-    """
-    n = len(x)
-    lower_r = lower - beta * x
-    upper_r = upper - beta * x
-
-    concordant = 0
-    discordant = 0
-    # O(n^2) loop
-    for i in range(n):
-        for j in range(i+1, n):
-            # check if r_i > r_j (lower_i > upper_j)
-            if lower_r[i] > upper_r[j]:
-                concordant += 1
-            elif upper_r[i] < lower_r[j]:
-                discordant += 1
-            else:
-                # tie/overlap -> do not count
-                pass
-    return concordant - discordant
-
-# ---------- Root-finding to solve S(beta) = 0 ----------
-def bracket_and_bisect(x: np.ndarray, lower: np.ndarray, upper: np.ndarray,
-                       beta0: Optional[float]=None, max_expand=50, tol=1e-8,
-                       maxiter=60) -> float:
-    """
-    Find beta* with bisection:
-    - choose initial bracket (low, high) that gives S(low) and S(high) with opposite signs.
-    - if no bracket found, expand search.
-    - return beta where S(beta) == 0 (within tol) or approximate where sign changes.
-    """
-    n = len(x)
-    # initial guess: standard Theil-Sen on uncensored pairs where both are exact
-    # build simple slope list from detected points
-    detected_idx = np.where(np.isfinite(lower) & np.isfinite(upper) & (lower == upper))[0]
-    if len(detected_idx) >= 2:
-        slopes = []
-        di = detected_idx
-        for i in range(len(di)):
-            for j in range(i+1, len(di)):
-                xi, xj = x[di[i]], x[di[j]]
-                if xj == xi:
-                    continue
-                yi, yj = lower[di[i]], lower[di[j]]
-                slopes.append((yj - yi) / (xj - xi))
-        if len(slopes) > 0:
-            median_slope = np.median(slopes)
-        else:
-            median_slope = 0.0
-    else:
-        median_slope = 0.0
-
-    if beta0 is None:
-        beta0 = median_slope
-
-    # start bracket around beta0
-    low = beta0 - max(1.0, abs(beta0))*1.0
-    high = beta0 + max(1.0, abs(beta0))*1.0
-    s_low = S_of_beta(low, x, lower, upper)
-    s_high = S_of_beta(high, x, lower, upper)
-
-    # expand outward until sign change or max_expand iterations
-    expand_factor = 2.0
-    it = 0
-    while s_low * s_high > 0 and it < max_expand:
-        # expand
-        low = low - (abs(low) + 1.0) * expand_factor
-        high = high + (abs(high) + 1.0) * expand_factor
-        s_low = S_of_beta(low, x, lower, upper)
-        s_high = S_of_beta(high, x, lower, upper)
-        it += 1
-
-    if s_low * s_high > 0:
-        # no sign change found; pick beta where S is closest to zero
-        # scan a grid and pick argmin |S|
-        grid = np.linspace(beta0 - 1000, beta0 + 1000, num=201)
-        Svals = np.array([abs(S_of_beta(g, x, lower, upper)) for g in grid])
-        best_idx = np.argmin(Svals)
-        return float(grid[best_idx])
-
-    # bisection
-    a, b = low, high
-    Sa, Sb = s_low, s_high
-    for it in range(maxiter):
-        m = (a + b) / 2.0
-        Sm = S_of_beta(m, x, lower, upper)
-        if abs(Sm) == 0 or (b - a) / 2.0 < tol:
-            return float(m)
-        # decide which side to keep
-        if Sa * Sm <= 0:
-            b = m
-            Sb = Sm
-        else:
-            a = m
-            Sa = Sm
-    # return midpoint if not converged
-    return float((a + b) / 2.0)
-
-# ---------- Turnbull-style intercept (practical approach) ----------
-def estimate_intercept_turnbull(residual_lower: np.ndarray, residual_upper: np.ndarray, tol=1e-6, max_iter=100) -> float:
-    """
-    Estimates the median of interval-censored data using a Turnbull-style approach.
-    This is a pragmatic implementation of the core logic, not a full port of a library like Icens.
-    It finds the ECDF and returns the 0.5 quantile (median).
-    """
-    # Get all unique, finite interval endpoints
-    endpoints = np.unique(np.concatenate([residual_lower[np.isfinite(residual_lower)],
-                                          residual_upper[np.isfinite(residual_upper)]]))
-
-    if len(endpoints) == 0:
-        return 0.0
-    if len(endpoints) == 1:
-        return endpoints[0]
-
-    # The Turnbull sets (intervals between endpoints)
-    turnbull_intervals = np.array([(endpoints[i], endpoints[i+1]) for i in range(len(endpoints)-1)])
-    midpoints = np.mean(turnbull_intervals, axis=1)
-
-    n_obs = len(residual_lower)
-    n_intervals = len(turnbull_intervals)
-
-    # Initialize probabilities for each interval
-    p = np.full(n_intervals, 1.0 / n_intervals)
-
-    for _ in range(max_iter):
-        p_old = p.copy()
-
-        # E-step: Calculate expected number of observations in each interval
-        alpha = np.zeros((n_obs, n_intervals))
-        for i in range(n_obs):
-            # Find which turnbull intervals are contained within the i-th observation's residual interval
-            contained_mask = (turnbull_intervals[:, 0] >= residual_lower[i]) & (turnbull_intervals[:, 1] <= residual_upper[i])
-
-            sum_p_contained = np.sum(p[contained_mask])
-            if sum_p_contained > 0:
-                alpha[i, contained_mask] = p[contained_mask] / sum_p_contained
-
-        # M-step: Update probabilities
-        p = np.sum(alpha, axis=0) / n_obs
-
-        # Check for convergence
-        if np.sum(np.abs(p - p_old)) < tol:
-            break
-
-    # Calculate ECDF and find the median
-    ecdf = np.cumsum(p)
-
-    # Find the first midpoint where the ECDF crosses 0.5
-    median_idx = np.where(ecdf >= 0.5)[0]
-    if len(median_idx) == 0:
-        # If all probabilities are tiny, return the last midpoint
-        return midpoints[-1]
-
-    return midpoints[median_idx[0]]
-
-
-# ---------- Public wrapper ----------
-def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
-              cen_type: Optional[np.ndarray] = None, lod: Optional[np.ndarray] = None,
-              bootstrap_ci: bool = True, n_boot: int = 500,
-              ci_alpha: float = 0.05) -> dict:
-    """
-    Compute ATS slope estimate and bootstrap CI.
-    Returns dict with keys: beta, intercept, ci_lower, ci_upper, prop_censored, notes
-    """
-    lower, upper = make_intervals(y, censored, cen_type=cen_type, lod=lod)
-    beta_hat = bracket_and_bisect(x, lower, upper, beta0=None)
-
-    # Calculate residuals and estimate intercept using Turnbull method
-    r_lower = lower - beta_hat * x
-    r_upper = upper - beta_hat * x
-    intercept = estimate_intercept_turnbull(r_lower, r_upper)
-
-    prop_cen = float(np.mean(censored))
-
-    result = {'beta': beta_hat, 'intercept': intercept,
-              'prop_censored': prop_cen, 'notes': []}
-
-    # simple diagnostics: fraction of pairwise comparisons that were ties at final beta
-    n = len(x)
-    ties = 0
-    total_pairs = (n * (n - 1)) / 2
-
-    # This is an O(n^2) operation, can be slow. Only compute if needed for diagnostics.
-    # S_val = S_of_beta(beta_hat, x, lower, upper)
-    # ties = total_pairs - abs(S_val) # This is not quite right if ties are not 0
-    # result['pairwise_ties_frac'] = ties / total_pairs if total_pairs > 0 else np.nan
-
-    # bootstrap CI (resampling indices with replacement, keep censoring info)
-    if bootstrap_ci:
-        boot_betas = []
-        rng = np.random.default_rng()
-        for b in range(n_boot):
-            idx = rng.integers(0, n, n)
-            x_b, y_b, cens_b = x[idx], y[idx], censored[idx]
-            cen_t_b = cen_type[idx] if cen_type is not None else None
-            lod_b = lod[idx] if lod is not None else None
-            try:
-                lower_b, upper_b = make_intervals(y_b, cens_b, cen_type=cen_t_b, lod=lod_b)
-                beta_b = bracket_and_bisect(x_b, lower_b, upper_b)
-                boot_betas.append(beta_b)
-            except Exception:
-                # skip sample if root-finding fails
-                pass
-        if len(boot_betas) >= max(10, int(0.1 * n_boot)):
-            lo = np.quantile(boot_betas, ci_alpha/2)
-            hi = np.quantile(boot_betas, 1 - ci_alpha/2)
-            result['ci_lower'] = float(lo)
-            result['ci_upper'] = float(hi)
-            result['bootstrap_samples'] = len(boot_betas)
-        else:
-            result['ci_lower'] = None
-            result['ci_upper'] = None
-            result['notes'].append('bootstrap failed to produce enough valid samples for CI')
-    return result
-```
-
-### Example usage (synthetic)
-
-```python
-import numpy as np
-# from ats import ats_slope # Assuming the code above is saved in ats.py
-
-# synthetic example with some left-censoring
-np.random.seed(1)
-n = 80
-x = np.linspace(0, 10, n)                         # time
-true_beta = 0.2
-y_true = 1.0 + true_beta * x
-y = y_true + np.random.normal(scale=0.5, size=n)
-
-# impose a LOD and censor low values
-lod_val = 1.5
-censored = y < lod_val
-y_obs = np.where(censored, lod_val, y)               # store face values (lod for censored)
-cen_type = np.array(['lt' if c else 'none' for c in censored])
-lod = np.full(n, lod_val)
-
-res = ats_slope(x=x, y=y_obs, censored=censored, cen_type=cen_type, lod=lod,
-                bootstrap_ci=True, n_boot=400)
-print(res)
-# res['beta'] is the ATS slope, compare to true_beta
-```
+[Code omitted for brevity - see `_ats.py`]
 
 ---
 
-## 6. Seasonal ATS: The `censeaken` Methodology
+## 6. Seasonal ATS: Methodological Improvement (Stratified ATS)
 
-This section has been **significantly revised** to accurately reflect the methodology of the `censeaken.R` script.
+This section describes the **Stratified ATS Estimator** implemented in `MannKenSen`, which differs intentionally from the reference `censeaken` R script.
 
-The previous guidance suggested calculating a trend for each season and then taking the median of those slopes. **This is incorrect.** The `censeaken.R` script follows a different, more nuanced procedure for calculating the single overall trend line and its significance.
+### The Problem with the `censeaken` Method
 
-**How `censeaken` Works:**
+The `censeaken` R script calculates the overall seasonal trend slope by running the standard, non-seasonal `cenken` (ATS) function on the **entire dataset at once**. It treats all data points as a single group, effectively ignoring the seasonal structure during slope estimation.
+*   **Issue:** In datasets with strong seasonality (e.g., winter values always lower than summer values), comparing points across seasons introduces significant noise and bias. The slope becomes dominated by seasonal differences rather than the long-term trend.
 
-1.  **Overall Trend Line (Slope and Intercept):**
-    To calculate the final, single trend line that represents the entire dataset, `censeaken` calls the non-seasonal `ATSmini` function (which uses `cenken`) on the **entire, unsorted, non-aggregated dataset**.
+### The Solution: Stratified ATS
 
-    ```R
-    # From censeaken.R
-    ats_all <- ATSmini(dat$y, dat$y.cen, dat$time)
-    medslope <- ats_all$slope
-    intall <- ats_all$intercept
-    ```
-    This means the overall slope is the standard Akritas-Theil-Sen slope computed across all seasons simultaneously. It is **not** an aggregation of seasonal slopes.
+To provide a more robust seasonal trend estimate, `MannKenSen` implements a **Stratified Akritas-Theil-Sen Estimator**. This method respects the independence of seasons, similar to how the Seasonal Kendall test respects seasons for p-value calculation.
 
-2.  **Overall Significance (p-value):**
-    The p-value for the overall trend is calculated using a permutation test that *does* respect seasonality.
-    *   For each season, it computes the Kendall S-statistic.
-    *   The **overall S-statistic** is the sum of these individual seasonal S-statistics (`s_all <- s_all + s`).
-    *   It then creates thousands of permutations (`R=4999` by default) by shuffling the time order of data *within each season* (preserving seasonal identity).
-    *   For each permutation, it recalculates the overall S-statistic.
-    *   The final p-value is the proportion of permuted S-statistics that are as extreme or more extreme than the original, observed S-statistic.
+**Methodology:**
 
-**Python Recipe (to match `censeaken`):**
+1.  **Stratified Score Function:**
+    Instead of minimizing the Kendall score $S(\beta)$ for the whole dataset, we minimize the **sum of seasonal scores**:
+    $$ S_{total}(\beta) = \sum_{k=1}^{m} S_k(\beta) $$
+    where $S_k(\beta)$ is the ATS score calculated **only using data pairs within season $k$**.
+    *   This ensures that we only compare "apples to apples" (e.g., January 2000 vs. January 2001), eliminating the noise from cross-season comparisons.
 
-*   **To get the overall slope and intercept:** Simply call the `ats_slope` function on your full dataset (e.g., all months and years together). The `season` column is not used for this specific calculation.
+2.  **Root Finding:**
+    We find the single slope $\beta^*$ such that $S_{total}(\beta^*) = 0$. This single slope represents the overall trend magnitude common to all seasons.
 
-    ```python
-    # df has columns: 'time', 'value', 'censored', 'cen_type', 'lod'
-    # The 'season' column is ignored for the main trend line calculation.
-    overall_trend = ats_slope(
-        x=df['time'].values,
-        y=df['value'].values,
-        censored=df['censored'].values,
-        cen_type=df['cen_type'].values,
-        lod=df['lod'].values
-    )
-    print(f"Overall Slope: {overall_trend['beta']}, Intercept: {overall_trend['intercept']}")
-    ```
+3.  **Stratified Bootstrap:**
+    Confidence intervals are calculated using a stratified bootstrap. We resample residuals **independently within each season** to preserve the sample size and variance structure of each season.
 
-*   **To get the overall p-value (optional, advanced):** You would need to implement the seasonal permutation test.
-    1.  Group the data by season.
-    2.  For each season, compute the censored Kendall S-statistic using the `S_of_beta` function with `beta=0`.
-    3.  Sum these S-statistics to get the observed `S_total`.
-    4.  Create a loop (e.g., for `R` repetitions). In each iteration:
-        *   For each season, shuffle the `(y, censored, cen_type, lod)` rows relative to the `x` (time) vector.
-        *   Recalculate the S-statistic for the shuffled data within each season.
-        *   Sum them to get a permuted `S_permuted_total`.
-    5.  The p-value is `(1 + count(abs(S_permuted_total) >= abs(S_total))) / (1 + R)`.
+4.  **Intercept:**
+    Once the global slope $\beta^*$ is determined, the intercept is estimated as the median of the residuals (using the Turnbull estimator) across the **entire dataset**. This centers the trend line correctly relative to the overall data distribution.
+
+**Python Recipe (Stratified ATS):**
+
+The `seasonal_trend_test` function automatically handles this when `sens_slope_method='ats'` is selected. Internally, it calls `seasonal_ats_slope`:
+
+```python
+# Internal call structure
+overall_ats = seasonal_ats_slope(
+    x=t_vector,
+    y=values,
+    censored=censored_flags,
+    seasons=season_ids,  # Key addition: grouping by season
+    ...
+)
+```
+
+This approach yields a slope that is consistent with the Seasonal Kendall test's logic and is robust to strong seasonal cycles.
 
 ---
 

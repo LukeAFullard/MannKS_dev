@@ -12,7 +12,7 @@ from ._stats import (_z_score, _p_value,
                    _sens_estimator_unequal_spacing, _confidence_intervals,
                    _mk_probability, _mk_score_and_var_censored,
                    _sens_estimator_censored, _sen_probability)
-from ._ats import ats_slope
+from ._ats import ats_slope, seasonal_ats_slope
 from ._datetime import (_get_season_func, _get_cycle_identifier, _get_time_ranks)
 from ._helpers import (_prepare_data, _aggregate_by_group, _value_for_time_increment)
 from .plotting import plot_trend
@@ -331,31 +331,23 @@ def seasonal_trend_test(
     var_s_for_ci = var_s
 
     if sens_slope_method == 'ats':
-        # For ATS, de-season the data before running the test to get a more accurate slope
-        deseasoned_data = slope_data.copy()
-        seasonal_medians = deseasoned_data.groupby('season')['value'].median()
-        deseasoned_data['value'] = deseasoned_data.apply(
-            lambda row: row['value'] - seasonal_medians[row['season']],
-            axis=1
-        )
-
-        # Run ATS on the de-seasoned data, ensuring the LOD is also scaled
-        overall_ats = ats_slope(
-            x=deseasoned_data['t'].to_numpy(),
-            y=deseasoned_data['value'].to_numpy(),
-            censored=deseasoned_data['censored'].to_numpy(),
-            cen_type=deseasoned_data['cen_type'].to_numpy(),
-            lod=deseasoned_data['value'].to_numpy(), # Use the de-seasoned value as the LOD for censored data
+        # Use Stratified ATS: Sum of within-season scores.
+        # This correctly handles seasonality without de-seasoning artifacts or global slope issues.
+        overall_ats = seasonal_ats_slope(
+            x=slope_data['t'].to_numpy(),
+            y=slope_data['value'].to_numpy(),
+            censored=slope_data['censored'].to_numpy(),
+            seasons=slope_data['season'].to_numpy(),
+            cen_type=slope_data['cen_type'].to_numpy(),
+            lod=slope_data['value'].to_numpy(),  # Assuming value is LOD for censored
             bootstrap_ci=True,
             ci_alpha=alpha
         )
         slope = overall_ats['beta']
-        # The intercept from ATS on de-seasoned data is near zero; a more meaningful
-        # intercept is calculated later from the original, non-deseasoned data.
-        intercept = np.nan
+        intercept = overall_ats['intercept']
         lower_ci = overall_ats.get('ci_lower', np.nan)
         upper_ci = overall_ats.get('ci_upper', np.nan)
-        sen_prob, sen_prob_max, sen_prob_min = np.nan, np.nan, np.nan # Not calculated by ATS
+        sen_prob, sen_prob_max, sen_prob_min = np.nan, np.nan, np.nan  # Not calculated by ATS
         if overall_ats.get('notes'):
             sens_slope_notes.update(overall_ats['notes'])
 
@@ -391,9 +383,7 @@ def seasonal_trend_test(
 
     # Assign slope, intercept, CIs based on method
     if sens_slope_method == 'ats':
-        # For ATS, the slope is already calculated. We now calculate a meaningful intercept.
-        if pd.notna(slope):
-            intercept = np.nanmedian(data_filtered['value']) - np.nanmedian(data_filtered['t']) * slope
+        pass # Slope and intercept already calculated by seasonal_ats_slope
     else:
         # This block now only applies to 'lwp' and 'nan' methods
         if not all_slopes:
