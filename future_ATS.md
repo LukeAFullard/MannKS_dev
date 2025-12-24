@@ -500,7 +500,23 @@ If the two differ substantially, prefer ATS unless you have a specific operation
 
 ---
 
-## 13. References and sources
+## 13. R Script File Organization
+
+The Akritas-Theil-Sen (ATS) method implementation in the `Example_Files/R/NADA2/` directory is structured across several key files:
+
+*   **`NADA_ken.R` (Core Engine)**: This script contains the fundamental statistical logic. The central function is `cenken`, which computes the ATS slope and intercept for a given dataset. It handles the complex calculations involving censored data.
+
+*   **`ATS.R` (High-Level Wrapper)**: This script provides a full-featured, user-friendly interface for non-seasonal ATS analysis. It calls the `cenken` function from `NADA_ken.R` to perform the core calculations and adds features like automatic logging, plotting, and data preparation.
+
+*   **`ATSmini.R` (Simplified Wrapper)**: This is a lightweight, faster wrapper, also for non-seasonal data. It calls `cenken` directly and is primarily intended for internal use by other functions (like `censeaken`) where the overhead of the full `ATS.R` script is unnecessary.
+
+*   **`censeaken.R` (Seasonal ATS)**: This script implements the seasonal version of the ATS test. For each season present in the data, it calls `ATSmini` to calculate the trend. It then combines the results from all seasons to provide an overall seasonal trend analysis, including a permutation test for significance.
+
+In summary, the non-seasonal ATS functionality is driven by `NADA_ken.R`, with `ATS.R` and `ATSmini.R` acting as user-facing and internal wrappers, respectively. The seasonal analysis is handled by `censeaken.R`, which leverages the non-seasonal engine for its per-season calculations.
+
+---
+
+## 14. References and sources
 
 * Akritas, M.G., Murphy, S.A., LaValley, M.P. (1995). *The Theil–Sen estimator with doubly censored data and applications*. Journal of the American Statistical Association. (ATS method). ([pure.psu.edu][1])
 * NADA package: `cenken` documentation (Compute censored Kendall’s tau and ATS line). ([rdocumentation.org][4])
