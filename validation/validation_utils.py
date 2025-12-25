@@ -56,13 +56,27 @@ class ValidationUtils:
         if 'RawValue' not in df_r_prep.columns:
             df_r_prep['RawValue'] = df_r_prep['value']
 
-        if 'Censored' not in df_r_prep.columns:
-            if df_r_prep['value'].dtype == object:
-                df_r_prep['Censored'] = df_r_prep['value'].astype(str).str.contains('<')
-                df_r_prep['RawValue'] = df_r_prep['value'].astype(str).str.replace('<', '').astype(float)
-                df_r_prep['CenType'] = np.where(df_r_prep['Censored'], 'lt', 'not')
-            else:
+        # Handle mixed censoring for RawValue and CenType
+        if df_r_prep['value'].dtype == object:
+            # Check for censoring indicators
+            is_left = df_r_prep['value'].astype(str).str.contains('<')
+            is_right = df_r_prep['value'].astype(str).str.contains('>')
+
+            # Clean RawValue by removing both < and >
+            clean_vals = df_r_prep['value'].astype(str).str.replace('<', '', regex=False).str.replace('>', '', regex=False)
+            df_r_prep['RawValue'] = clean_vals.astype(float)
+
+            # Set Censored flag (True if either left or right)
+            df_r_prep['Censored'] = is_left | is_right
+
+            # Set CenType
+            conditions = [is_left, is_right]
+            choices = ['lt', 'gt']
+            df_r_prep['CenType'] = np.select(conditions, choices, default='not')
+        else:
+            if 'Censored' not in df_r_prep.columns:
                 df_r_prep['Censored'] = False
+            if 'CenType' not in df_r_prep.columns:
                 df_r_prep['CenType'] = 'not'
 
         df_r_prep['Censored'] = df_r_prep['Censored'].astype(bool)
@@ -160,9 +174,9 @@ class ValidationUtils:
             ro.r(f'source("{self.nada2_ken_path}")')
             ro.r(f'source("{self.nada2_ats_path}")')
 
-            if 'value' in df.columns and df['value'].dtype == object and df['value'].str.contains('<').any():
-                 y_vals = df['value'].astype(str).str.replace('<', '').astype(float).values
-                 y_cen = df['value'].astype(str).str.contains('<').values
+            if 'value' in df.columns and df['value'].dtype == object and df['value'].astype(str).str.contains('<|>').any():
+                 y_vals = df['value'].astype(str).str.replace('<', '', regex=False).str.replace('>', '', regex=False).astype(float).values
+                 y_cen = df['value'].astype(str).str.contains('<|>').values
             else:
                 y_vals = df['value'].values
                 y_cen = np.zeros(len(df), dtype=bool)
@@ -222,6 +236,14 @@ class ValidationUtils:
         else:
             t_numeric = np.arange(len(df))
 
+        # Helper to prepare censored data if needed
+        def get_input_x(dataframe):
+             if dataframe['value'].dtype == object and dataframe['value'].astype(str).str.contains('<|>').any():
+                 return mk.prepare_censored_data(dataframe['value'])
+             return dataframe['value']
+
+        x_input = get_input_x(df)
+        mk_std = mk.trend_test(x_input, t, **mk_kwargs)
         # Standard Run - prefer numeric if possible for clean stats, but datetime if user provides it.
         # But for comparison with R (which uses Years), numeric decimal years is safer for standard.
         # Actually, standard mk uses whatever we pass.
@@ -326,7 +348,8 @@ class ValidationUtils:
         else:
             x_plot = np.arange(len(df))
 
-        y_plot = df['value']
+        # Handle censored values for plotting (just strip < and >)
+        y_plot = df['value'].astype(str).str.replace('<', '', regex=False).str.replace('>', '', regex=False).astype(float)
 
         plt.plot(x_plot, y_plot, 'o', color='black', label='Data')
 
