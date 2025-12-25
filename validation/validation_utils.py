@@ -185,14 +185,21 @@ class ValidationUtils:
         full_test_id = f"{test_id}_{scenario_name}"
         print(f"Running comparison for: {full_test_id}")
 
+        t_datetime = None
+        t_numeric = None
+
         if 'date' in df.columns:
             dates = pd.to_datetime(df['date'])
-            t = dates.dt.year + (dates.dt.dayofyear - 1) / 365.25
-            t = t.values
+            t_datetime = dates.to_numpy()
+            t_numeric = dates.dt.year + (dates.dt.dayofyear - 1) / 365.25
+            t_numeric = t_numeric.values
         else:
-            t = np.arange(len(df))
+            t_numeric = np.arange(len(df))
 
-        mk_std = mk.trend_test(df['value'], t, **mk_kwargs)
+        # Standard Run - prefer numeric if possible for clean stats, but datetime if user provides it.
+        # But for comparison with R (which uses Years), numeric decimal years is safer for standard.
+        # Actually, standard mk uses whatever we pass.
+        mk_std = mk.trend_test(df['value'], t_numeric if t_numeric is not None else t_datetime, **mk_kwargs)
 
         lwp_defaults = {
             'mk_test_method': 'lwp',
@@ -202,11 +209,15 @@ class ValidationUtils:
         }
         lwp_final_kwargs = {**lwp_defaults, **lwp_mode_kwargs}
 
-        mk_lwp = mk.trend_test(df['value'], t, **lwp_final_kwargs)
+        # If agg_method is 'lwp', we MUST pass datetime objects
+        if lwp_final_kwargs.get('agg_method') == 'lwp' and t_datetime is not None:
+             mk_lwp = mk.trend_test(df['value'], t_datetime, **lwp_final_kwargs)
+        else:
+             mk_lwp = mk.trend_test(df['value'], t_numeric if t_numeric is not None else t_datetime, **lwp_final_kwargs)
 
         r_res = self.run_lwp_r_script(df)
 
-        mk_ats = mk.trend_test(df['value'], t, sens_slope_method='ats')
+        mk_ats = mk.trend_test(df['value'], t_numeric if t_numeric is not None else t_datetime, sens_slope_method='ats')
 
         nada_res = self.run_nada2_r_script(df)
 
@@ -257,9 +268,13 @@ class ValidationUtils:
 
     def _append_to_csv(self, row: Dict):
         df = pd.DataFrame([row])
-        cols = pd.read_csv(self.master_csv_path, nrows=0).columns.tolist()
-        df = df[cols]
-        df.to_csv(self.master_csv_path, mode='a', header=False, index=False)
+        if os.path.exists(self.master_csv_path) and os.stat(self.master_csv_path).st_size > 0:
+             cols = pd.read_csv(self.master_csv_path, nrows=0).columns.tolist()
+             df = df[cols]
+             df.to_csv(self.master_csv_path, mode='a', header=False, index=False)
+        else:
+             df.to_csv(self.master_csv_path, mode='w', header=True, index=False)
+
 
     def _get_decimal_year(self, df: pd.DataFrame) -> np.ndarray:
         """Converts dataframe date column to decimal year, matching run_comparison logic."""
