@@ -21,5 +21,5 @@
 ## LWP Accuracy (Python vs R)
 | Test ID               |   Slope Error |   Slope % Error |
 |:----------------------|--------------:|----------------:|
-| V-03_tau_b_comparison |    0.00342935 |       0.0685401 |
-| V-03_tau_a_comparison |    0.00342935 |       0.0685401 |
+| V-03_tau_b_comparison |    0.00342935 |        0.068587 |
+| V-03_tau_a_comparison |    0.00342935 |        0.068587 |

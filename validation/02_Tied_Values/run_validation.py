@@ -27,20 +27,27 @@ def run():
     utils = ValidationUtils(os.path.dirname(__file__))
 
     # Scenario 1: Strong Increasing with Ties
+    # NOTE: slope=0.1 per month. Annual slope ~ 1.2
+    # The LWP R logic uses Years as time unit for slope.
+    # MannKenSen using date objects also outputs per Year (or whatever unit dates imply, which is 365.25 days).
+    # So true slope is 0.1 * 12 = 1.2
     df_strong = generate_tied_data(n=60, slope=0.1, noise_std=2.0)
-    utils.run_comparison(
+    _, mk_std = utils.run_comparison(
         test_id="V-02",
         df=df_strong,
-        scenario_name="strong_increasing_tied"
+        scenario_name="strong_increasing_tied",
+        true_slope=1.2
     )
-    utils.generate_plot(df_strong, "V-02 Strong Increasing (Tied)", "v02_strong.png")
+    utils.generate_plot(df_strong, "V-02 Strong Increasing (Tied)", "v02_strong.png", mk_result=mk_std)
 
     # Scenario 2: Weak Decreasing with Ties
+    # Slope -0.05 per month -> -0.6 per year
     df_weak = generate_tied_data(n=60, slope=-0.05, noise_std=2.0)
     utils.run_comparison(
         test_id="V-02",
         df=df_weak,
-        scenario_name="weak_decreasing_tied"
+        scenario_name="weak_decreasing_tied",
+        true_slope=-0.6
     )
 
     # Scenario 3: Stable with Ties (Many ties expected)
@@ -48,7 +55,8 @@ def run():
     utils.run_comparison(
         test_id="V-02",
         df=df_stable,
-        scenario_name="stable_tied"
+        scenario_name="stable_tied",
+        true_slope=0.0
     )
 
     # Generate Report

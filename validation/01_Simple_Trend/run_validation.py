@@ -25,19 +25,21 @@ def run():
 
     # Scenario 1: Strong Increasing Trend
     df_strong = generate_simple_trend_data(n=20, slope=2.0, noise_std=1.0)
-    utils.run_comparison(
+    _, mk_std = utils.run_comparison(
         test_id="V-01",
         df=df_strong,
-        scenario_name="strong_increasing"
+        scenario_name="strong_increasing",
+        true_slope=2.0
     )
-    utils.generate_plot(df_strong, "V-01 Strong Increasing Trend", "v01_strong.png")
+    utils.generate_plot(df_strong, "V-01 Strong Increasing Trend", "v01_strong.png", mk_result=mk_std)
 
     # Scenario 2: Weak Decreasing Trend
     df_weak = generate_simple_trend_data(n=20, slope=-0.2, noise_std=1.0)
     utils.run_comparison(
         test_id="V-01",
         df=df_weak,
-        scenario_name="weak_decreasing"
+        scenario_name="weak_decreasing",
+        true_slope=-0.2
     )
 
     # Scenario 3: Stable (No Trend)
@@ -45,7 +47,8 @@ def run():
     utils.run_comparison(
         test_id="V-01",
         df=df_stable,
-        scenario_name="stable"
+        scenario_name="stable",
+        true_slope=0.0
     )
 
     # Generate Report

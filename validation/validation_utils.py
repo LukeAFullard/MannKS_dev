@@ -179,7 +179,8 @@ class ValidationUtils:
     def run_comparison(self, test_id: str, df: pd.DataFrame,
                        scenario_name: str,
                        mk_kwargs: Dict = {},
-                       lwp_mode_kwargs: Dict = {}) -> Dict:
+                       lwp_mode_kwargs: Dict = {},
+                       true_slope: float = None) -> Tuple[Dict, object]:
 
         full_test_id = f"{test_id}_{scenario_name}"
         print(f"Running comparison for: {full_test_id}")
@@ -209,15 +210,20 @@ class ValidationUtils:
 
         nada_res = self.run_nada2_r_script(df)
 
-        if not np.isnan(r_res['slope']) and r_res['slope'] != 0:
+        slope_error = np.nan
+        slope_pct_error = np.nan
+
+        if not np.isnan(r_res['slope']):
             slope_error = mk_lwp.slope - r_res['slope']
-            slope_pct_error = (slope_error / r_res['slope']) * 100
-        elif r_res['slope'] == 0:
-             slope_error = mk_lwp.slope
-             slope_pct_error = 0.0
-        else:
-             slope_error = np.nan
-             slope_pct_error = np.nan
+
+            if true_slope is not None and true_slope != 0:
+                slope_pct_error = (slope_error / true_slope) * 100
+            elif r_res['slope'] != 0:
+                slope_pct_error = (slope_error / r_res['slope']) * 100
+            elif slope_error == 0:
+                slope_pct_error = 0.0
+            else:
+                slope_pct_error = np.nan
 
         result_row = {
             'test_id': full_test_id,
@@ -247,7 +253,7 @@ class ValidationUtils:
 
         self.results.append(result_row)
         self._append_to_csv(result_row)
-        return result_row
+        return result_row, mk_std
 
     def _append_to_csv(self, row: Dict):
         df = pd.DataFrame([row])
@@ -255,24 +261,58 @@ class ValidationUtils:
         df = df[cols]
         df.to_csv(self.master_csv_path, mode='a', header=False, index=False)
 
-    def generate_plot(self, df: pd.DataFrame, title: str, filename: str):
-        """Generates a simple plot of the data."""
+    def _get_decimal_year(self, df: pd.DataFrame) -> np.ndarray:
+        """Converts dataframe date column to decimal year, matching run_comparison logic."""
+        if 'date' in df.columns:
+            dates = pd.to_datetime(df['date'])
+            t = dates.dt.year + (dates.dt.dayofyear - 1) / 365.25
+            return t.values
+        else:
+            return np.arange(len(df))
+
+    def generate_plot(self, df: pd.DataFrame, title: str, filename: str, mk_result=None):
+        """Generates a simple plot of the data, optionally with trend line and CIs."""
         plt.figure(figsize=(10, 6))
 
         if 'date' in df.columns:
-            x = df['date']
+            x_plot = df['date']
         else:
-            x = np.arange(len(df))
+            x_plot = np.arange(len(df))
 
-        y = df['value']
+        y_plot = df['value']
 
-        plt.plot(x, y, 'o-', label='Data')
+        plt.plot(x_plot, y_plot, 'o', color='black', label='Data')
+
+        # Add Trend Line and CIs if provided
+        if mk_result is not None and not np.isnan(mk_result.slope):
+            t_numeric = self._get_decimal_year(df)
+
+            # Calculate Trend Line: y = slope * t + intercept
+            y_trend = mk_result.slope * t_numeric + mk_result.intercept
+
+            plt.plot(x_plot, y_trend, '-', color='blue', label=f"Sen's Slope: {mk_result.slope:.4f}")
+
+            # Calculate CIs (Approximation for visualization: pivot around median)
+            t_med = np.median(t_numeric)
+            y_med = np.median(y_plot)
+
+            if not np.isnan(mk_result.lower_ci):
+                y_lower = mk_result.lower_ci * (t_numeric - t_med) + y_med
+                plt.plot(x_plot, y_lower, '--', color='blue', alpha=0.5, label=f'90% CI')
+
+            if not np.isnan(mk_result.upper_ci):
+                y_upper = mk_result.upper_ci * (t_numeric - t_med) + y_med
+                plt.plot(x_plot, y_upper, '--', color='blue', alpha=0.5)
+
+                # Shade the confidence interval
+                if not np.isnan(mk_result.lower_ci):
+                    plt.fill_between(x_plot, y_lower, y_upper, color='blue', alpha=0.1)
 
         plt.title(title)
         plt.xlabel('Time')
         plt.ylabel('Value')
-        plt.legend()
-        plt.grid(True)
+        plt.legend(loc='best')
+        plt.grid(True, linestyle=':', alpha=0.6)
 
         plot_path = os.path.join(self.output_dir, filename)
         plt.savefig(plot_path)

@@ -26,6 +26,6 @@
 ## LWP Accuracy (Python vs R)
 | Test ID                |   Slope Error |   Slope % Error |
 |:-----------------------|--------------:|----------------:|
-| V-01_strong_increasing |  -0.000267961 |      -0.0140445 |
-| V-01_weak_decreasing   |  -2.45076e-06 |       0.0010212 |
-| V-01_stable            |   3.76186e-07 |       0.0019871 |
+| V-01_strong_increasing |  -0.000267961 |     -0.0133981  |
+| V-01_weak_decreasing   |  -2.45076e-06 |      0.00122538 |
+| V-01_stable            |   3.76186e-07 |      0.0019871  |

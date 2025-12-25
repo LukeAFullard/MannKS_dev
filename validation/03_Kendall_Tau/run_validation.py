@@ -26,21 +26,30 @@ def run():
 
     df = generate_highly_tied_data()
 
+    # V-03 Data: Step function 0-10 months = 0, 10-20 months = 5, 20-30 months = 10.
+    # Total time 30 months = 2.5 years.
+    # Total rise 10.
+    # True Slope ~ 5/1 = 5.
+
+    true_s = 5.0
+
     # 1. Standard Comparison (Tau-b default)
-    utils.run_comparison(
+    _, mk_std = utils.run_comparison(
         test_id="V-03",
         df=df,
         scenario_name="tau_b_comparison",
-        mk_kwargs={'tau_method': 'b'}
+        mk_kwargs={'tau_method': 'b'},
+        true_slope=true_s
     )
-    utils.generate_plot(df, "V-03 Highly Tied Data", "v03_tied.png")
+    utils.generate_plot(df, "V-03 Highly Tied Data", "v03_tied.png", mk_result=mk_std)
 
     # 2. Tau-a check
     utils.run_comparison(
         test_id="V-03",
         df=df,
         scenario_name="tau_a_comparison",
-        mk_kwargs={'tau_method': 'a'}
+        mk_kwargs={'tau_method': 'a'},
+        true_slope=true_s
     )
 
     # Generate Report
