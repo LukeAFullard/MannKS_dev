@@ -241,25 +241,39 @@ def seasonal_trend_test(
 
     if agg_method == 'lwp':
         # The 'lwp' method uses a specific aggregation that chooses one value per time increment.
-        data_filtered = _value_for_time_increment(data_filtered, is_datetime, season_type)
+
+        # Define mapping from season_type to pandas offset alias
+        SEASON_TO_OFFSET = {
+            'year': 'Y', 'month': 'M', 'quarter': 'Q',
+            'day': 'D', 'hour': 'H', 'minute': 'T', 'second': 'S',
+            'week': 'W', 'week_of_year': 'W', 'day_of_year': 'D'
+        }
+        period_alias = SEASON_TO_OFFSET.get(season_type, 'M')
+
+        # Handle numeric data conversion if needed
+        # We ensure t_original is datetime-like for the helper function
+        if not is_datetime:
+             data_filtered['t_original'] = pd.to_datetime(data_filtered['t_original'], unit='s', origin='unix')
+
+        # Construct group key from the cycle/season columns calculated above
+        # This matches the (cycle, season) grouping used for other methods
+        group_key = pd.Series(list(zip(data_filtered['cycle'], data_filtered['season'])), index=data_filtered.index)
+
+        data_filtered = _value_for_time_increment(data_filtered, group_key, period_alias)
+
     elif agg_method != 'none':
         if data_filtered['censored'].any() and agg_method not in ['robust_median', 'lwp']:
              analysis_notes.append(
                 f"WARNING: '{agg_method}' aggregation with censored data may produce "
                 f"biased results. Consider using agg_method='robust_median'."
             )
-        if is_datetime:
-            t_pd = pd.to_datetime(data_filtered['t_original'])
-            cycles = _get_cycle_identifier(t_pd, season_type)
-            seasons_agg = season_func(t_pd) if season_type != 'year' else np.ones(len(t_pd))
-        else:
-            t_numeric_agg = data_filtered['t'].to_numpy()
-            t_normalized = t_numeric_agg - t_numeric_agg[0]
-            cycles = np.floor(t_normalized / period)
-            seasons_agg = np.floor(t_normalized % period)
 
-        data_filtered['cycle'] = cycles
-        data_filtered['season_agg'] = seasons_agg
+        # We reuse the cycle/season calculation from the initial block
+        # Only recalculate if explicitly needed, but here we can just use the existing columns.
+        # However, to be safe and match previous logic strictly (except for LWP fix),
+        # we will use the columns we just set.
+
+        data_filtered['season_agg'] = data_filtered['season']
 
         agg_data_list = [
             _aggregate_by_group(group, agg_method, is_datetime)
