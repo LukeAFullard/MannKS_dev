@@ -40,6 +40,14 @@ class ValidationUtils:
         """
         df_r_prep = df.copy()
 
+        # Handle Missing Date if Time (Numeric Year) is present
+        if 'date' not in df_r_prep.columns and 'time' in df_r_prep.columns:
+            # Construct a fake date from decimal year for R script compatibility
+            year = df_r_prep['time'].astype(int)
+            days = ((df_r_prep['time'] - year) * 365.25).astype(int)
+            # Use 'D' for days. ensure year is string for to_datetime
+            df_r_prep['date'] = pd.to_datetime(year.astype(str) + '-01-01') + pd.to_timedelta(days, unit='D')
+
         # Ensure 'MyDate' exists (LWP script expects 'myDate')
         if 'date' in df_r_prep.columns:
             df_r_prep['myDate'] = df_r_prep['date']
@@ -86,7 +94,22 @@ class ValidationUtils:
 
             # Set TimeIncr explicitly.
             # If unique years == count, assume annual. Otherwise assume monthly (use Month).
-            if len(df['date'].dt.year.unique()) == len(df):
+            # If date was generated from time, year column should be correct.
+            # But checking df['date'] might fail if df didn't have it originally.
+            # Check r_df columns or reconstruct logic.
+            # We know _prepare_r_dataframe adds 'date' if missing.
+
+            # Simple heuristic: if 'time' is in df and it looks like years (e.g. 2000, 2001),
+            # LWP should use Year.
+
+            is_annual = True
+            # Check repetition of years in R dataframe
+            ro.r('year_counts <- table(df_r$Year)')
+            max_counts = ro.r('max(year_counts)')[0]
+            if max_counts > 1:
+                is_annual = False
+
+            if is_annual:
                  ro.r('df_r$TimeIncr <- df_r$Year')
             else:
                  ro.r('df_r$TimeIncr <- df_r$Month')
@@ -144,7 +167,10 @@ class ValidationUtils:
                 y_vals = df['value'].values
                 y_cen = np.zeros(len(df), dtype=bool)
 
-            if 'date' in df.columns:
+            # Determine x_vals (time)
+            if 'time' in df.columns:
+                 x_vals = df['time'].values
+            elif 'date' in df.columns:
                  dates = pd.to_datetime(df['date'])
                  # Convert to decimal year
                  x_vals = dates.dt.year + (dates.dt.dayofyear - 1) / 365.25
@@ -225,6 +251,8 @@ class ValidationUtils:
         slope_pct_error = np.nan
 
         if not np.isnan(r_res['slope']):
+            # mk_lwp.slope might be scaled or unscaled depending on input.
+            # If we passed datetimes and scaling, it should be comparable.
             slope_error = mk_lwp.slope - r_res['slope']
 
             if true_slope is not None and true_slope != 0:
@@ -278,7 +306,9 @@ class ValidationUtils:
 
     def _get_decimal_year(self, df: pd.DataFrame) -> np.ndarray:
         """Converts dataframe date column to decimal year, matching run_comparison logic."""
-        if 'date' in df.columns:
+        if 'time' in df.columns:
+            return df['time'].values
+        elif 'date' in df.columns:
             dates = pd.to_datetime(df['date'])
             t = dates.dt.year + (dates.dt.dayofyear - 1) / 365.25
             return t.values
@@ -289,7 +319,9 @@ class ValidationUtils:
         """Generates a simple plot of the data, optionally with trend line and CIs."""
         plt.figure(figsize=(10, 6))
 
-        if 'date' in df.columns:
+        if 'time' in df.columns:
+            x_plot = df['time']
+        elif 'date' in df.columns:
             x_plot = df['date']
         else:
             x_plot = np.arange(len(df))
@@ -334,12 +366,15 @@ class ValidationUtils:
         plt.close()
         print(f"Plot saved to {plot_path}")
 
-    def create_report(self, filename='README.md'):
+    def create_report(self, filename='README.md', description=None):
         """Creates a Markdown report with results and plots in long format."""
         report_path = os.path.join(self.output_dir, filename)
 
         with open(report_path, 'w') as f:
             f.write(f"# Validation Report\n\n")
+
+            if description:
+                f.write(description + "\n\n")
 
             # Plots
             f.write("## Plots\n")
