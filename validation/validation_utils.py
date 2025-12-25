@@ -54,14 +54,21 @@ class ValidationUtils:
 
         # Add LWP required columns if not present
         if 'RawValue' not in df_r_prep.columns:
-            df_r_prep['RawValue'] = df_r_prep['value']
-
-        if 'Censored' not in df_r_prep.columns:
+            # Need to parse censoring
             if df_r_prep['value'].dtype == object:
-                df_r_prep['Censored'] = df_r_prep['value'].astype(str).str.contains('<')
-                df_r_prep['RawValue'] = df_r_prep['value'].astype(str).str.replace('<', '').astype(float)
-                df_r_prep['CenType'] = np.where(df_r_prep['Censored'], 'lt', 'not')
+                # Handle both < and >
+                df_r_prep['RawValue'] = df_r_prep['value'].astype(str).str.replace('<', '').str.replace('>', '').astype(float)
+
+                # Determine CenType
+                conditions = [
+                    df_r_prep['value'].astype(str).str.contains('<'),
+                    df_r_prep['value'].astype(str).str.contains('>')
+                ]
+                choices = ['lt', 'gt']
+                df_r_prep['CenType'] = np.select(conditions, choices, default='not')
+                df_r_prep['Censored'] = df_r_prep['CenType'] != 'not'
             else:
+                df_r_prep['RawValue'] = df_r_prep['value']
                 df_r_prep['Censored'] = False
                 df_r_prep['CenType'] = 'not'
 
@@ -160,9 +167,11 @@ class ValidationUtils:
             ro.r(f'source("{self.nada2_ken_path}")')
             ro.r(f'source("{self.nada2_ats_path}")')
 
-            if 'value' in df.columns and df['value'].dtype == object and df['value'].str.contains('<').any():
-                 y_vals = df['value'].astype(str).str.replace('<', '').astype(float).values
-                 y_cen = df['value'].astype(str).str.contains('<').values
+            if 'value' in df.columns and df['value'].dtype == object and (df['value'].str.contains('<').any() or df['value'].str.contains('>').any()):
+                 y_vals = df['value'].astype(str).str.replace('<', '').str.replace('>', '').astype(float).values
+                 # Logical OR on contains < or >
+                 is_censored = df['value'].astype(str).str.contains('<') | df['value'].astype(str).str.contains('>')
+                 y_cen = is_censored.values
             else:
                 y_vals = df['value'].values
                 y_cen = np.zeros(len(df), dtype=bool)
@@ -178,10 +187,11 @@ class ValidationUtils:
             else:
                 x_vals = np.arange(len(df))
 
-            with localconverter(ro.default_converter + numpy2ri.converter):
-                ro.globalenv['y_vec'] = y_vals
-                ro.globalenv['ycen_vec'] = y_cen
-                ro.globalenv['x_vec'] = x_vals
+            # Explicit conversion to R vectors to avoid numpy2ri context issues
+            ro.globalenv['y_vec'] = ro.FloatVector(y_vals)
+            # BoolVector in R is logical
+            ro.globalenv['ycen_vec'] = ro.BoolVector(y_cen)
+            ro.globalenv['x_vec'] = ro.FloatVector(x_vals)
 
             cmd = "res_ats <- ATS(y_vec, ycen_vec, x_vec, LOG=FALSE, printstat=FALSE, drawplot=FALSE)"
             ro.r(cmd)
@@ -211,6 +221,14 @@ class ValidationUtils:
         full_test_id = f"{test_id}_{scenario_name}"
         print(f"Running comparison for: {full_test_id}")
 
+        # Pre-process censored data for Python if needed
+        x_std = df['value']
+        if df['value'].dtype == object:
+             try:
+                 x_std = mk.prepare_censored_data(df['value'])
+             except Exception as e:
+                 print(f"Warning: automatic pre-processing failed: {e}")
+
         # Standard MK: Use converted numeric time (decimal years)
         if 'date' in df.columns:
             dates = pd.to_datetime(df['date'])
@@ -219,14 +237,10 @@ class ValidationUtils:
         else:
             t_std = np.arange(len(df))
 
-        mk_std = mk.trend_test(df['value'], t_std, **mk_kwargs)
+        # Pass x_std (which might be the DataFrame from prepare_censored_data)
+        mk_std = mk.trend_test(x_std, t_std, **mk_kwargs)
 
         # LWP Mode: Try to mimic R behavior.
-        # If dates are present, pass datetime objects to trigger 'middle_lwp' aggregation logic.
-        # R script typically assumes 'Year' for annual data or 'Month' for monthly.
-        # If we pass datetimes + agg_period='year', it should snap to year midpoints.
-        # But we must also handle unit scaling because datetime inputs return units/sec.
-
         lwp_defaults = {
             'mk_test_method': 'lwp',
             'ci_method': 'lwp',
@@ -236,10 +250,7 @@ class ValidationUtils:
         lwp_final_kwargs = {**lwp_defaults, **lwp_mode_kwargs}
 
         if 'date' in df.columns:
-             # Pass datetime objects
              t_lwp = pd.to_datetime(df['date'])
-             # Ensure agg_period is set if not provided, default to 'year' for robustness if annual-ish
-             # Actually, let's look at the data frequency. If n_unique_years == n, it's annual.
              n_years = len(t_lwp.dt.year.unique())
              n_obs = len(t_lwp)
 
@@ -249,18 +260,16 @@ class ValidationUtils:
                  else:
                      lwp_final_kwargs['agg_period'] = 'month' # Assumption
 
-             # Also enable slope scaling to match R's likely annual output
              if 'slope_scaling' not in lwp_final_kwargs:
                  lwp_final_kwargs['slope_scaling'] = 'year'
 
-             mk_lwp = mk.trend_test(df['value'], t_lwp, **lwp_final_kwargs)
+             mk_lwp = mk.trend_test(x_std, t_lwp, **lwp_final_kwargs)
         else:
-             # Fallback to numeric
-             mk_lwp = mk.trend_test(df['value'], t_std, **lwp_final_kwargs)
+             mk_lwp = mk.trend_test(x_std, t_std, **lwp_final_kwargs)
 
         r_res = self.run_lwp_r_script(df)
 
-        mk_ats = mk.trend_test(df['value'], t_std, sens_slope_method='ats')
+        mk_ats = mk.trend_test(x_std, t_std, sens_slope_method='ats')
 
         nada_res = self.run_nada2_r_script(df)
 
@@ -268,8 +277,6 @@ class ValidationUtils:
         slope_pct_error = np.nan
 
         if not np.isnan(r_res['slope']):
-            # mk_lwp.slope might be scaled or unscaled depending on input.
-            # If we passed datetimes and scaling, it should be comparable.
             slope_error = mk_lwp.slope - r_res['slope']
 
             if true_slope is not None and true_slope != 0:
