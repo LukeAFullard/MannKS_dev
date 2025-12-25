@@ -54,22 +54,29 @@ class ValidationUtils:
 
         # Add LWP required columns if not present
         if 'RawValue' not in df_r_prep.columns:
-            # Need to parse censoring
-            if df_r_prep['value'].dtype == object:
-                # Handle both < and >
-                df_r_prep['RawValue'] = df_r_prep['value'].astype(str).str.replace('<', '').str.replace('>', '').astype(float)
+            df_r_prep['RawValue'] = df_r_prep['value']
 
-                # Determine CenType
-                conditions = [
-                    df_r_prep['value'].astype(str).str.contains('<'),
-                    df_r_prep['value'].astype(str).str.contains('>')
-                ]
-                choices = ['lt', 'gt']
-                df_r_prep['CenType'] = np.select(conditions, choices, default='not')
-                df_r_prep['Censored'] = df_r_prep['CenType'] != 'not'
-            else:
-                df_r_prep['RawValue'] = df_r_prep['value']
+        # Handle mixed censoring for RawValue and CenType
+        if df_r_prep['value'].dtype == object:
+            # Check for censoring indicators
+            is_left = df_r_prep['value'].astype(str).str.contains('<')
+            is_right = df_r_prep['value'].astype(str).str.contains('>')
+
+            # Clean RawValue by removing both < and >
+            clean_vals = df_r_prep['value'].astype(str).str.replace('<', '', regex=False).str.replace('>', '', regex=False)
+            df_r_prep['RawValue'] = clean_vals.astype(float)
+
+            # Set Censored flag (True if either left or right)
+            df_r_prep['Censored'] = is_left | is_right
+
+            # Set CenType
+            conditions = [is_left, is_right]
+            choices = ['lt', 'gt']
+            df_r_prep['CenType'] = np.select(conditions, choices, default='not')
+        else:
+            if 'Censored' not in df_r_prep.columns:
                 df_r_prep['Censored'] = False
+            if 'CenType' not in df_r_prep.columns:
                 df_r_prep['CenType'] = 'not'
 
         df_r_prep['Censored'] = df_r_prep['Censored'].astype(bool)
@@ -230,17 +237,34 @@ class ValidationUtils:
                  print(f"Warning: automatic pre-processing failed: {e}")
 
         # Standard MK: Use converted numeric time (decimal years)
+        t_datetime = None
+        t_numeric = None
+
         if 'date' in df.columns:
             dates = pd.to_datetime(df['date'])
-            t_std = dates.dt.year + (dates.dt.dayofyear - 1) / 365.25
-            t_std = t_std.values
+            t_datetime = dates.to_numpy()
+            t_numeric = dates.dt.year + (dates.dt.dayofyear - 1) / 365.25
+            t_numeric = t_numeric.values
         else:
-            t_std = np.arange(len(df))
+            t_numeric = np.arange(len(df))
 
         # Pass x_std (which might be the DataFrame from prepare_censored_data)
         mk_std = mk.trend_test(x_std, t_std, **mk_kwargs)
 
         # LWP Mode: Try to mimic R behavior.
+        # Helper to prepare censored data if needed
+        def get_input_x(dataframe):
+             if dataframe['value'].dtype == object and dataframe['value'].astype(str).str.contains('<|>').any():
+                 return mk.prepare_censored_data(dataframe['value'])
+             return dataframe['value']
+
+        x_input = get_input_x(df)
+        mk_std = mk.trend_test(x_input, t, **mk_kwargs)
+        # Standard Run - prefer numeric if possible for clean stats, but datetime if user provides it.
+        # But for comparison with R (which uses Years), numeric decimal years is safer for standard.
+        # Actually, standard mk uses whatever we pass.
+        mk_std = mk.trend_test(df['value'], t_numeric if t_numeric is not None else t_datetime, **mk_kwargs)
+
         lwp_defaults = {
             'mk_test_method': 'lwp',
             'ci_method': 'lwp',
@@ -270,6 +294,15 @@ class ValidationUtils:
         r_res = self.run_lwp_r_script(df)
 
         mk_ats = mk.trend_test(x_std, t_std, sens_slope_method='ats')
+        # If agg_method is 'lwp', we MUST pass datetime objects
+        if lwp_final_kwargs.get('agg_method') == 'lwp' and t_datetime is not None:
+             mk_lwp = mk.trend_test(df['value'], t_datetime, **lwp_final_kwargs)
+        else:
+             mk_lwp = mk.trend_test(df['value'], t_numeric if t_numeric is not None else t_datetime, **lwp_final_kwargs)
+
+        r_res = self.run_lwp_r_script(df)
+
+        mk_ats = mk.trend_test(df['value'], t_numeric if t_numeric is not None else t_datetime, sens_slope_method='ats')
 
         nada_res = self.run_nada2_r_script(df)
 
@@ -320,9 +353,13 @@ class ValidationUtils:
 
     def _append_to_csv(self, row: Dict):
         df = pd.DataFrame([row])
-        cols = pd.read_csv(self.master_csv_path, nrows=0).columns.tolist()
-        df = df[cols]
-        df.to_csv(self.master_csv_path, mode='a', header=False, index=False)
+        if os.path.exists(self.master_csv_path) and os.stat(self.master_csv_path).st_size > 0:
+             cols = pd.read_csv(self.master_csv_path, nrows=0).columns.tolist()
+             df = df[cols]
+             df.to_csv(self.master_csv_path, mode='a', header=False, index=False)
+        else:
+             df.to_csv(self.master_csv_path, mode='w', header=True, index=False)
+
 
     def _get_decimal_year(self, df: pd.DataFrame) -> np.ndarray:
         """Converts dataframe date column to decimal year, matching run_comparison logic."""
@@ -346,7 +383,8 @@ class ValidationUtils:
         else:
             x_plot = np.arange(len(df))
 
-        y_plot = df['value']
+        # Handle censored values for plotting (just strip < and >)
+        y_plot = df['value'].astype(str).str.replace('<', '', regex=False).str.replace('>', '', regex=False).astype(float)
 
         plt.plot(x_plot, y_plot, 'o', color='black', label='Data')
 
