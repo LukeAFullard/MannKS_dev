@@ -4,7 +4,7 @@ This document outlines a comprehensive plan for verifying the `mannkensen` Pytho
 
 ## Verification Methodology
 
-For each verification case, three analyses will be performed and their results compared:
+For each verification case, five analyses will be performed and their results compared:
 
 1.  **`mannkensen` (Standard):** A standard run of the relevant `mannkensen` function (`trend_test` or `seasonal_trend_test`) using its default, robust statistical methods.
 2.  **`mannkensen` (LWP Mode):** A run of the `mannkensen` function with all LWP-compatibility parameters enabled. This typically includes:
@@ -14,6 +14,8 @@ For each verification case, three analyses will be performed and their results c
     *   `sens_slope_method='lwp'`
     *   `tie_break_method='lwp'` (for non-seasonal tests)
 3.  **LWP-TRENDS R Script:** A run of the original `LWPTrends_v2502.r` script using `rpy2` to execute the analysis on the identical synthetic dataset.
+4.  **`mannkensen` (ATS Mode):** A run of the `mannkensen` function using the Akritas-Theil-Sen estimator (`sens_slope_method='ats'`).
+5.  **R NADA2 Script:** A run of the relevant NADA2 function (`cenken` for non-seasonal, `censeaken` for seasonal) using `rpy2` to execute the analysis on the identical synthetic dataset.
 
 All data used for these tests will be synthetically generated to provide full control over the inputs and expected outcomes. The majority of tests will use monthly data frequency, with a smaller subset using annual data to ensure both are handled correctly.
 
@@ -33,10 +35,12 @@ A master CSV file, `validation/master_results.csv`, will be created and updated 
 *   `mk_py_slope`, `mk_py_p_value`, `mk_py_lower_ci`, `mk_py_upper_ci`: Results from `mannkensen` (Standard).
 *   `lwp_py_slope`, `lwp_py_p_value`, `lwp_py_lower_ci`, `lwp_py_upper_ci`: Results from `mannkensen` (LWP Mode).
 *   `r_slope`, `r_p_value`, `r_lower_ci`, `r_upper_ci`: Results from the LWP-TRENDS R Script.
+*   `ats_py_slope`, `ats_py_p_value`, `ats_py_lower_ci`, `ats_py_upper_ci`: Results from `mannkensen` (ATS Mode).
+*   `nada_r_slope`, `nada_r_p_value`, `nada_r_lower_ci`, `nada_r_upper_ci`: Results from the R NADA2 Script.
 *   `slope_error`: The absolute error (`lwp_py_slope` - `r_slope`).
 *   `slope_pct_error`: The percentage error, calculated as `(slope_error / r_slope) * 100`.
 
-This master file will provide a quantitative, high-level overview of the LWP-mode's accuracy and consistency.
+This master file will provide a quantitative, high-level overview of the accuracy and consistency across all methods.
 
 ---
 
