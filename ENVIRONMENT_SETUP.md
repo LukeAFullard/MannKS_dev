@@ -41,7 +41,20 @@ Setting up the environment on Windows requires a few manual steps.
 
 ## Step 2: R Packages
 
-Once R is installed, you need to install the R packages required for validation and comparison tests. You can do this automatically by running the provided script, or manually.
+Once R is installed, you need to install the R packages required for validation and comparison tests.
+
+### Required Packages
+
+The following R packages are required:
+*   `plyr`
+*   `tidyr`
+*   `viridis`
+*   `NADA`
+*   `lubridate`
+*   `gam`
+*   `ggplot2`
+*   `ggpubr`
+*   `Icens` (from Bioconductor)
 
 ### Automated Installation (Recommended)
 
@@ -58,7 +71,7 @@ Run the `install_r_packages.R` script from your terminal.
 
 ### Manual Installation
 
-If the automated script fails, you can install the packages manually.
+If the automated script fails, you can install the packages manually in an R session.
 
 1.  Start an R interactive session.
     ```bash
@@ -68,19 +81,19 @@ If the automated script fails, you can install the packages manually.
     R
     ```
 
-2.  Inside the R session, install the required packages one by one.
+2.  Inside the R session, install the CRAN packages:
     ```R
-    install.packages('plyr')
-    install.packages('tidyr')
-    install.packages('viridis')
-    install.packages('NADA')
-    install.packages('lubridate')
-    install.packages('gam')
-    install.packages('ggplot2')
-    install.packages('ggpubr')
+    install.packages(c('plyr', 'tidyr', 'viridis', 'NADA', 'lubridate', 'gam', 'ggplot2', 'ggpubr'))
     ```
 
-3.  Exit the R session by typing `q()` and pressing Enter.
+3.  Install `Icens` from Bioconductor:
+    ```R
+    if (!requireNamespace("BiocManager", quietly = TRUE))
+        install.packages("BiocManager")
+    BiocManager::install("Icens")
+    ```
+
+4.  Exit the R session by typing `q()` and pressing Enter.
 
 ## Step 3: Python Environment
 
@@ -107,7 +120,7 @@ Once the environment is fully set up, you can run the tests and validation scrip
 python3 -m pytest tests/
 
 # Run the first validation script
-python3 validation/01_Basic_Trend_Analysis/basic_trend.py
+python3 validation/01_Simple_Trend/run_validation.py
 ```
 
 ## Step 5: Troubleshooting
