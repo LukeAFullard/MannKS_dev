@@ -211,21 +211,21 @@ class ValidationUtils:
         full_test_id = f"{test_id}_{scenario_name}"
         print(f"Running comparison for: {full_test_id}")
 
-        # Standard MK: Use converted numeric time (decimal years)
+        t_datetime = None
+        t_numeric = None
+
         if 'date' in df.columns:
             dates = pd.to_datetime(df['date'])
-            t_std = dates.dt.year + (dates.dt.dayofyear - 1) / 365.25
-            t_std = t_std.values
+            t_datetime = dates.to_numpy()
+            t_numeric = dates.dt.year + (dates.dt.dayofyear - 1) / 365.25
+            t_numeric = t_numeric.values
         else:
-            t_std = np.arange(len(df))
+            t_numeric = np.arange(len(df))
 
-        mk_std = mk.trend_test(df['value'], t_std, **mk_kwargs)
-
-        # LWP Mode: Try to mimic R behavior.
-        # If dates are present, pass datetime objects to trigger 'middle_lwp' aggregation logic.
-        # R script typically assumes 'Year' for annual data or 'Month' for monthly.
-        # If we pass datetimes + agg_period='year', it should snap to year midpoints.
-        # But we must also handle unit scaling because datetime inputs return units/sec.
+        # Standard Run - prefer numeric if possible for clean stats, but datetime if user provides it.
+        # But for comparison with R (which uses Years), numeric decimal years is safer for standard.
+        # Actually, standard mk uses whatever we pass.
+        mk_std = mk.trend_test(df['value'], t_numeric if t_numeric is not None else t_datetime, **mk_kwargs)
 
         lwp_defaults = {
             'mk_test_method': 'lwp',
@@ -235,32 +235,15 @@ class ValidationUtils:
         }
         lwp_final_kwargs = {**lwp_defaults, **lwp_mode_kwargs}
 
-        if 'date' in df.columns:
-             # Pass datetime objects
-             t_lwp = pd.to_datetime(df['date'])
-             # Ensure agg_period is set if not provided, default to 'year' for robustness if annual-ish
-             # Actually, let's look at the data frequency. If n_unique_years == n, it's annual.
-             n_years = len(t_lwp.dt.year.unique())
-             n_obs = len(t_lwp)
-
-             if 'agg_period' not in lwp_final_kwargs:
-                 if n_years == n_obs:
-                     lwp_final_kwargs['agg_period'] = 'year'
-                 else:
-                     lwp_final_kwargs['agg_period'] = 'month' # Assumption
-
-             # Also enable slope scaling to match R's likely annual output
-             if 'slope_scaling' not in lwp_final_kwargs:
-                 lwp_final_kwargs['slope_scaling'] = 'year'
-
-             mk_lwp = mk.trend_test(df['value'], t_lwp, **lwp_final_kwargs)
+        # If agg_method is 'lwp', we MUST pass datetime objects
+        if lwp_final_kwargs.get('agg_method') == 'lwp' and t_datetime is not None:
+             mk_lwp = mk.trend_test(df['value'], t_datetime, **lwp_final_kwargs)
         else:
-             # Fallback to numeric
-             mk_lwp = mk.trend_test(df['value'], t_std, **lwp_final_kwargs)
+             mk_lwp = mk.trend_test(df['value'], t_numeric if t_numeric is not None else t_datetime, **lwp_final_kwargs)
 
         r_res = self.run_lwp_r_script(df)
 
-        mk_ats = mk.trend_test(df['value'], t_std, sens_slope_method='ats')
+        mk_ats = mk.trend_test(df['value'], t_numeric if t_numeric is not None else t_datetime, sens_slope_method='ats')
 
         nada_res = self.run_nada2_r_script(df)
 
@@ -313,9 +296,13 @@ class ValidationUtils:
 
     def _append_to_csv(self, row: Dict):
         df = pd.DataFrame([row])
-        cols = pd.read_csv(self.master_csv_path, nrows=0).columns.tolist()
-        df = df[cols]
-        df.to_csv(self.master_csv_path, mode='a', header=False, index=False)
+        if os.path.exists(self.master_csv_path) and os.stat(self.master_csv_path).st_size > 0:
+             cols = pd.read_csv(self.master_csv_path, nrows=0).columns.tolist()
+             df = df[cols]
+             df.to_csv(self.master_csv_path, mode='a', header=False, index=False)
+        else:
+             df.to_csv(self.master_csv_path, mode='w', header=True, index=False)
+
 
     def _get_decimal_year(self, df: pd.DataFrame) -> np.ndarray:
         """Converts dataframe date column to decimal year, matching run_comparison logic."""
