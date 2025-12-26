@@ -123,7 +123,7 @@ class ValidationUtils:
             if max_counts > 1:
                 is_annual = False
 
-            if is_annual:
+            if is_annual and not seasonal:
                  ro.r('df_r$TimeIncr <- df_r$Year')
             else:
                  ro.r('df_r$TimeIncr <- df_r$Month')
@@ -136,29 +136,35 @@ class ValidationUtils:
                 )
                 """
                 ro.r(cmd)
-
-                if 'result' not in ro.globalenv:
-                    return {'slope': np.nan, 'p_value': np.nan, 'lower_ci': np.nan, 'upper_ci': np.nan}
-
-                r_result = ro.globalenv['result']
-
-                if r_result == ro.r('NULL'):
-                     return {'slope': np.nan, 'p_value': np.nan, 'lower_ci': np.nan, 'upper_ci': np.nan}
-
-                with localconverter(ro.default_converter + pandas2ri.converter):
-                    res_df = ro.conversion.rpy2py(r_result)
-
-                if res_df is None or len(res_df) == 0:
-                    return {'slope': np.nan, 'p_value': np.nan, 'lower_ci': np.nan, 'upper_ci': np.nan}
-
-                return {
-                    'slope': float(res_df['AnnualSenSlope'].iloc[0]),
-                    'p_value': float(res_df['p'].iloc[0]),
-                    'lower_ci': float(res_df['Sen_Lci'].iloc[0]),
-                    'upper_ci': float(res_df['Sen_Uci'].iloc[0])
-                }
             else:
+                ro.r('df_r$Season <- df_r$Month')
+                cmd = """
+                suppressWarnings(
+                    result <- SeasonalTrendAnalysis(df_r, do.plot=FALSE, TimeIncrMed=TRUE, UseMidObs=TRUE)
+                )
+                """
+                ro.r(cmd)
+
+            if 'result' not in ro.globalenv:
                 return {'slope': np.nan, 'p_value': np.nan, 'lower_ci': np.nan, 'upper_ci': np.nan}
+
+            r_result = ro.globalenv['result']
+
+            if r_result == ro.r('NULL'):
+                    return {'slope': np.nan, 'p_value': np.nan, 'lower_ci': np.nan, 'upper_ci': np.nan}
+
+            with localconverter(ro.default_converter + pandas2ri.converter):
+                res_df = ro.conversion.rpy2py(r_result)
+
+            if res_df is None or len(res_df) == 0:
+                return {'slope': np.nan, 'p_value': np.nan, 'lower_ci': np.nan, 'upper_ci': np.nan}
+
+            return {
+                'slope': float(res_df['AnnualSenSlope'].iloc[0]),
+                'p_value': float(res_df['p'].iloc[0]),
+                'lower_ci': float(res_df['Sen_Lci'].iloc[0]),
+                'upper_ci': float(res_df['Sen_Uci'].iloc[0])
+            }
 
         except Exception as e:
             print(f"Error running LWP R script: {e}")
@@ -223,10 +229,11 @@ class ValidationUtils:
                        scenario_name: str,
                        mk_kwargs: Dict = {},
                        lwp_mode_kwargs: Dict = {},
-                       true_slope: float = None) -> Tuple[Dict, object]:
+                       true_slope: float = None,
+                       seasonal: bool = False) -> Tuple[Dict, object]:
 
         full_test_id = f"{test_id}_{scenario_name}"
-        print(f"Running comparison for: {full_test_id}")
+        print(f"Running comparison for: {full_test_id} (Seasonal: {seasonal})")
 
         # Pre-process censored data for Python if needed
         x_std = df['value']
@@ -256,7 +263,12 @@ class ValidationUtils:
         if 't_std' not in locals():
             t_std = t_numeric if t_numeric is not None else t_datetime
 
-        mk_std = mk.trend_test(x_std, t_std, **mk_kwargs)
+        if seasonal:
+             # For seasonal, default to period 12 if not in kwargs and t is numeric/time
+             # Or rely on seasonal_trend_test defaults
+             mk_std = mk.seasonal_trend_test(x_std, t_datetime if t_datetime is not None else t_std, **mk_kwargs)
+        else:
+             mk_std = mk.trend_test(x_std, t_std, **mk_kwargs)
 
         # LWP Mode: Try to mimic R behavior.
         # Helper to prepare censored data if needed
@@ -280,34 +292,53 @@ class ValidationUtils:
              n_years = len(t_lwp.dt.year.unique())
              n_obs = len(t_lwp)
 
-             if 'agg_period' not in lwp_final_kwargs:
+             if 'agg_period' not in lwp_final_kwargs and not seasonal:
                  if n_years == n_obs:
                      lwp_final_kwargs['agg_period'] = 'year'
                  else:
                      lwp_final_kwargs['agg_period'] = 'month' # Assumption
 
+             # seasonal_trend_test does NOT support agg_period. It uses season_type/period.
+             # So we must remove agg_period if it got added or is present when calling seasonal.
+             if seasonal and 'agg_period' in lwp_final_kwargs:
+                 del lwp_final_kwargs['agg_period']
+
              if 'slope_scaling' not in lwp_final_kwargs:
                  lwp_final_kwargs['slope_scaling'] = 'year'
 
-             mk_lwp = mk.trend_test(x_std, t_lwp, **lwp_final_kwargs)
+             if seasonal:
+                 mk_lwp = mk.seasonal_trend_test(x_std, t_lwp, **lwp_final_kwargs)
+             else:
+                 mk_lwp = mk.trend_test(x_std, t_lwp, **lwp_final_kwargs)
         else:
-             mk_lwp = mk.trend_test(x_std, t_std, **lwp_final_kwargs)
+             if seasonal:
+                 # Check if agg_period is in kwargs and remove it for seasonal
+                 if 'agg_period' in lwp_final_kwargs:
+                      del lwp_final_kwargs['agg_period']
+                 mk_lwp = mk.seasonal_trend_test(x_std, t_std, **lwp_final_kwargs)
+             else:
+                 mk_lwp = mk.trend_test(x_std, t_std, **lwp_final_kwargs)
 
-        r_res = self.run_lwp_r_script(df)
+        r_res = self.run_lwp_r_script(df, seasonal=seasonal)
 
-        mk_ats = mk.trend_test(x_std, t_std, sens_slope_method='ats')
+        # ATS
         # If agg_method is 'lwp', we MUST pass datetime objects
         if lwp_final_kwargs.get('agg_method') == 'lwp' and t_datetime is not None:
-             mk_lwp = mk.trend_test(x_std, t_datetime, **lwp_final_kwargs)
+             t_ats = t_datetime
         else:
-             # Use the R-compatible t_numeric here as well
-             mk_lwp = mk.trend_test(x_std, t_numeric if t_numeric is not None else t_datetime, **lwp_final_kwargs)
+             t_ats = t_numeric if t_numeric is not None else t_datetime
 
-        r_res = self.run_lwp_r_script(df)
+        if seasonal:
+             mk_ats = mk.seasonal_trend_test(x_std, t_ats, sens_slope_method='ats', **mk_kwargs)
+        else:
+             mk_ats = mk.trend_test(x_std, t_ats, sens_slope_method='ats')
 
-        mk_ats = mk.trend_test(x_std, t_numeric if t_numeric is not None else t_datetime, sens_slope_method='ats')
-
-        nada_res = self.run_nada2_r_script(df)
+        # NADA2 R script currently only runs ATS (non-seasonal).
+        # TODO: Add seasonal ATS support to run_nada2_r_script if needed.
+        if not seasonal:
+            nada_res = self.run_nada2_r_script(df)
+        else:
+            nada_res = {'slope': np.nan, 'p_value': np.nan, 'lower_ci': np.nan, 'upper_ci': np.nan}
 
         slope_error = np.nan
         slope_pct_error = np.nan
