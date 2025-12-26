@@ -12,44 +12,85 @@ if repo_root not in sys.path:
 from validation.validation_utils import ValidationUtils
 import MannKenSen as mk
 
-def generate_highly_tied_data(n=30):
+def generate_highly_tied_data(n=30, trend='step'):
     """Generates data with many ties."""
     dates = pd.date_range(start='2000-01-01', periods=n, freq='ME')
-    # Step function
-    values = np.zeros(n)
-    values[10:20] = 5
-    values[20:] = 10
+
+    if trend == 'step_up':
+        # Step function increasing
+        values = np.zeros(n)
+        values[10:20] = 5
+        values[20:] = 10
+    elif trend == 'step_down':
+        # Step function decreasing
+        values = np.zeros(n) + 10
+        values[10:20] = 5
+        values[20:] = 0
+    else: # Flat
+        values = np.zeros(n) + 5
+
     return pd.DataFrame({'date': dates, 'value': values})
 
 def run():
     utils = ValidationUtils(os.path.dirname(__file__))
+    scenarios = []
 
-    df = generate_highly_tied_data()
-
-    # V-03 Data: Step function 0-10 months = 0, 10-20 months = 5, 20-30 months = 10.
-    # Total time 30 months = 2.5 years.
-    # Total rise 10.
-    # True Slope ~ 5/1 = 5.
-
-    true_s = 5.0
-
-    # 1. Standard Comparison (Tau-b default)
-    _, mk_std = utils.run_comparison(
+    # Scenario 1: Step Up (Increasing)
+    df_step_up = generate_highly_tied_data(trend='step_up')
+    _, mk_res_up = utils.run_comparison(
         test_id="V-03",
-        df=df,
-        scenario_name="tau_b_comparison",
+        df=df_step_up,
+        scenario_name="step_increasing",
         mk_kwargs={'tau_method': 'b'},
-        true_slope=true_s
+        true_slope=5.0 # Roughly
     )
-    utils.generate_plot(df, "V-03 Highly Tied Data", "v03_tied.png", mk_result=mk_std)
+    scenarios.append({
+        'df': df_step_up,
+        'title': 'Step Increasing (Tau-b)',
+        'mk_result': mk_res_up
+    })
 
-    # 2. Tau-a check
+    # Scenario 2: Step Down (Decreasing)
+    df_step_down = generate_highly_tied_data(trend='step_down')
+    _, mk_res_down = utils.run_comparison(
+        test_id="V-03",
+        df=df_step_down,
+        scenario_name="step_decreasing",
+        mk_kwargs={'tau_method': 'b'},
+        true_slope=-5.0
+    )
+    scenarios.append({
+        'df': df_step_down,
+        'title': 'Step Decreasing (Tau-b)',
+        'mk_result': mk_res_down
+    })
+
+    # Scenario 3: Flat (No Trend)
+    df_flat = generate_highly_tied_data(trend='flat')
+    _, mk_res_flat = utils.run_comparison(
+        test_id="V-03",
+        df=df_flat,
+        scenario_name="flat",
+        mk_kwargs={'tau_method': 'b'},
+        true_slope=0.0
+    )
+    scenarios.append({
+        'df': df_flat,
+        'title': 'Flat (Tau-b)',
+        'mk_result': mk_res_flat
+    })
+
+    # Generate Combined Plot
+    utils.generate_combined_plot(scenarios, "v03_combined.png", "V-03: Kendall Tau Analysis (Highly Tied)")
+
+    # Additional Tau-a check (keep logic but no plot for this specific sub-test in main figure)
+    # Just running it for the table
     utils.run_comparison(
         test_id="V-03",
-        df=df,
-        scenario_name="tau_a_comparison",
+        df=df_step_up,
+        scenario_name="step_increasing_tau_a",
         mk_kwargs={'tau_method': 'a'},
-        true_slope=true_s
+        true_slope=5.0
     )
 
     # Generate Report

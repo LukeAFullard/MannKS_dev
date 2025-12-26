@@ -8,28 +8,26 @@ Three scenarios were tested:
 2.  **Weak Decreasing Trend:** A subtle, statistically significant (or borderline) negative trend.
 3.  **Stable (No Trend):** Data with no underlying trend.
 
-## Trend Figure (Strong Increasing)
-The figure below shows the raw data (with multiple observations per month) and the standard Mann-Kendall Sen's slope trend line.
-
-![Strong Increasing Trend](01_strong_increasing_standard.png)
+## Combined Results
+![Combined Trend Analysis](v04_combined.png)
 
 ## Results Table
 | Test ID                | Method                |     Slope |     P-Value |   Lower CI |    Upper CI |
 |:-----------------------|:----------------------|----------:|------------:|-----------:|------------:|
-| V-04_Strong_Increasing | MannKenSen (Standard) |  5.47513  | 0           |   5.07333  |   5.88956   |
+| V-04_Strong_Increasing | MannKenSen (Standard) |  5.47182  | 0           |   5.06962  |   5.8874    |
 | V-04_Strong_Increasing | MannKenSen (LWP Mode) |  5.34763  | 8.09654e-10 |   4.27101  |   6.26123   |
 | V-04_Strong_Increasing | LWP-TRENDS (R)        |  5.34763  | 8.09654e-10 |   4.51229  |   6.18379   |
-| V-04_Strong_Increasing | MannKenSen (ATS)      |  5.47513  | 0           |   5.07333  |   5.88956   |
+| V-04_Strong_Increasing | MannKenSen (ATS)      |  5.47182  | 0           |   5.06962  |   5.8874    |
 | V-04_Strong_Increasing | NADA2 (R)             |  5.47513  | 0           | nan        | nan         |
-| V-04_Weak_Decreasing   | MannKenSen (Standard) | -0.749507 | 0.00095686  |  -1.19815  |  -0.30141   |
+| V-04_Weak_Decreasing   | MannKenSen (Standard) | -0.749227 | 0.00095686  |  -1.19667  |  -0.301578  |
 | V-04_Weak_Decreasing   | MannKenSen (LWP Mode) | -0.805907 | 0.123765    |  -1.71387  |   0.225312  |
 | V-04_Weak_Decreasing   | LWP-TRENDS (R)        | -0.805907 | 0.123765    |  -1.62762  |   0.0743976 |
-| V-04_Weak_Decreasing   | MannKenSen (ATS)      | -0.749507 | 0.00095686  |  -1.19815  |  -0.30141   |
+| V-04_Weak_Decreasing   | MannKenSen (ATS)      | -0.749227 | 0.00095686  |  -1.19667  |  -0.301578  |
 | V-04_Weak_Decreasing   | NADA2 (R)             | -0.749518 | 0.00095686  | nan        | nan         |
-| V-04_Stable            | MannKenSen (Standard) | -0.258808 | 0.217184    |  -0.672275 |   0.15028   |
+| V-04_Stable            | MannKenSen (Standard) | -0.258738 | 0.217184    |  -0.672275 |   0.15028   |
 | V-04_Stable            | MannKenSen (LWP Mode) | -0.528518 | 0.144996    |  -1.19137  |   0.176661  |
 | V-04_Stable            | LWP-TRENDS (R)        | -0.528518 | 0.144996    |  -1.14131  |   0.0462097 |
-| V-04_Stable            | MannKenSen (ATS)      | -0.258808 | 0.217184    |  -0.672275 |   0.15028   |
+| V-04_Stable            | MannKenSen (ATS)      | -0.258738 | 0.217184    |  -0.672275 |   0.15028   |
 | V-04_Stable            | NADA2 (R)             | -0.25879  | 0.217184    | nan        | nan         |
 
 ## LWP Accuracy (Python vs R)

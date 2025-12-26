@@ -25,7 +25,7 @@ def generate_mixed_censored_data(n=60, trend_slope=0.1, noise_std=0.5, censor_fr
     """
     Generates synthetic monthly data with a linear trend and mixed censoring.
     """
-    np.random.seed(42)  # Fixed seed for reproducibility
+    # np.random.seed(42)  # Removed local seed to allow varying seeds per scenario call
     dates = [datetime(2000, 1, 1) + timedelta(days=30*i) for i in range(n)]
 
     # Base signal: Trend + Noise
@@ -67,10 +67,12 @@ def generate_mixed_censored_data(n=60, trend_slope=0.1, noise_std=0.5, censor_fr
     return df
 
 # --- Scenarios ---
+scenarios = []
 
 # 1. Strong Increasing Trend
+np.random.seed(42)
 df_strong = generate_mixed_censored_data(n=60, trend_slope=0.2, noise_std=1.0, censor_fraction=0.3)
-res_strong, mk_strong = validator.run_comparison(
+_, mk_strong = validator.run_comparison(
     test_id="V-10",
     df=df_strong,
     scenario_name="Strong_Increasing",
@@ -78,13 +80,16 @@ res_strong, mk_strong = validator.run_comparison(
     lwp_mode_kwargs={'mk_test_method': 'lwp', 'ci_method': 'lwp', 'sens_slope_method': 'lwp'},
     true_slope=0.2
 )
-
-# Generate Plot ONLY for Strong Increasing (as requested)
-validator.generate_plot(df_strong, "V-10: Mixed Censoring - Strong Increasing Trend", "V-10_strong_increasing_plot.png", mk_result=mk_strong)
+scenarios.append({
+    'df': df_strong,
+    'title': 'Strong Increasing (Mixed Censored)',
+    'mk_result': mk_strong
+})
 
 # 2. Weak Decreasing Trend
+np.random.seed(43)
 df_weak = generate_mixed_censored_data(n=60, trend_slope=-0.05, noise_std=1.5, censor_fraction=0.3)
-validator.run_comparison(
+_, mk_weak = validator.run_comparison(
     test_id="V-10",
     df=df_weak,
     scenario_name="Weak_Decreasing",
@@ -92,10 +97,16 @@ validator.run_comparison(
     lwp_mode_kwargs={'mk_test_method': 'lwp', 'ci_method': 'lwp', 'sens_slope_method': 'lwp'},
     true_slope=-0.05
 )
+scenarios.append({
+    'df': df_weak,
+    'title': 'Weak Decreasing (Mixed Censored)',
+    'mk_result': mk_weak
+})
 
 # 3. Stable (No Trend)
+np.random.seed(44)
 df_stable = generate_mixed_censored_data(n=60, trend_slope=0.0, noise_std=1.0, censor_fraction=0.3)
-validator.run_comparison(
+_, mk_stable = validator.run_comparison(
     test_id="V-10",
     df=df_stable,
     scenario_name="Stable",
@@ -103,6 +114,14 @@ validator.run_comparison(
     lwp_mode_kwargs={'mk_test_method': 'lwp', 'ci_method': 'lwp', 'sens_slope_method': 'lwp'},
     true_slope=0.0
 )
+scenarios.append({
+    'df': df_stable,
+    'title': 'Stable (Mixed Censored)',
+    'mk_result': mk_stable
+})
+
+# Generate Combined Plot
+validator.generate_combined_plot(scenarios, "v10_combined.png", "V-10: Mixed Censoring Analysis")
 
 # --- Generate Report ---
 validator.create_report("README.md")

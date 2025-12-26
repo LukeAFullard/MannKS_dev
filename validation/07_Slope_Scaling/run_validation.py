@@ -83,6 +83,7 @@ class ValidationUtilsV7(ValidationUtils):
 def run_validation():
     output_dir = os.path.dirname(__file__)
     utils = ValidationUtilsV7(output_dir)
+    scenarios = []
 
     # --- Scenario 1: Strong Increasing Trend ---
     np.random.seed(42)
@@ -94,8 +95,12 @@ def run_validation():
     values = slope_monthly * np.arange(n) + 10 + noise
     df_strong = pd.DataFrame({'date': dates, 'value': values})
 
-    utils.run_comparison_v7('V-07', df_strong, 'strong_increasing', true_slope=slope_annual)
-    utils.generate_plot(df_strong, 'Strong Increasing Trend (V-07)', 'strong_increasing.png')
+    _, mk_res_strong = utils.run_comparison_v7('V-07', df_strong, 'strong_increasing', true_slope=slope_annual)
+    scenarios.append({
+        'df': df_strong,
+        'title': 'Strong Increasing (Scaled)',
+        'mk_result': mk_res_strong
+    })
 
     # --- Scenario 2: Weak Decreasing Trend ---
     slope_annual_weak = -0.5
@@ -104,8 +109,12 @@ def run_validation():
     values_weak = slope_monthly_weak * np.arange(n) + 20 + noise_weak
     df_weak = pd.DataFrame({'date': dates, 'value': values_weak})
 
-    utils.run_comparison_v7('V-07', df_weak, 'weak_decreasing', true_slope=slope_annual_weak)
-    utils.generate_plot(df_weak, 'Weak Decreasing Trend (V-07)', 'weak_decreasing.png')
+    _, mk_res_weak = utils.run_comparison_v7('V-07', df_weak, 'weak_decreasing', true_slope=slope_annual_weak)
+    scenarios.append({
+        'df': df_weak,
+        'title': 'Weak Decreasing (Scaled)',
+        'mk_result': mk_res_weak
+    })
 
     # --- Scenario 3: Stable (No Trend) ---
     slope_annual_stable = 0.0
@@ -113,8 +122,15 @@ def run_validation():
     values_stable = 15 + noise_stable
     df_stable = pd.DataFrame({'date': dates, 'value': values_stable})
 
-    utils.run_comparison_v7('V-07', df_stable, 'stable', true_slope=0.0)
-    utils.generate_plot(df_stable, 'Stable Trend (V-07)', 'stable.png')
+    _, mk_res_stable = utils.run_comparison_v7('V-07', df_stable, 'stable', true_slope=0.0)
+    scenarios.append({
+        'df': df_stable,
+        'title': 'Stable (Scaled)',
+        'mk_result': mk_res_stable
+    })
+
+    # Generate Combined Plot
+    utils.generate_combined_plot(scenarios, "v07_combined.png", "V-07: Slope Scaling Analysis")
 
     # Create final report
     utils.create_report()

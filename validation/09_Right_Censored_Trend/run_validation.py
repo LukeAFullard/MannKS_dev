@@ -145,6 +145,16 @@ class RightCensoredValidationUtils(ValidationUtils):
 
         # Standard MK: Pass FULL DataFrame to handle censoring metadata
         # MKS trend_test accepts df with 'value', 'censored', 'cen_type'
+        # BUT prepare_censored_data logic usually converts strings like '>5' to mixed type.
+        # If df['value'] is already numeric and we have separate censored columns, we might need to combine them?
+        # mk.trend_test expects x as data. If x is numeric, it assumes uncensored unless we pass censored args?
+        # No, MKS expects the input vector to contain the strings or objects if we rely on automatic parsing.
+        # OR we can pre-process into a DataFrame with specific columns.
+
+        # In this script, 'df' has 'value' as numeric threshold and 'cen_type' as 'gt'/'not'.
+        # We need to construct the input 'x' that MKS expects if we want it to parse, OR pass the pre-processed structure.
+        # MKS `trend_test` accepts `x` as array-like. If `x` is a DataFrame with 'value', 'censored', 'cen_type', it uses it directly.
+
         mk_std = mk.trend_test(df, t_std, **mk_kwargs)
 
         # LWP Mode
@@ -217,65 +227,6 @@ class RightCensoredValidationUtils(ValidationUtils):
         self._append_to_csv(result_row)
         return result_row, mk_std
 
-    def generate_plot(self, df: pd.DataFrame, title: str, filename: str, mk_result=None):
-        """Generates plot with explicit handling of right-censored data."""
-        plt.figure(figsize=(10, 6))
-
-        if 'time' in df.columns:
-            x_plot = df['time']
-        elif 'date' in df.columns:
-            x_plot = df['date']
-        else:
-            x_plot = np.arange(len(df))
-
-        # Separate uncensored and censored
-        uncensored_mask = ~df['censored']
-        censored_mask = df['censored']
-
-        plt.plot(x_plot[uncensored_mask], df.loc[uncensored_mask, 'value'], 'o', color='black', label='Observed')
-        plt.plot(x_plot[censored_mask], df.loc[censored_mask, 'value'], '^', color='red', mfc='none', label='Right Censored (>)')
-
-        if mk_result is not None and not np.isnan(mk_result.slope):
-            # Calculate Trend Line
-            if 'date' in df.columns:
-                dates = pd.to_datetime(df['date'])
-                t_numeric = dates.dt.year + (dates.dt.dayofyear - 1) / 365.25
-                t_numeric = t_numeric.values
-            else:
-                t_numeric = df['time'].values if 'time' in df.columns else np.arange(len(df))
-
-            # Use raw slope per second if available for plotting on datetime axis?
-            # Or use the scaled slope logic from validation utils which assumes annual t_numeric
-
-            y_trend = mk_result.slope * t_numeric + mk_result.intercept
-            plt.plot(x_plot, y_trend, '-', color='blue', label=f"Sen's Slope: {mk_result.slope:.4f}")
-
-            # Confidence Intervals
-            t_med = np.median(t_numeric)
-            y_med = np.median(df['value']) # roughly pivot around data median
-
-            # Use calculated CIs
-            if not np.isnan(mk_result.lower_ci):
-                y_lower = mk_result.lower_ci * (t_numeric - t_med) + y_med
-                plt.plot(x_plot, y_lower, '--', color='blue', alpha=0.3)
-
-            if not np.isnan(mk_result.upper_ci):
-                y_upper = mk_result.upper_ci * (t_numeric - t_med) + y_med
-                plt.plot(x_plot, y_upper, '--', color='blue', alpha=0.3, label='90% CI')
-                plt.fill_between(x_plot, y_lower, y_upper, color='blue', alpha=0.1)
-
-        plt.title(title)
-        plt.xlabel('Time')
-        plt.ylabel('Value')
-        plt.legend(loc='best')
-        plt.grid(True, linestyle=':', alpha=0.6)
-
-        plot_path = os.path.join(self.output_dir, filename)
-        plt.savefig(plot_path)
-        plt.close()
-        print(f"Plot saved to {plot_path}")
-
-
 def generate_right_censored_data(n=24, slope=1.0, noise_std=0.5, start_year=2000,
                                  censor_threshold_percentile=80):
     """
@@ -292,10 +243,7 @@ def generate_right_censored_data(n=24, slope=1.0, noise_std=0.5, start_year=2000
     censored = values > threshold
     cen_type = np.where(censored, 'gt', 'not')
 
-    # For censored values, the 'value' is the threshold (or we could keep the real value as 'truth'
-    # but analysis should see the limit).
-    # Usually in real data we see ">LIMIT".
-    # Here we set value = threshold for censored points.
+    # For censored values, the 'value' is the threshold
     final_values = values.copy()
     final_values[censored] = threshold
 
@@ -311,11 +259,11 @@ def generate_right_censored_data(n=24, slope=1.0, noise_std=0.5, start_year=2000
 
 def run():
     utils = RightCensoredValidationUtils(os.path.dirname(__file__))
+    scenarios = []
 
     # Scenario 1: Strong Increasing Trend
-    # Slope 2.0, top 20% censored
     df_strong = generate_right_censored_data(n=36, slope=2.0, noise_std=1.0, censor_threshold_percentile=80)
-    _, mk_std = utils.run_comparison(
+    _, mk_std_strong = utils.run_comparison(
         test_id="V-09",
         df=df_strong,
         scenario_name="strong_increasing",
@@ -323,15 +271,15 @@ def run():
         lwp_mode_kwargs={'slope_scaling': 'year'},
         true_slope=2.0
     )
-
-    # Plot only for Strong Increasing
-    utils.generate_plot(df_strong, "V-09 Strong Increasing Trend (Right Censored)", "v09_strong_right_censored.png", mk_result=mk_std)
+    scenarios.append({
+        'df': df_strong,
+        'title': 'Strong Increasing (Right Censored)',
+        'mk_result': mk_std_strong
+    })
 
     # Scenario 2: Weak Decreasing Trend
-    # Slope -0.5, top 10% censored (which means very few censored if decreasing from high?
-    # No, if decreasing, high values are at start. Top 10% values will be at start.)
     df_weak = generate_right_censored_data(n=36, slope=-0.5, noise_std=1.5, censor_threshold_percentile=85)
-    utils.run_comparison(
+    _, mk_std_weak = utils.run_comparison(
         test_id="V-09",
         df=df_weak,
         scenario_name="weak_decreasing",
@@ -339,11 +287,15 @@ def run():
         lwp_mode_kwargs={'slope_scaling': 'year'},
         true_slope=-0.5
     )
+    scenarios.append({
+        'df': df_weak,
+        'title': 'Weak Decreasing (Right Censored)',
+        'mk_result': mk_std_weak
+    })
 
     # Scenario 3: Stable (No Trend)
-    # Slope 0.0, top 20% censored
     df_stable = generate_right_censored_data(n=36, slope=0.0, noise_std=1.0, censor_threshold_percentile=80)
-    utils.run_comparison(
+    _, mk_std_stable = utils.run_comparison(
         test_id="V-09",
         df=df_stable,
         scenario_name="stable",
@@ -351,6 +303,14 @@ def run():
         lwp_mode_kwargs={'slope_scaling': 'year'},
         true_slope=0.0
     )
+    scenarios.append({
+        'df': df_stable,
+        'title': 'Stable (Right Censored)',
+        'mk_result': mk_std_stable
+    })
+
+    # Generate Combined Plot
+    utils.generate_combined_plot(scenarios, "v09_combined.png", "V-09: Right-Censored Trend Analysis")
 
     # Generate Report
     description = """
@@ -362,13 +322,6 @@ def run():
     1. **Strong Increasing Trend**: Data with a clear positive slope, where higher values are censored.
     2. **Weak Decreasing Trend**: Data with a slight negative slope, where initial high values are censored.
     3. **Stable (No Trend)**: Random data with no trend, with some high values censored.
-
-    Comparison is made between:
-    - **MannKenSen (Standard)**: Uses the 'robust' method for Mann-Kendall and Sen's slope.
-    - **MannKenSen (LWP Mode)**: Uses `mk_test_method='lwp'` and `agg_method='lwp'` to mimic R.
-    - **LWP-TRENDS R Script**: The reference implementation.
-    - **MannKenSen (ATS)**: Uses the Akritas-Theil-Sen estimator.
-    - **NADA2 R Script**: Using the ATS estimator (Note: NADA2 is typically for left-censoring).
     """
 
     utils.create_report(description=description)
