@@ -84,11 +84,18 @@ def trend_test(
                                 timestamps are present.
             - 'lwp': Aggregates data to a single observation per time period defined
                      by `agg_period` (e.g., year, month). This mimics the LWP-TRENDS
-                     R script and is useful for handling high-density data
-                     clusters. Requires a datetime-like time vector `t`.
+                     R script (`UseMidObs=TRUE`) and is useful for handling high-density
+                     data clusters. Requires a datetime-like time vector `t`.
+            - 'lwp_median': Aggregates data to the median of all observations within
+                            the time period defined by `agg_period`. This mimics the
+                            LWP-TRENDS R script (`UseMidObs=FALSE`). Requires a
+                            datetime-like time vector `t`.
+            - 'lwp_robust_median': Similar to 'lwp_median' but uses a robust median
+                                   calculation suitable for censored data.
             - 'median': Aggregates tied timestamps using the median of values and times.
+                        Does NOT thin data (reduce frequency), only handles exact ties.
             - 'robust_median': A more statistically robust median for censored data at
-                               tied timestamps.
+                               tied timestamps. Does NOT thin data.
             - 'middle': Aggregates tied timestamps using the observation closest to the
                         mean of the actual timestamps.
             - 'middle_lwp': Aggregates tied timestamps using the observation closest to the
@@ -196,7 +203,7 @@ def trend_test(
     if tau_method not in valid_tau_methods:
         raise ValueError(f"Invalid `tau_method`. Must be one of {valid_tau_methods}.")
 
-    valid_agg_methods = ['none', 'median', 'robust_median', 'middle', 'middle_lwp', 'lwp']
+    valid_agg_methods = ['none', 'median', 'robust_median', 'middle', 'middle_lwp', 'lwp', 'lwp_median', 'lwp_robust_median']
     if agg_method not in valid_agg_methods:
         raise ValueError(f"Invalid `agg_method`. Must be one of {valid_agg_methods}.")
 
@@ -231,9 +238,9 @@ def trend_test(
 
 
     # Handle tied timestamps and temporal aggregation
-    if agg_method == 'lwp':
+    if agg_method in ['lwp', 'lwp_median', 'lwp_robust_median']:
         if not is_datetime:
-            raise ValueError("`agg_method='lwp'` can only be used with datetime-like inputs for `t`.")
+            raise ValueError(f"`agg_method='{agg_method}'` can only be used with datetime-like inputs for `t`.")
 
         # LWP aggregation selects one value per time period (e.g., year, month).
         t_datetime = pd.to_datetime(data_filtered['t_original'])
@@ -247,7 +254,24 @@ def trend_test(
 
         period_freq = period_map[agg_period]
         group_key = t_datetime.dt.to_period(period_freq)
-        data_filtered = _value_for_time_increment(data_filtered, group_key, period_freq)
+
+        if agg_method == 'lwp':
+            data_filtered = _value_for_time_increment(data_filtered, group_key, period_freq)
+        else:
+            # Map lwp_median -> median, lwp_robust_median -> robust_median for the helper
+            helper_method = agg_method.replace('lwp_', '')
+
+            # Need to assign group key to the dataframe to use it in groupby
+            # We copy to avoid settingWithCopy warnings on the view
+            data_filtered = data_filtered.copy()
+            data_filtered['period_group'] = group_key
+
+            agg_data_list = [
+                _aggregate_by_group(group, helper_method, is_datetime)
+                for _, group in data_filtered.groupby('period_group')
+            ]
+            data_filtered = pd.concat(agg_data_list, ignore_index=True)
+            data_filtered = data_filtered.drop(columns=['period_group'], errors='ignore')
 
     elif len(data_filtered['t']) != len(np.unique(data_filtered['t'])):
         if agg_method == 'none':
