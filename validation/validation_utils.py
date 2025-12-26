@@ -28,6 +28,10 @@ class ValidationUtils:
         self.lwp_script_path = os.path.join(repo_root, 'Example_Files/R/LWPTrends_v2502/LWPTrends_v2502.r')
         self.nada2_ats_path = os.path.join(repo_root, 'Example_Files/R/NADA2/ATS.R')
         self.nada2_ken_path = os.path.join(repo_root, 'Example_Files/R/NADA2/NADA_ken.R')
+        self.nada2_atsmini_path = os.path.join(repo_root, 'Example_Files/R/NADA2/ATSmini.R')
+        self.nada2_censeaken_path = os.path.join(repo_root, 'Example_Files/R/NADA2/censeaken.R')
+        self.nada2_computes_path = os.path.join(repo_root, 'Example_Files/R/NADA2/computeS.R')
+        self.nada2_kenplot_path = os.path.join(repo_root, 'Example_Files/R/NADA2/kenplot.R')
         self.master_csv_path = os.path.join(repo_root, 'validation/master_results.csv')
         self.results = [] # Store results for this session
 
@@ -170,8 +174,8 @@ class ValidationUtils:
             print(f"Error running LWP R script: {e}")
             return {'slope': np.nan, 'p_value': np.nan, 'lower_ci': np.nan, 'upper_ci': np.nan}
 
-    def run_nada2_r_script(self, df: pd.DataFrame) -> Dict:
-        """Runs the NADA2 ATS.R script."""
+    def run_nada2_r_script(self, df: pd.DataFrame, seasonal: bool = False) -> Dict:
+        """Runs the NADA2 ATS.R or censeaken.R script."""
         try:
             # Load required packages explicitly
             ro.r('library(Icens)')
@@ -179,6 +183,12 @@ class ValidationUtils:
 
             ro.r(f'source("{self.nada2_ken_path}")')
             ro.r(f'source("{self.nada2_ats_path}")')
+
+            if seasonal:
+                ro.r(f'source("{self.nada2_atsmini_path}")')
+                ro.r(f'source("{self.nada2_computes_path}")')
+                ro.r(f'source("{self.nada2_kenplot_path}")')
+                ro.r(f'source("{self.nada2_censeaken_path}")')
 
             if 'value' in df.columns and df['value'].dtype == object and (df['value'].str.contains('<').any() or df['value'].str.contains('>').any()):
                  y_vals = df['value'].astype(str).str.replace('<', '').str.replace('>', '').astype(float).values
@@ -206,19 +216,54 @@ class ValidationUtils:
             ro.globalenv['ycen_vec'] = ro.BoolVector(y_cen)
             ro.globalenv['x_vec'] = ro.FloatVector(x_vals)
 
-            cmd = "res_ats <- ATS(y_vec, ycen_vec, x_vec, LOG=FALSE, printstat=FALSE, drawplot=FALSE)"
-            ro.r(cmd)
-            r_res = ro.globalenv['res_ats']
+            if not seasonal:
+                cmd = "res_ats <- ATS(y_vec, ycen_vec, x_vec, LOG=FALSE, printstat=FALSE, drawplot=FALSE)"
+                ro.r(cmd)
+                r_res = ro.globalenv['res_ats']
 
-            with localconverter(ro.default_converter + pandas2ri.converter):
-                res_df = ro.conversion.rpy2py(r_res)
+                with localconverter(ro.default_converter + pandas2ri.converter):
+                    res_df = ro.conversion.rpy2py(r_res)
 
-            return {
-                'slope': float(res_df['slope'].iloc[0]),
-                'p_value': float(res_df['pval'].iloc[0]),
-                'lower_ci': np.nan,
-                'upper_ci': np.nan
-            }
+                return {
+                    'slope': float(res_df['slope'].iloc[0]),
+                    'p_value': float(res_df['pval'].iloc[0]),
+                    'lower_ci': np.nan,
+                    'upper_ci': np.nan
+                }
+            else:
+                # Prepare 'group' variable for censeaken
+                # Assuming monthly data for now, or use df['date'] to extract month
+                if 'date' in df.columns:
+                    dates = pd.to_datetime(df['date'])
+                    groups = dates.dt.month.values
+                else:
+                    # Fallback or error if no date column for seasonal
+                    # Or try to infer from index if it's monthly
+                    groups = np.tile(np.arange(1, 13), len(df) // 12 + 1)[:len(df)]
+
+                ro.globalenv['grp_vec'] = ro.FloatVector(groups) # censeaken expects factor or numeric
+
+                # censeaken(time, y, y.cen, group, data = NULL, LOG = FALSE, R = 4999, nmin = 4, ...)
+                # Note: censeaken uses permutation test (R=4999). It might be slow.
+                # Reducing R for validation speed if allowed, but sticking to default for accuracy.
+                cmd = "res_censeaken <- censeaken(x_vec, y_vec, ycen_vec, grp_vec, LOG=FALSE, R=499, seaplots=FALSE)"
+                ro.r(cmd)
+                r_res = ro.globalenv['res_censeaken']
+
+                # censeaken returns a named list/dataframe with stats.
+                # Based on analysis: Prints and returns an overall RESULTS dataframe containing:
+                # S_SK, tau_SK, pval, intercept, slope
+
+                with localconverter(ro.default_converter + pandas2ri.converter):
+                    res_df = ro.conversion.rpy2py(r_res)
+
+                # res_df is usually a DataFrame with 1 row
+                return {
+                    'slope': float(res_df['slope'].iloc[0]),
+                    'p_value': float(res_df['pval'].iloc[0]),
+                    'lower_ci': np.nan, # censeaken does not appear to return CIs for slope easily?
+                    'upper_ci': np.nan
+                }
 
         except Exception as e:
             print(f"Error running NADA2 R script: {e}")
@@ -322,8 +367,8 @@ class ValidationUtils:
         r_res = self.run_lwp_r_script(df, seasonal=seasonal)
 
         # ATS
-        # If agg_method is 'lwp', we MUST pass datetime objects
-        if lwp_final_kwargs.get('agg_method') == 'lwp' and t_datetime is not None:
+        # Pass t_datetime if available to ensure correct seasonality handling in ATS mode
+        if t_datetime is not None:
              t_ats = t_datetime
         else:
              t_ats = t_numeric if t_numeric is not None else t_datetime
@@ -333,12 +378,8 @@ class ValidationUtils:
         else:
              mk_ats = mk.trend_test(x_std, t_ats, sens_slope_method='ats')
 
-        # NADA2 R script currently only runs ATS (non-seasonal).
-        # TODO: Add seasonal ATS support to run_nada2_r_script if needed.
-        if not seasonal:
-            nada_res = self.run_nada2_r_script(df)
-        else:
-            nada_res = {'slope': np.nan, 'p_value': np.nan, 'lower_ci': np.nan, 'upper_ci': np.nan}
+        # NADA2 R script
+        nada_res = self.run_nada2_r_script(df, seasonal=seasonal)
 
         slope_error = np.nan
         slope_pct_error = np.nan
