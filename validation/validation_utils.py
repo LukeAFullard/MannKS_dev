@@ -243,12 +243,19 @@ class ValidationUtils:
         if 'date' in df.columns:
             dates = pd.to_datetime(df['date'])
             t_datetime = dates.to_numpy()
-            t_numeric = dates.dt.year + (dates.dt.dayofyear - 1) / 365.25
+
+            # --- FIX: Use R-style numeric time calculation (Days since Epoch / 365.25) ---
+            # Correctly access .dt.days via timedelta
+            t_numeric = (dates - pd.Timestamp("1970-01-01")).dt.days / 365.25
             t_numeric = t_numeric.values
         else:
             t_numeric = np.arange(len(df))
+            t_std = t_numeric # Default for fallback if no date
 
         # Pass x_std (which might be the DataFrame from prepare_censored_data)
+        if 't_std' not in locals():
+            t_std = t_numeric if t_numeric is not None else t_datetime
+
         mk_std = mk.trend_test(x_std, t_std, **mk_kwargs)
 
         # LWP Mode: Try to mimic R behavior.
@@ -259,10 +266,9 @@ class ValidationUtils:
              return dataframe['value']
 
         x_input = get_input_x(df)
-        mk_std = mk.trend_test(x_input, t, **mk_kwargs)
+
         # Standard Run - prefer numeric if possible for clean stats, but datetime if user provides it.
         # But for comparison with R (which uses Years), numeric decimal years is safer for standard.
-        # Actually, standard mk uses whatever we pass.
         mk_std = mk.trend_test(df['value'], t_numeric if t_numeric is not None else t_datetime, **mk_kwargs)
 
         lwp_defaults = {
@@ -298,6 +304,7 @@ class ValidationUtils:
         if lwp_final_kwargs.get('agg_method') == 'lwp' and t_datetime is not None:
              mk_lwp = mk.trend_test(df['value'], t_datetime, **lwp_final_kwargs)
         else:
+             # Use the R-compatible t_numeric here as well
              mk_lwp = mk.trend_test(df['value'], t_numeric if t_numeric is not None else t_datetime, **lwp_final_kwargs)
 
         r_res = self.run_lwp_r_script(df)
@@ -367,7 +374,9 @@ class ValidationUtils:
             return df['time'].values
         elif 'date' in df.columns:
             dates = pd.to_datetime(df['date'])
-            t = dates.dt.year + (dates.dt.dayofyear - 1) / 365.25
+            # --- FIX: Use R-style numeric time calculation in this helper too ---
+            # Correctly access .dt.days via timedelta
+            t = (dates - pd.Timestamp("1970-01-01")).dt.days / 365.25
             return t.values
         else:
             return np.arange(len(df))
