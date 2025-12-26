@@ -66,13 +66,16 @@ These parameters control how the test handles censored data.
 -   **Type:** `str`, **Default:** `'none'`
 -   **Description:** Determines how to handle multiple observations that occur at the same time or within the same time period.
 -   **Usefulness:** This is critical for two scenarios:
-    1.  **Tied Timestamps:** If you have multiple measurements for the exact same timestamp, you must aggregate them to avoid calculation errors.
-    2.  **Clustered Data:** If you have high-frequency data (e.g., daily samples for one month, then monthly for years), it can bias the trend result. The `'lwp'` method, used with `agg_period`, aggregates all data within a period (e.g., a year) to a single point, ensuring each period has equal weight.
--   **Limitations:** Aggregation, by definition, reduces the amount of data used in the test, which can lower its statistical power. For censored data, `'robust_median'` is the recommended method, but be aware that aggregating censored values is a difficult statistical problem and the result should be interpreted with care. See **[Example 9](./09_Aggregation_Tied_Clustered_Data/README.md)**.
+    1.  **Tied Timestamps:** If you have multiple measurements for the exact same timestamp, you must aggregate them to avoid calculation errors. Standard methods like `'median'` or `'robust_median'` perform this aggregation without reducing the overall frequency of unique timestamps.
+    2.  **Clustered Data (Thinning):** If you have high-frequency data (e.g., daily samples for one month, then monthly for years), it can bias the trend result. You can "thin" the data to a consistent frequency (e.g., one value per year) using these methods:
+        *   `'lwp'`: Selects the single observation closest to the theoretical midpoint of the period (mimics LWP R script `UseMidObs=TRUE`).
+        *   `'lwp_median'`: Calculates the median of all observations in the period (mimics LWP R script `UseMidObs=FALSE`).
+        *   `'lwp_robust_median'`: As above, but uses a robust median logic suitable for censored data.
+-   **Limitations:** Aggregation, by definition, reduces the amount of data used in the test, which can lower its statistical power. For censored data, `'robust_median'` or `'lwp_robust_median'` are the recommended methods, but be aware that aggregating censored values is a difficult statistical problem and the result should be interpreted with care. See **[Example 9](./09_Aggregation_Tied_Clustered_Data/README.md)**.
 
 #### `agg_period`
 -   **Type:** `str`, **Default:** `'year'`
--   **Description:** Defines the time window for aggregation **only when `agg_method='lwp'`**.
+-   **Description:** Defines the time window for aggregation **when using any `lwp*` aggregation method** (`'lwp'`, `'lwp_median'`, `'lwp_robust_median'`).
 -   **Usefulness:** This allows you to define the granularity of your analysis whendealing with clustered data. You can analyze trends on an aggregated `'year'`, `'month'`, or `'day'` basis. This requires that your time vector `t` contains datetime objects.
 
 ---

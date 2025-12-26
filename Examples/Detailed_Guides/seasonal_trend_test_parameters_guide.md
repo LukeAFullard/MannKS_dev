@@ -43,12 +43,13 @@ Aggregation in a seasonal context is about ensuring that you have **one represen
 
 #### `agg_method`
 -   **Type:** `str`, **Default:** `'none'`
--   **Description:** This determines the method for reducing multiple data points that fall within the same season-cycle block to a single point.
+-   **Description:** This determines the method for reducing multiple data points that fall within the same season-cycle block (e.g., all samples in "January 2010") to a single representative point.
 -   **Usefulness and Implications:**
-    -   **When is it needed?** If you have multiple samples for "January 2010", you must aggregate them. The seasonal test is designed to compare "January vs. January", not the individual data points within them.
-    -   `'none'`: Use this only if your data is already structured as one observation per season per cycle (e.g., one measurement every month).
-    -   `'lwp'` / `'median'`: These methods are common for aggregating environmental data. They are provided for compatibility with the LWP-TRENDS R script's methodology, which aggregates data before performing the test.
-    -   `'robust_median'`: This is the recommended method if your data is censored.
+    -   **When is it needed?** If you have multiple samples for a specific season-year (e.g., two samples in Jan 2010), you must aggregate them. The seasonal test requires exactly one observation per season per cycle.
+    -   `'none'`: Use this only if your data is already structured as one observation per season per cycle.
+    -   `'lwp'`: Selects the single observation closest to the theoretical midpoint of the period (mimics LWP R script `UseMidObs=TRUE`).
+    -   `'median'`: Calculates the median of all values within the season-cycle block. Equivalent to LWP R script `UseMidObs=FALSE`.
+    -   `'robust_median'`: As above, but uses a robust median logic suitable for censored data.
 -   **Limitations:** **Aggregating censored data is statistically complex and can introduce bias.** For example, the median of `['<2', '5', '10']` is `5`, but the median of `['<2', '<5', '10']` is ambiguous. The `'robust_median'` method uses a reasonable heuristic, but you should be aware of this underlying uncertainty. See **[Example 9](./09_Aggregation_Tied_Clustered_Data/README.md)**.
 
 ---

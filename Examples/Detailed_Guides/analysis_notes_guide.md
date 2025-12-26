@@ -39,7 +39,8 @@ The `MannKenSen` package includes a system of "Analysis Notes" to provide data q
 -   **Usefulness and Implications:** This is a critical warning. The Sen's slope is calculated from the slopes of all pairs of points. If two points have the same timestamp, the slope denominator (`t_j - t_i`) is zero, leading to an infinite slope (`inf`), which breaks the calculation. The `MannKenSen` package removes these pairs, but this can **bias the result**. It effectively ignores some of your data in an unmanaged way.
 -   **Limitations and Nuances:** This is especially problematic if the tied values are not identical. If you have `(t1, x1)` and `(t1, x2)`, the package cannot know which value truly represents that time point.
 -   **Recommended Actions:**
-    1.  **Aggregate:** This is the best solution. Use the `agg_method` parameter to combine the duplicate-time observations into a single, representative point. See [Example 9](./09_Aggregation_Tied_Clustered_Data/README.md) for a detailed guide.
+    1.  **Aggregate (Tie-Breaking):** Use `agg_method='median'` or `'robust_median'` to combine the duplicate-time observations into a single point. This keeps the timestamps as they are.
+    2.  **Aggregate (Thinning):** If the ties are part of a larger clustering issue (e.g., daily samples for monthly analysis), consider using `agg_method='lwp_median'` to thin the data to a consistent frequency. See [Example 9](./09_Aggregation_Tied_Clustered_Data/README.md) for a detailed guide.
 
 ---
 
