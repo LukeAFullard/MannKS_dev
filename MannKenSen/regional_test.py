@@ -168,7 +168,17 @@ def regional_test(
         z_score = (TAU - 0.5) / np.sqrt(CorrectedVarTAU)
         CT = norm.cdf(z_score)
     else:
-        CT = np.nan
+        # If variance is zero, we are 100% confident in the direction indicated by TAU
+        # provided TAU is not 0.5.
+        if TAU > 0.5:
+            CT = 1.0
+        elif TAU < 0.5:
+            # If TAU < 0.5, it contradicts the modal direction definition (TAU >= 0.5),
+            # but for completeness:
+            CT = 0.0
+        else:
+            # TAU = 0.5 means no direction
+            CT = 0.5
 
     return RegionalTrendResult(M=M, TAU=TAU, VarTAU=VarTAU,
                                CorrectedVarTAU=CorrectedVarTAU, DT=DT, CT=CT)
