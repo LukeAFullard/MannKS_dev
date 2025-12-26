@@ -43,13 +43,15 @@ def generate_left_censored_data(n=24, slope=1.0, noise_std=0.5, start_year=2000,
     # For left censored values, the reported value is the threshold (limit).
     # e.g. if real value is 2 and limit is 5, we report <5.
     final_values = values.copy()
-    final_values[censored] = threshold
+
+    # Create the mixed type column
+    final_values = final_values.astype(object)
+    final_values[censored] = '<' + str(threshold)
 
     df = pd.DataFrame({
         'date': dates,
         'value': final_values,
-        'censored': censored,
-        'cen_type': cen_type,
+        'cen_type': cen_type, # Helper for plotting color
         'true_value': values # For debugging
     })
 
@@ -57,13 +59,12 @@ def generate_left_censored_data(n=24, slope=1.0, noise_std=0.5, start_year=2000,
 
 def run():
     utils = LeftCensoredValidationUtils(os.path.dirname(__file__))
+    scenarios = []
 
     # Scenario 1: Strong Increasing Trend
-    # Slope 5.0, Noise 1.0, Intercept 10
-    # Higher slope to distinguish from previous test
     df_strong = generate_left_censored_data(n=36, slope=5.0, noise_std=1.0, censor_threshold_percentile=20, intercept=10)
 
-    _, mk_std = utils.run_comparison(
+    _, mk_std_strong = utils.run_comparison(
         test_id="V-08",
         df=df_strong,
         scenario_name="strong_increasing",
@@ -71,14 +72,15 @@ def run():
         lwp_mode_kwargs={'slope_scaling': 'year'},
         true_slope=5.0
     )
-
-    utils.generate_plot(df_strong, "V-08 Strong Increasing Trend (Left Censored)", "v08_strong_left_censored.png", mk_result=mk_std)
+    scenarios.append({
+        'df': df_strong,
+        'title': 'Strong Increasing (Left Censored)',
+        'mk_result': mk_std_strong
+    })
 
     # Scenario 2: Weak Decreasing Trend
-    # Slope -0.8, Noise 0.5, Intercept 20
-    # Lower noise and higher intercept to ensure detectable negative trend without negative data artifacts
     df_weak = generate_left_censored_data(n=36, slope=-0.8, noise_std=0.5, censor_threshold_percentile=20, intercept=20)
-    utils.run_comparison(
+    _, mk_std_weak = utils.run_comparison(
         test_id="V-08",
         df=df_weak,
         scenario_name="weak_decreasing",
@@ -86,11 +88,15 @@ def run():
         lwp_mode_kwargs={'slope_scaling': 'year'},
         true_slope=-0.8
     )
+    scenarios.append({
+        'df': df_weak,
+        'title': 'Weak Decreasing (Left Censored)',
+        'mk_result': mk_std_weak
+    })
 
     # Scenario 3: Stable (No Trend)
-    # Slope 0.0, Noise 1.0, Intercept 15
     df_stable = generate_left_censored_data(n=36, slope=0.0, noise_std=1.0, censor_threshold_percentile=20, intercept=15)
-    utils.run_comparison(
+    _, mk_std_stable = utils.run_comparison(
         test_id="V-08",
         df=df_stable,
         scenario_name="stable",
@@ -98,6 +104,14 @@ def run():
         lwp_mode_kwargs={'slope_scaling': 'year'},
         true_slope=0.0
     )
+    scenarios.append({
+        'df': df_stable,
+        'title': 'Stable (Left Censored)',
+        'mk_result': mk_std_stable
+    })
+
+    # Generate Combined Plot
+    utils.generate_combined_plot(scenarios, "v08_combined.png", "V-08: Left-Censored Trend Analysis")
 
     # Generate Report
     description = """
@@ -109,13 +123,6 @@ def run():
     1. **Strong Increasing Trend**: Slope 5.0, Noise 1.0. Clear positive trend.
     2. **Weak Decreasing Trend**: Slope -0.8, Noise 0.5. Detectable negative trend (avoiding zero-slope artifacts from high noise).
     3. **Stable (No Trend)**: Slope 0.0, Noise 1.0. No underlying trend.
-
-    Comparison is made between:
-    - **MannKenSen (Standard)**: Uses the 'robust' method for Mann-Kendall and Sen's slope.
-    - **MannKenSen (LWP Mode)**: Uses `mk_test_method='lwp'` and `agg_method='lwp'` to mimic R.
-    - **LWP-TRENDS R Script**: The reference implementation.
-    - **MannKenSen (ATS)**: Uses the Akritas-Theil-Sen estimator.
-    - **NADA2 R Script**: Using the ATS estimator (reference for ATS mode).
     """
 
     utils.create_report(description=description)

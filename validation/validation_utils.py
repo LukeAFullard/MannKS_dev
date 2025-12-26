@@ -267,10 +267,6 @@ class ValidationUtils:
 
         x_input = get_input_x(df)
 
-        # Standard Run - prefer numeric if possible for clean stats, but datetime if user provides it.
-        # But for comparison with R (which uses Years), numeric decimal years is safer for standard.
-        mk_std = mk.trend_test(df['value'], t_numeric if t_numeric is not None else t_datetime, **mk_kwargs)
-
         lwp_defaults = {
             'mk_test_method': 'lwp',
             'ci_method': 'lwp',
@@ -302,14 +298,14 @@ class ValidationUtils:
         mk_ats = mk.trend_test(x_std, t_std, sens_slope_method='ats')
         # If agg_method is 'lwp', we MUST pass datetime objects
         if lwp_final_kwargs.get('agg_method') == 'lwp' and t_datetime is not None:
-             mk_lwp = mk.trend_test(df['value'], t_datetime, **lwp_final_kwargs)
+             mk_lwp = mk.trend_test(x_std, t_datetime, **lwp_final_kwargs)
         else:
              # Use the R-compatible t_numeric here as well
-             mk_lwp = mk.trend_test(df['value'], t_numeric if t_numeric is not None else t_datetime, **lwp_final_kwargs)
+             mk_lwp = mk.trend_test(x_std, t_numeric if t_numeric is not None else t_datetime, **lwp_final_kwargs)
 
         r_res = self.run_lwp_r_script(df)
 
-        mk_ats = mk.trend_test(df['value'], t_numeric if t_numeric is not None else t_datetime, sens_slope_method='ats')
+        mk_ats = mk.trend_test(x_std, t_numeric if t_numeric is not None else t_datetime, sens_slope_method='ats')
 
         nada_res = self.run_nada2_r_script(df)
 
@@ -383,55 +379,95 @@ class ValidationUtils:
 
     def generate_plot(self, df: pd.DataFrame, title: str, filename: str, mk_result=None):
         """Generates a simple plot of the data, optionally with trend line and CIs."""
-        plt.figure(figsize=(10, 6))
+        # For backward compatibility, wraps generate_combined_plot with single scenario
+        self.generate_combined_plot([{'df': df, 'title': title, 'mk_result': mk_result}], filename, title)
 
-        if 'time' in df.columns:
-            x_plot = df['time']
-        elif 'date' in df.columns:
-            x_plot = df['date']
-        else:
-            x_plot = np.arange(len(df))
+    def generate_combined_plot(self, scenarios: List[Dict], filename: str, main_title: str):
+        """
+        Generates a figure with subplots (e.g. 1x3).
+        scenarios: List of dicts with keys: 'df', 'title', 'mk_result'.
+        """
+        num_plots = len(scenarios)
+        fig, axes = plt.subplots(1, num_plots, figsize=(6 * num_plots, 6))
 
-        # Handle censored values for plotting (just strip < and >)
-        y_plot = df['value'].astype(str).str.replace('<', '', regex=False).str.replace('>', '', regex=False).astype(float)
+        if num_plots == 1:
+            axes = [axes]
 
-        plt.plot(x_plot, y_plot, 'o', color='black', label='Data')
+        for ax, scen in zip(axes, scenarios):
+            df = scen['df']
+            title = scen.get('title', '')
+            mk_result = scen.get('mk_result')
 
-        # Add Trend Line and CIs if provided
-        if mk_result is not None and not np.isnan(mk_result.slope):
-            t_numeric = self._get_decimal_year(df)
+            if 'time' in df.columns:
+                x_plot = df['time']
+            elif 'date' in df.columns:
+                x_plot = df['date']
+            else:
+                x_plot = np.arange(len(df))
 
-            # Calculate Trend Line: y = slope * t + intercept
-            y_trend = mk_result.slope * t_numeric + mk_result.intercept
+            # Handle censored values for plotting (just strip < and >)
+            y_plot = df['value'].astype(str).str.replace('<', '', regex=False).str.replace('>', '', regex=False).astype(float)
 
-            plt.plot(x_plot, y_trend, '-', color='blue', label=f"Sen's Slope: {mk_result.slope:.4f}")
+            # Determine color based on censoring
+            colors = []
+            if 'cen_type' in df.columns:
+                 for c_type in df['cen_type']:
+                     if c_type == 'lt': colors.append('red') # Left censored
+                     elif c_type == 'gt': colors.append('orange') # Right censored
+                     else: colors.append('black')
+            else:
+                 colors = ['black'] * len(df)
 
-            # Calculate CIs (Approximation for visualization: pivot around median)
-            t_med = np.median(t_numeric)
-            y_med = np.median(y_plot)
+            ax.scatter(x_plot, y_plot, c=colors, label='Data')
 
-            if not np.isnan(mk_result.lower_ci):
-                y_lower = mk_result.lower_ci * (t_numeric - t_med) + y_med
-                plt.plot(x_plot, y_lower, '--', color='blue', alpha=0.5, label=f'90% CI')
+            # Create proxy artists for legend
+            from matplotlib.lines import Line2D
+            legend_elements = [Line2D([0], [0], marker='o', color='w', label='Data', markerfacecolor='black', markersize=8)]
+            if 'red' in colors:
+                legend_elements.append(Line2D([0], [0], marker='o', color='w', label='Left Censored', markerfacecolor='red', markersize=8))
+            if 'orange' in colors:
+                legend_elements.append(Line2D([0], [0], marker='o', color='w', label='Right Censored', markerfacecolor='orange', markersize=8))
 
-            if not np.isnan(mk_result.upper_ci):
-                y_upper = mk_result.upper_ci * (t_numeric - t_med) + y_med
-                plt.plot(x_plot, y_upper, '--', color='blue', alpha=0.5)
+            # Add Trend Line and CIs if provided
+            if mk_result is not None and not np.isnan(mk_result.slope):
+                t_numeric = self._get_decimal_year(df)
 
-                # Shade the confidence interval
-                if not np.isnan(mk_result.lower_ci):
-                    plt.fill_between(x_plot, y_lower, y_upper, color='blue', alpha=0.1)
+                # Calculate Trend Line: y = slope * t + intercept
+                y_trend = mk_result.slope * t_numeric + mk_result.intercept
 
-        plt.title(title)
-        plt.xlabel('Time')
-        plt.ylabel('Value')
-        plt.legend(loc='best')
-        plt.grid(True, linestyle=':', alpha=0.6)
+                ax.plot(x_plot, y_trend, '-', color='blue', label=f"Sen's Slope: {mk_result.slope:.4f}")
+                legend_elements.append(Line2D([0], [0], color='blue', lw=2, label=f"Slope: {mk_result.slope:.4f}"))
+
+                # Calculate CIs (Approximation for visualization: pivot around median)
+                t_med = np.median(t_numeric)
+                y_med = np.median(y_plot)
+
+                if hasattr(mk_result, 'lower_ci') and not np.isnan(mk_result.lower_ci):
+                    y_lower = mk_result.lower_ci * (t_numeric - t_med) + y_med
+                    ax.plot(x_plot, y_lower, '--', color='blue', alpha=0.5)
+                    legend_elements.append(Line2D([0], [0], color='blue', lw=1, linestyle='--', label='90% CI'))
+
+                if hasattr(mk_result, 'upper_ci') and not np.isnan(mk_result.upper_ci):
+                    y_upper = mk_result.upper_ci * (t_numeric - t_med) + y_med
+                    ax.plot(x_plot, y_upper, '--', color='blue', alpha=0.5)
+
+                    # Shade the confidence interval
+                    if hasattr(mk_result, 'lower_ci') and not np.isnan(mk_result.lower_ci):
+                        ax.fill_between(x_plot, y_lower, y_upper, color='blue', alpha=0.1)
+
+            ax.set_title(title)
+            ax.set_xlabel('Time')
+            ax.set_ylabel('Value')
+            ax.legend(handles=legend_elements, loc='best')
+            ax.grid(True, linestyle=':', alpha=0.6)
+
+        fig.suptitle(main_title, fontsize=16)
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust for suptitle
 
         plot_path = os.path.join(self.output_dir, filename)
         plt.savefig(plot_path)
         plt.close()
-        print(f"Plot saved to {plot_path}")
+        print(f"Combined plot saved to {plot_path}")
 
     def create_report(self, filename='README.md', description=None):
         """Creates a Markdown report with results and plots in long format."""

@@ -43,8 +43,9 @@ def generate_tied_timestamp_data(n_months=24, trend_slope=0.0, noise_std=1.0, se
 def run_validation():
     output_dir = os.path.dirname(__file__)
     utils = ValidationUtils(output_dir)
+    scenarios = []
 
-    # --- 1. Strong Increasing Trend (Generate Plot) ---
+    # --- 1. Strong Increasing Trend ---
     df_inc = generate_tied_timestamp_data(n_months=36, trend_slope=0.5, noise_std=2.0, seed=101)
 
     res_inc, mk_result_inc = utils.run_comparison(
@@ -59,13 +60,15 @@ def run_validation():
         },
         mk_kwargs={'slope_scaling': 'year'}
     )
+    scenarios.append({
+        'df': df_inc,
+        'title': 'Strong Increasing (Aggregated)',
+        'mk_result': mk_result_inc
+    })
 
-    utils.generate_plot(df_inc, "V-04: Strong Increasing Trend (Standard MKS)", "01_strong_increasing_standard.png", mk_result=mk_result_inc)
-
-
-    # --- 2. Weak Decreasing Trend (No Plot) ---
+    # --- 2. Weak Decreasing Trend ---
     df_dec = generate_tied_timestamp_data(n_months=36, trend_slope=-0.1, noise_std=2.0, seed=102)
-    utils.run_comparison(
+    _, mk_result_dec = utils.run_comparison(
         test_id="V-04",
         df=df_dec,
         scenario_name="Weak_Decreasing",
@@ -77,10 +80,15 @@ def run_validation():
         },
         mk_kwargs={'slope_scaling': 'year'}
     )
+    scenarios.append({
+        'df': df_dec,
+        'title': 'Weak Decreasing (Aggregated)',
+        'mk_result': mk_result_dec
+    })
 
-    # --- 3. Stable (No Trend) (No Plot) ---
+    # --- 3. Stable (No Trend) ---
     df_stable = generate_tied_timestamp_data(n_months=36, trend_slope=0.0, noise_std=2.0, seed=103)
-    utils.run_comparison(
+    _, mk_result_stable = utils.run_comparison(
         test_id="V-04",
         df=df_stable,
         scenario_name="Stable",
@@ -92,6 +100,14 @@ def run_validation():
         },
         mk_kwargs={'slope_scaling': 'year'}
     )
+    scenarios.append({
+        'df': df_stable,
+        'title': 'Stable (Aggregated)',
+        'mk_result': mk_result_stable
+    })
+
+    # Generate Combined Plot
+    utils.generate_combined_plot(scenarios, "v04_combined.png", "V-04: Aggregation Methods Analysis")
 
     # --- Create Custom Report ---
     report_path = os.path.join(output_dir, 'README.md')
@@ -109,9 +125,8 @@ def run_validation():
         f.write("2.  **Weak Decreasing Trend:** A subtle, statistically significant (or borderline) negative trend.\n")
         f.write("3.  **Stable (No Trend):** Data with no underlying trend.\n\n")
 
-        f.write("## Trend Figure (Strong Increasing)\n")
-        f.write("The figure below shows the raw data (with multiple observations per month) and the standard Mann-Kendall Sen's slope trend line.\n\n")
-        f.write("![Strong Increasing Trend](01_strong_increasing_standard.png)\n\n")
+        f.write("## Combined Results\n")
+        f.write("![Combined Trend Analysis](v04_combined.png)\n\n")
 
         f.write("## Results Table\n")
         if utils.results:
