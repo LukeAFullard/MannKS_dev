@@ -213,6 +213,14 @@ def seasonal_trend_test(
     analysis_notes = []
     data_filtered, is_datetime = _prepare_data(x, t, hicensor)
 
+    # Ensure data is sorted by time. This is critical for:
+    # 1. Correct application of censor rules in Sen's slope (which assume j > i implies t[j] > t[i]).
+    # 2. Consistent results regardless of input order.
+    if is_datetime:
+        data_filtered = data_filtered.sort_values(by='t_original')
+    else:
+        data_filtered = data_filtered.sort_values(by='t')
+
     note = get_analysis_note(data_filtered, values_col='value', censored_col='censored')
     analysis_notes.append(note)
 
