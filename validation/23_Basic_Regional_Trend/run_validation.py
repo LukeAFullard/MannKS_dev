@@ -81,7 +81,7 @@ def run_python_regional_test(all_site_data):
         # Run standard Mann-Kendall test
         # We use agg_method='median' to match typical R behavior for monthly data if needed,
         # but for clean monthly data 'none' is fine. Let's use 'none' for simplicity first.
-        result = mk.trend_test(site_df['value'], site_df['time'], agg_method='median', agg_period='month')
+        result = mk.trend_test(site_df['value'], site_df['time'], agg_method='median', agg_period='month', slope_scaling='year')
 
         site_results.append({
             'site': site,

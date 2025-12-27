@@ -20,25 +20,27 @@ The goal is to demonstrate that setting parameters `mk_test_method='lwp'` and `s
 ![v13_strong.png](v13_strong.png)
 
 ## Results
-               Test ID                Method         Slope      P-Value      Lower CI      Upper CI
-V-13_strong_increasing MannKenSen (Standard)  2.290743e+01 2.988301e-06  2.166883e+01  2.366761e+01
-V-13_strong_increasing MannKenSen (LWP Mode)  2.233000e+01 0.000000e+00  2.081536e+01  2.335437e+01
-V-13_strong_increasing        LWP-TRENDS (R)  2.233000e+01 8.450761e-20  2.115055e+01  2.318617e+01
-V-13_strong_increasing      MannKenSen (ATS)  7.547076e-07 2.988301e-06  7.429859e-07  7.666314e-07
-V-13_strong_increasing             NADA2 (R)  2.023019e+01 2.034849e-06           NaN           NaN
-  V-13_weak_decreasing MannKenSen (Standard) -2.241818e+00 1.577977e-03 -2.505029e+00 -1.973345e+00
-  V-13_weak_decreasing MannKenSen (LWP Mode) -2.096619e+00 1.239009e-13 -2.375827e+00 -1.818101e+00
-  V-13_weak_decreasing        LWP-TRENDS (R) -2.096619e+00 4.877611e-14 -2.329167e+00 -1.870403e+00
-  V-13_weak_decreasing      MannKenSen (ATS) -7.958050e-08 1.577977e-03 -8.802517e-08 -7.033250e-08
-  V-13_weak_decreasing             NADA2 (R) -1.523124e+00 1.313942e-03           NaN           NaN
-           V-13_stable MannKenSen (Standard)  2.081871e-01 5.179169e-01 -2.316072e-01  5.675388e-01
-           V-13_stable MannKenSen (LWP Mode)  9.294736e-03 3.282304e-01 -1.192797e-02  4.291403e-01
-           V-13_stable        LWP-TRENDS (R)  9.294736e-03 3.202983e-01  0.000000e+00  3.553108e-01
-           V-13_stable      MannKenSen (ATS)  4.208411e-09 5.179169e-01 -3.398805e-09  1.255751e-08
-           V-13_stable             NADA2 (R)  7.124561e-02 5.109250e-01           NaN           NaN
+| Test ID                | Method                |       Slope |     P-Value |   Lower CI |   Upper CI |
+|:-----------------------|:----------------------|------------:|------------:|-----------:|-----------:|
+| V-13_strong_increasing | MannKenSen (Standard) | 22.9074     | 2.9883e-06  |  21.6688   |  23.6676   |
+| V-13_strong_increasing | MannKenSen (LWP Mode) | 22.33       | 0           |  20.8154   |  23.3544   |
+| V-13_strong_increasing | LWP-TRENDS (R)        | 22.33       | 8.45076e-20 |  21.1505   |  23.1862   |
+| V-13_strong_increasing | MannKenSen (ATS)      | 23.8168     | 2.9883e-06  |  23.4591   |  24.175    |
+| V-13_strong_increasing | NADA2 (R)             | 20.2302     | 2.03485e-06 | nan        | nan        |
+| V-13_weak_decreasing   | MannKenSen (Standard) | -2.24182    | 0.00157798  |  -2.50503  |  -1.97335  |
+| V-13_weak_decreasing   | MannKenSen (LWP Mode) | -2.09662    | 1.23901e-13 |  -2.37583  |  -1.8181   |
+| V-13_weak_decreasing   | LWP-TRENDS (R)        | -2.09662    | 4.87761e-14 |  -2.32917  |  -1.8704   |
+| V-13_weak_decreasing   | MannKenSen (ATS)      | -2.51137    | 0.00157798  |  -2.81151  |  -2.21322  |
+| V-13_weak_decreasing   | NADA2 (R)             | -1.52312    | 0.00131394  | nan        | nan        |
+| V-13_stable            | MannKenSen (Standard) |  0.208187   | 0.517917    |  -0.231607 |   0.567539 |
+| V-13_stable            | MannKenSen (LWP Mode) |  0.00929474 | 0.32823     |  -0.011928 |   0.42914  |
+| V-13_stable            | LWP-TRENDS (R)        |  0.00929474 | 0.320298    |   0        |   0.355311 |
+| V-13_stable            | MannKenSen (ATS)      |  0.132807   | 0.517917    |  -0.155278 |   0.390721 |
+| V-13_stable            | NADA2 (R)             |  0.0712456  | 0.510925    | nan        | nan        |
 
 ## LWP Accuracy (Python vs R)
-               Test ID  Slope Error  Slope % Error
-V-13_strong_increasing 0.000000e+00   0.000000e+00
-  V-13_weak_decreasing 4.440892e-16  -2.220446e-13
-           V-13_stable 1.734723e-18   1.866350e-14
+| Test ID                |   Slope Error |   Slope % Error |
+|:-----------------------|--------------:|----------------:|
+| V-13_strong_increasing |   0           |     0           |
+| V-13_weak_decreasing   |   4.44089e-16 |    -2.22045e-13 |
+| V-13_stable            |   1.73472e-18 |     1.86635e-14 |
