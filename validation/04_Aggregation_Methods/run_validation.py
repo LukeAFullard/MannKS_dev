@@ -278,9 +278,9 @@ class ValidationUtils:
              t_ats = t_numeric if t_numeric is not None else t_datetime
 
         if seasonal:
-             mk_ats = mk.seasonal_trend_test(x_std, t_ats, sens_slope_method='ats', **mk_kwargs)
+             mk_ats = mk.seasonal_trend_test(x_std, t_ats, sens_slope_method='ats', slope_scaling='year', **mk_kwargs)
         else:
-             mk_ats = mk.trend_test(x_std, t_ats, sens_slope_method='ats')
+             mk_ats = mk.trend_test(x_std, t_ats, sens_slope_method='ats', slope_scaling='year')
 
         nada_res = self.run_nada2_r_script(df, seasonal=seasonal)
 
