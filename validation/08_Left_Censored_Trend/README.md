@@ -19,27 +19,25 @@
 ![v08_strong_left_censored.png](v08_strong_left_censored.png)
 
 ## Results
-| Test ID                | Method                |     Slope |     P-Value |   Lower CI |    Upper CI |
-|:-----------------------|:----------------------|----------:|------------:|-----------:|------------:|
-| V-08_strong_increasing | MannKenSen (Standard) |  5.64389  | 2.5735e-13  |   4.85093  |   6.98769   |
-| V-08_strong_increasing | MannKenSen (LWP Mode) |  5.48981  | 2.5735e-13  |   4.7352   |   6.81486   |
-| V-08_strong_increasing | LWP-TRENDS (R)        |  5.48981  | 2.11501e-13 |   4.86003  |   6.6062    |
-| V-08_strong_increasing | MannKenSen (ATS)      |  4.88713  | 2.5735e-13  |   4.54314  |   5.24366   |
-| V-08_strong_increasing | NADA2 (R)             |  4.88952  | 2.11609e-13 | nan        | nan         |
-| V-08_weak_decreasing   | MannKenSen (Standard) | -1.14027  | 7.56878e-08 |  -2.12784  |  -0.704638  |
-| V-08_weak_decreasing   | MannKenSen (LWP Mode) | -1.07408  | 7.56878e-08 |  -1.89043  |  -0.665127  |
-| V-08_weak_decreasing   | LWP-TRENDS (R)        | -1.07408  | 6.7985e-08  |  -1.69095  |  -0.709468  |
-| V-08_weak_decreasing   | MannKenSen (ATS)      | -0.7915   | 7.56878e-08 |  -0.979113 |  -0.598495  |
-| V-08_weak_decreasing   | NADA2 (R)             | -0.793479 | 6.7985e-08  | nan        | nan         |
-| V-08_stable            | MannKenSen (Standard) | -0.374044 | 0.274921    |  -1.03164  |   0.279845  |
-| V-08_stable            | MannKenSen (LWP Mode) | -0.292675 | 0.274921    |  -0.921535 |   0.153196  |
-| V-08_stable            | LWP-TRENDS (R)        | -0.292675 | 0.273202    |  -0.812243 |   0.0951858 |
-| V-08_stable            | MannKenSen (ATS)      | -0.341235 | 0.274921    |  -0.753092 |   0.077555  |
-| V-08_stable            | NADA2 (R)             | -0.341479 | 0.273202    | nan        | nan         |
+               Test ID                Method         Slope      P-Value      Lower CI      Upper CI
+V-08_strong_increasing MannKenSen (Standard)  5.643887e+00 2.573497e-13  4.850932e+00  6.987687e+00
+V-08_strong_increasing MannKenSen (LWP Mode)  5.489809e+00 2.573497e-13  4.735198e+00  6.814860e+00
+V-08_strong_increasing        LWP-TRENDS (R)  5.489809e+00 2.115009e-13  4.860028e+00  6.606200e+00
+V-08_strong_increasing      MannKenSen (ATS)  1.548638e-07 2.573497e-13  1.430536e-07  1.660990e-07
+V-08_strong_increasing             NADA2 (R)  4.889521e+00 2.116085e-13           NaN           NaN
+  V-08_weak_decreasing MannKenSen (Standard) -1.140265e+00 7.568782e-08 -2.127843e+00 -7.046380e-01
+  V-08_weak_decreasing MannKenSen (LWP Mode) -1.074080e+00 7.568782e-08 -1.890429e+00 -6.651274e-01
+  V-08_weak_decreasing        LWP-TRENDS (R) -1.074080e+00 6.798504e-08 -1.690951e+00 -7.094681e-01
+  V-08_weak_decreasing      MannKenSen (ATS) -2.508113e-08 7.568782e-08 -3.117591e-08 -1.931139e-08
+  V-08_weak_decreasing             NADA2 (R) -7.934790e-01 6.798504e-08           NaN           NaN
+           V-08_stable MannKenSen (Standard) -3.740440e-01 2.749208e-01 -1.031641e+00  2.798449e-01
+           V-08_stable MannKenSen (LWP Mode) -2.926753e-01 2.749208e-01 -9.215355e-01  1.531956e-01
+           V-08_stable        LWP-TRENDS (R) -2.926753e-01 2.732017e-01 -8.122428e-01  9.518579e-02
+           V-08_stable      MannKenSen (ATS) -1.081308e-08 2.749208e-01 -2.338827e-08  2.926638e-09
+           V-08_stable             NADA2 (R) -3.414792e-01 2.732017e-01           NaN           NaN
 
 ## LWP Accuracy (Python vs R)
-| Test ID                |   Slope Error |   Slope % Error |
-|:-----------------------|--------------:|----------------:|
-| V-08_strong_increasing |   5.32907e-15 |     1.06581e-13 |
-| V-08_weak_decreasing   |  -1.11022e-15 |     1.38778e-13 |
-| V-08_stable            |   6.10623e-16 |    -2.08635e-13 |
+               Test ID  Slope Error  Slope % Error
+V-08_strong_increasing 0.000000e+00   0.000000e+00
+  V-08_weak_decreasing 2.220446e-16  -2.775558e-14
+           V-08_stable 0.000000e+00  -0.000000e+00

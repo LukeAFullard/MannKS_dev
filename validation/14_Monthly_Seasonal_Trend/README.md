@@ -17,27 +17,25 @@ It compares the standard `mannkensen` seasonal test against the LWP-TRENDS R scr
 ![V14_Trend_Analysis.png](V14_Trend_Analysis.png)
 
 ## Results
-| Test ID                | Method                |        Slope |     P-Value |    Lower CI |    Upper CI |
-|:-----------------------|:----------------------|-------------:|------------:|------------:|------------:|
-| V-14_strong_increasing | MannKenSen (Standard) |  2.00497     | 0           |   1.94106   |   2.08928   |
-| V-14_strong_increasing | MannKenSen (LWP Mode) |  2.00497     | 0           |   1.94112   |   2.08923   |
-| V-14_strong_increasing | LWP-TRENDS (R)        |  2.00497     | 3.72242e-39 |   1.9468    |   2.07599   |
-| V-14_strong_increasing | MannKenSen (ATS)      |  2.00522     | 0           |   1.98773   |   2.03538   |
-| V-14_strong_increasing | NADA2 (R)             |  1.902       | 0.002       | nan         | nan         |
-| V-14_weak_decreasing   | MannKenSen (Standard) | -0.566635    | 3.76987e-12 |  -0.704278  |  -0.412259  |
-| V-14_weak_decreasing   | MannKenSen (LWP Mode) | -0.566635    | 3.76987e-12 |  -0.704155  |  -0.412702  |
-| V-14_weak_decreasing   | LWP-TRENDS (R)        | -0.566635    | 3.76988e-12 |  -0.668577  |  -0.435515  |
-| V-14_weak_decreasing   | MannKenSen (ATS)      | -0.566463    | 3.76987e-12 |  -0.600073  |  -0.531601  |
-| V-14_weak_decreasing   | NADA2 (R)             | -0.6906      | 0.002       | nan         | nan         |
-| V-14_stable            | MannKenSen (Standard) |  0.000520175 | 0.979401    |  -0.0859605 |   0.0802783 |
-| V-14_stable            | MannKenSen (LWP Mode) |  0.000520175 | 0.979401    |  -0.0855397 |   0.0800738 |
-| V-14_stable            | LWP-TRENDS (R)        |  0.000520175 | 0.979401    |  -0.0535041 |   0.0633387 |
-| V-14_stable            | MannKenSen (ATS)      |  0.00051967  | 0.979401    |  -0.0210754 |   0.0294619 |
-| V-14_stable            | NADA2 (R)             | -0.08904     | 0.974       | nan         | nan         |
+               Test ID                Method     Slope      P-Value  Lower CI  Upper CI
+V-14_strong_increasing MannKenSen (Standard)  2.020856 0.000000e+00  1.972572  2.080038
+V-14_strong_increasing MannKenSen (LWP Mode)  2.020856 0.000000e+00  1.972590  2.079749
+V-14_strong_increasing        LWP-TRENDS (R)  2.020856 2.989998e-41  1.976889  2.060802
+V-14_strong_increasing      MannKenSen (ATS)  2.021197 0.000000e+00  2.004058  2.036708
+V-14_strong_increasing             NADA2 (R)  1.952000 2.000000e-03       NaN       NaN
+  V-14_weak_decreasing MannKenSen (Standard) -0.466957 1.283174e-10 -0.614060 -0.333050
+  V-14_weak_decreasing MannKenSen (LWP Mode) -0.466957 1.283174e-10 -0.613986 -0.333163
+  V-14_weak_decreasing        LWP-TRENDS (R) -0.466957 1.283175e-10 -0.604165 -0.354746
+  V-14_weak_decreasing      MannKenSen (ATS) -0.467963 1.283174e-10 -0.528708 -0.432652
+  V-14_weak_decreasing             NADA2 (R) -0.583700 2.000000e-03       NaN       NaN
+           V-14_stable MannKenSen (Standard) -0.010241 7.371284e-01 -0.057873  0.061899
+           V-14_stable MannKenSen (LWP Mode) -0.010241 7.371284e-01 -0.057872  0.061747
+           V-14_stable        LWP-TRENDS (R) -0.010241 7.371284e-01 -0.050500  0.049343
+           V-14_stable      MannKenSen (ATS) -0.010159 7.371284e-01 -0.021250  0.007164
+           V-14_stable             NADA2 (R) -0.092590 6.720000e-01       NaN       NaN
 
 ## LWP Accuracy (Python vs R)
-| Test ID                |   Slope Error |   Slope % Error |
-|:-----------------------|--------------:|----------------:|
-| V-14_strong_increasing |    0          |      0          |
-| V-14_weak_decreasing   |    0          |     -0          |
-| V-14_stable            |   -1.0842e-19 |     -2.0843e-14 |
+               Test ID   Slope Error  Slope % Error
+V-14_strong_increasing  0.000000e+00   0.000000e+00
+  V-14_weak_decreasing -5.551115e-17   1.110223e-14
+           V-14_stable -1.734723e-18   1.693831e-14
