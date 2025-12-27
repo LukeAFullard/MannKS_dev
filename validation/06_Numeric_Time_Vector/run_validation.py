@@ -227,6 +227,8 @@ class ValidationUtils:
             t_datetime = dates.to_numpy()
             t_numeric = (dates - pd.Timestamp("1970-01-01")).dt.days / 365.25
             t_numeric = t_numeric.values
+        elif 'time' in df.columns:
+            t_numeric = df['time'].values
         else:
             t_numeric = np.arange(len(df))
 
