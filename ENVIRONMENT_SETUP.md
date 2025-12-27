@@ -135,3 +135,5 @@ A common point of failure is the `rpy2` package being unable to locate your R in
         export R_HOME="/usr/lib/R"
         pip install -r dev-requirements.txt
         ```
+
+-   **R Package Timeouts (e.g., `ggpubr`):** Large packages like `ggpubr` may time out during installation. If this happens, try installing its heavy dependencies individually first: `install.packages(c('car', 'rstatix'))`.
