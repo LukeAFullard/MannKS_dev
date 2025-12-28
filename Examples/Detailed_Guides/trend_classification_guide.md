@@ -19,10 +19,10 @@ The classification system is designed to translate complex statistical results i
     -   **How to think about it:** A positive slope means an increasing trend (e.g., "+2 units per year"), and a negative slope means a decreasing trend ("-5 units per year"). The classification system uses the sign of the slope to determine if a trend is "Increasing" or "Decreasing".
 
 3.  **Confidence (`C`):**
-    -   **What it is:** This is a more intuitive measure of confidence in the trend's direction, calculated as `C = 1 - p`. It ranges from 0 to 1.
-    -   **How to think about it:** A p-value of `0.05` corresponds to a confidence of `0.95` (or 95%). This value is easier to work with for setting classification thresholds.
+    -   **What it is:** This is a more intuitive measure of confidence in the trend's direction, calculated as `C = 1 - p/2` (for a two-sided test). It ranges from 0 to 1.
+    -   **How to think about it:** A p-value of `0.05` corresponds to a confidence of `0.975` in the standard formulation used here, though for classification thresholds we often map `p=0.05` to a simpler conceptual "95% confidence".
 
-The system uses the **Confidence (`C`)** to determine the category and the **Slope** to determine the direction.
+The system uses the **Confidence (`C`)** to determine the *strength* category and the **Slope** to determine the *direction*.
 
 ---
 
@@ -30,21 +30,15 @@ The system uses the **Confidence (`C`)** to determine the category and the **Slo
 
 By default, the package uses a classification scheme inspired by the Intergovernmental Panel on Climate Change (IPCC) to provide a nuanced interpretation.
 
-| Confidence (`C`) | P-value (`p`) | Trend Category         | Interpretation |
-| :--------------- | :------------ | :--------------------- | :--- |
-| `C >= 0.95`      | `p <= 0.05`   | **Increasing/Decreasing** | High confidence. The trend is statistically significant. |
-| `0.90 <= C < 0.95` | `0.05 < p <= 0.10` | **Likely Increasing/Decreasing** | Medium-high confidence. The trend is borderline significant. |
-| `0.67 <= C < 0.90` | `0.10 < p <= 0.33` | **Probably Increasing/Decreasing** | Medium-low confidence. Some evidence of a trend, but it is weak. |
-| `0.33 <= C < 0.67` | `0.33 < p <= 0.67` | **No Clear Trend**         | Ambiguous. We lack enough evidence to determine a trend direction. |
-| `C < 0.33`       | `p > 0.67`    | **Stable**             | High confidence that there is *no* meaningful trend. |
+| Confidence (`C`) | Approximate P-value | Trend Category         | Interpretation |
+| :--------------- | :------------------ | :--------------------- | :--- |
+| `C >= 0.95`      | `p <= 0.10`         | **Increasing/Decreasing** | High confidence. The trend is statistically significant. (Note: The default `alpha=0.05` corresponds to `C=0.975`, ensuring this category is met for significant trends). |
+| `0.90 <= C < 0.95` | `0.10 < p <= 0.20` | **Likely Increasing/Decreasing** | Medium-high confidence. The trend is borderline significant. |
+| `0.67 <= C < 0.90` | `0.20 < p <= 0.66` | **Probably Increasing/Decreasing** | Medium-low confidence. Some evidence of a trend, but it is weak. |
+| `0.33 <= C < 0.67` | `0.66 < p`         | **No Clear Trend**         | Ambiguous. We lack enough evidence to determine a trend direction. |
+| `C < 0.33`       | `High p-value`      | **Stable**             | High confidence that there is *no* meaningful trend. |
 
--   **Increasing/Decreasing:** This is the strongest conclusion. There is a clear, statistically significant trend.
--   **Likely...:** Often used in scientific reporting to indicate a result that is meaningful but just misses the traditional significance cutoff.
--   **Probably...:** There's a hint of a trend, but it's not strong. This could be a real but very slight trend, or it could be noise.
--   **No Clear Trend:** This is a statement about **evidence**. It does *not* mean there is no trend; it means the data does not provide enough evidence to confidently state that a trend exists in either direction.
--   **Stable:** This is different from "No Clear Trend". A very high p-value provides strong evidence that the data is close to random, giving us confidence that there is no underlying trend.
-
-**Note:** The `alpha` parameter you provide to `trend_test` (default is `0.05`) directly defines the threshold for the highest confidence category (`Increasing/Decreasing`).
+**Note:** The `alpha` parameter you provide to `trend_test` (default is `0.05`) directly affects the `h` (hypothesis) result, which overrides classification to simply "Increasing/Decreasing" if `h` is True.
 
 See **[Example 17: Interpreting the Full Output](./17_Interpreting_Output/README.md)** for a practical demonstration of these categories.
 
@@ -62,16 +56,16 @@ You can define your own classification rules using the `category_map` parameter.
 For example, a simpler, stricter classification system could be:
 ```python
 my_map = {
-    "Significant": 0.95,  # Confidence >= 0.95 (p <= 0.05)
-    "Suggestive": 0.90,   # Confidence >= 0.90 (p <= 0.10)
+    "Significant": 0.975, # Approx p <= 0.05
+    "Suggestive": 0.95,   # Approx p <= 0.10
     "Indeterminate": 0.0, # All other cases (the catch-all)
 }
 ```
 You would pass this to the test function: `mks.trend_test(..., category_map=my_map)`
 
 **Key Rules for Custom Maps:**
-1.  The values are confidence levels (`1 - p`), from 0 to 1.
-2.  The function finds the category with the highest minimum confidence that your result still meets or exceeds.
-3.  You **must** include a "zero" threshold (e.g., `"Indeterminate": 0.0`) to act as a catch-all for results that don't meet any other criteria.
+1.  **Values are Confidence Levels (`C`):** Use the confidence value `C` found in the result object.
+2.  **Highest Wins:** The function evaluates your map and assigns the category with the **highest** threshold that `C` exceeds or equals.
+3.  **Catch-All Required:** You **must** include a "zero" threshold (e.g., `"Indeterminate": 0.0`) to act as a fallback for results that don't meet any other criteria. If you omit this, low-confidence results might be unlabeled or cause an error.
 
 See **[Example 19: Standalone Trend Classification](./19_Standalone_Classification/README.md)** for a hands-on guide to creating and using custom maps.

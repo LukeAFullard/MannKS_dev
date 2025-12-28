@@ -2,7 +2,7 @@
 
 The `seasonal_trend_test` function is designed to perform a Mann-Kendall trend test on data with seasonal cycles. It works by calculating the trend test for each season individually and then combining the results for an overall trend. This guide provides a detailed explanation of each parameter, with a focus on those specific to seasonal analysis.
 
-*For parameters not covered in detail here (`hicensor`, `lt_mult`, `gt_mult`, etc.), see the [**`trend_test` parameter guide**](./trend_test_parameters_guide.md) for a full explanation.*
+*For parameters not covered in detail here (`hicensor`, `lt_mult`, `gt_mult`, `tau_method`, `ci_method`, `tie_break_method`, etc.), see the [**`trend_test` parameter guide**](./trend_test_parameters_guide.md) for a full explanation.*
 
 ---
 
@@ -50,13 +50,24 @@ Aggregation in a seasonal context is about ensuring that you have **one represen
     -   `'lwp'`: Selects the single observation closest to the theoretical midpoint of the period (mimics LWP R script `UseMidObs=TRUE`).
     -   `'median'`: Calculates the median of all values within the season-cycle block. Equivalent to LWP R script `UseMidObs=FALSE`.
     -   `'robust_median'`: As above, but uses a robust median logic suitable for censored data.
+    -   `'middle'`: Selects the observation whose timestamp is closest to the mean of the actual timestamps in that season-year group.
+    -   `'middle_lwp'`: Selects the observation closest to the theoretical midpoint of the time period.
 -   **Limitations:** **Aggregating censored data is statistically complex and can introduce bias.** For example, the median of `['<2', '5', '10']` is `5`, but the median of `['<2', '<5', '10']` is ambiguous. The `'robust_median'` method uses a reasonable heuristic, but you should be aware of this underlying uncertainty. See **[Example 9](./09_Aggregation_Tied_Clustered_Data/README.md)**.
 
 ---
 
 ### Censored Data Parameters
 
-#### `hicensor`, `lt_mult`, `gt_mult`, `sens_slope_method`, `mk_test_method`
+#### `sens_slope_method`
+-   **Type:** `str`, **Default:** `'nan'`
+-   **Description:** Controls the method used for calculating the Sen's slope.
+-   **Usefulness:**
+    *   `'nan'`: Standard method. Ambiguous slopes (between two incompatible censored values) are treated as missing.
+    *   `'ats'`: Uses the **Seasonal Akritas-Theil-Sen** estimator. This calculates the overall slope by finding the value that zeroes the sum of the seasonal Kendall scores. It is the most robust method for seasonal censored data.
+    *   `'lwp'`: Sets ambiguous slopes to 0 (legacy behavior).
+-   **Limitations:** `'ats'` is computationally intensive and does not currently support confidence intervals or probability outputs for the *seasonal* test (returns `NaN` for these fields).
+
+#### `hicensor`, `lt_mult`, `gt_mult`, `mk_test_method`
 These parameters function identically to their `trend_test` counterparts but are applied at the **seasonal level**. For example, `hicensor` will be applied independently to the data for each season. This is important because different seasons may have different data characteristics or censoring levels.
 
 ---

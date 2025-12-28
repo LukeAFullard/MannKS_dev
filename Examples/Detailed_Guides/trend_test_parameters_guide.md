@@ -48,9 +48,12 @@ These parameters control how the test handles censored data.
 
 #### `sens_slope_method`
 -   **Type:** `str`, **Default:** `'nan'`
--   **Description:** Controls how to handle the ambiguous case of calculating a slope between two censored points.
--   **Usefulness:** A slope between `<5` and `<10` is ambiguous. The default `'nan'` treats this slope as unknown and excludes it from the final median calculation. This is the most statistically neutral and recommended approach. The `'lwp'` option sets these ambiguous slopes to `0`, which is provided for reproducibility against an older R script.
--   **Limitations:** The `'lwp'` method can bias the final Sen's slope towards zero, especially in heavily censored datasets. It should be used with caution. See **[Example 21](./21_Sens_Slope_Methods/README.md)**.
+-   **Description:** Controls the method used for calculating the Sen's slope, particularly in the presence of censored data.
+-   **Usefulness:**
+    *   `'nan'` (Default): A slope between two incompatible censored values (e.g., `<5` and `<10`) is treated as ambiguous (`NaN`) and excluded from the median calculation. This is statistically neutral.
+    *   `'ats'`: Uses the **Akritas-Theil-Sen (ATS)** estimator. This is a statistically robust method specifically designed for censored data. It calculates the slope by finding the value that zeroes the generalized Kendall's S statistic for the residuals. It handles mixed censoring types (left and right) and is the recommended method for rigorous analysis of censored datasets.
+    *   `'lwp'`: Assigns a slope of `0` to ambiguous censored pairs. This mimics the behavior of the legacy LWP-TRENDS R script.
+-   **Limitations:** `'ats'` is computationally more intensive than the other methods and uses bootstrapping for confidence intervals. `'lwp'` can artificially bias the slope towards zero and is only recommended for backward compatibility. See **[Example 21](./21_Sens_Slope_Methods/README.md)**.
 
 #### `mk_test_method`
 -   **Type:** `str`, **Default:** `'robust'`
@@ -66,7 +69,11 @@ These parameters control how the test handles censored data.
 -   **Type:** `str`, **Default:** `'none'`
 -   **Description:** Determines how to handle multiple observations that occur at the same time or within the same time period.
 -   **Usefulness:** This is critical for two scenarios:
-    1.  **Tied Timestamps:** If you have multiple measurements for the exact same timestamp, you must aggregate them to avoid calculation errors. Standard methods like `'median'` or `'robust_median'` perform this aggregation without reducing the overall frequency of unique timestamps.
+    1.  **Tied Timestamps:** If you have multiple measurements for the exact same timestamp, you must aggregate them to avoid calculation errors.
+        *   `'median'`: Uses the median of values at the tied timestamp.
+        *   `'robust_median'`: Uses a censored-data-aware median (recommended for censored data).
+        *   `'middle'`: Selects the observation whose timestamp is closest to the mean of the actual timestamps in the group.
+        *   `'middle_lwp'`: Selects the observation closest to the theoretical midpoint of the time period.
     2.  **Clustered Data (Thinning):** If you have high-frequency data (e.g., daily samples for one month, then monthly for years), it can bias the trend result. You can "thin" the data to a consistent frequency (e.g., one value per year) using these methods:
         *   `'lwp'`: Selects the single observation closest to the theoretical midpoint of the period (mimics LWP R script `UseMidObs=TRUE`).
         *   `'lwp_median'`: Calculates the median of all observations in the period (mimics LWP R script `UseMidObs=FALSE`).
@@ -93,6 +100,14 @@ Defaults are recommended for most users.
 -   **Type:** `str`, **Default:** `'direct'`
 -   **Description:** Controls the method for calculating the Sen's slope confidence intervals.
 -   **Usefulness:** The confidence interval gives you a range of plausible values for the true slope. The `'direct'` method is a standard, statistically robust approach. The `'lwp'` method uses a specific interpolation technique designed to replicate the LWP-TRENDS R script. Unless you need that specific replication, `'direct'` is recommended. See **[Example 14](./14_Confidence_Interval_Methods/README.md)**.
+
+#### `tie_break_method`
+-   **Type:** `str`, **Default:** `'robust'`
+-   **Description:** Controls the internal epsilon used for detecting tied values during the Mann-Kendall test calculation.
+-   **Usefulness:** This parameter is primarily for cross-software validation.
+    *   `'robust'` (Default): Uses a very small epsilon derived from the data's precision (half the minimum difference between unique values). This safely detects ties without accidentally matching very close but distinct floating-point numbers.
+    *   `'lwp'`: Uses a larger epsilon (minimum difference / 1000) to replicate the specific behavior of the LWP-TRENDS R script.
+-   **Limitations:** Generally, you should stick to `'robust'`. The `'lwp'` method is only needed if you are trying to reproduce exact numbers from the legacy R script and are facing floating-point discrepancies.
 
 ---
 
