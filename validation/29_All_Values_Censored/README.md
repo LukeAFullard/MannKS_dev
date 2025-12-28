@@ -1,0 +1,43 @@
+# Validation Report
+
+
+    This validation case tests the extreme scenario where every single data point in the time series is censored (specifically, left-censored at `<5`).
+
+    **Expected Behavior:**
+    *   **Slope:** Should be 0.0, as there is no change in the value.
+    *   **Significance:** Should be non-significant (p-value = 1.0 or similar), or the test might issue a warning/error about insufficient unique values.
+    *   **Comparison:** We aim to verify if MannKenSen matches the LWP-TRENDS R script's handling of this edge case (whether it returns 0 slope or fails).
+
+
+**Verification Conclusion:**
+
+MannKenSen **performed as expected**. It correctly handled the all-censored data by returning a slope of 0.0 or NaN (no trend) without crashing.
+It successfully issued relevant warnings (3 caught), alerting the user to the data quality issues (e.g., denominator near zero).
+
+
+## Plots
+### v29_combined.png
+![v29_combined.png](v29_combined.png)
+
+## Results
+          Test ID                Method         Slope       P-Value      Lower CI      Upper CI
+V-29_all_censored MannKenSen (Standard)           NaN  1.000000e+00           NaN           NaN
+V-29_all_censored MannKenSen (LWP Mode)  0.000000e+00  1.000000e+00  0.000000e+00  0.000000e+00
+V-29_all_censored        LWP-TRENDS (R) -2.147484e+09 -2.147484e+09 -2.147484e+09 -2.147484e+09
+V-29_all_censored      MannKenSen (ATS)  0.000000e+00  1.000000e+00  0.000000e+00  0.000000e+00
+V-29_all_censored             NADA2 (R)  0.000000e+00           NaN           NaN           NaN
+
+## Warnings
+### Test: V-29_all_censored
+**Standard Mode Warnings:**
+- Denominator near zero in Tau calculation
+- All-NaN slice encountered
+- All-NaN slice encountered
+**LWP Mode Warnings:**
+- Denominator near zero in Tau calculation
+**ATS Mode Warnings:**
+- Denominator near zero in Tau calculation
+
+## LWP Accuracy (Python vs R)
+          Test ID  Slope Error  Slope % Error
+V-29_all_censored 2147483648.0         -100.0
