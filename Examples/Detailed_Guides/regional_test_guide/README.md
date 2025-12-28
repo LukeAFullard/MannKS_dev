@@ -39,6 +39,36 @@ The `regional_test` function requires two pandas DataFrames as input:
 # ...
 ```
 
+## Parameter Reference
+
+### `trend_results`
+-   **Type:** `pandas.DataFrame`
+-   **Description:** The DataFrame containing the summary statistics (S-score and Confidence) for each site.
+
+### `time_series_data`
+-   **Type:** `pandas.DataFrame`
+-   **Description:** The DataFrame containing the raw data for all sites. This is used to calculate the correlation between sites.
+
+### `site_col`
+-   **Type:** `str`, **Default:** `'site'`
+-   **Description:** The name of the column containing unique site identifiers. This column must exist in **both** input DataFrames.
+
+### `value_col`
+-   **Type:** `str`, **Default:** `'value'`
+-   **Description:** The name of the column in `time_series_data` containing the observed values.
+
+### `time_col`
+-   **Type:** `str`, **Default:** `'time'`
+-   **Description:** The name of the column in `time_series_data` containing the timestamps.
+
+### `s_col`
+-   **Type:** `str`, **Default:** `'s'`
+-   **Description:** The name of the column in `trend_results` containing the Mann-Kendall S-statistic.
+
+### `c_col`
+-   **Type:** `str`, **Default:** `'C'`
+-   **Description:** The name of the column in `trend_results` containing the trend confidence value (0 to 1).
+
 ## Output Fields
 
 The function returns a `namedtuple` with the following fields:

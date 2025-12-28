@@ -75,11 +75,37 @@ The key takeaway is the **process**. The first check confirms seasonality in the
 
 ### Parameter Reference
 
--   `x`, `t`, `alpha`: These core parameters function identically to their counterparts in `trend_test`. `x` is the data vector, `t` is the time vector, and `alpha` is the significance level.
--   `period`, `season_type`: These define the seasonal structure, just as in `seasonal_trend_test`. Use `season_type` for datetime data and `period` for numeric time.
--   `agg_method`: The method for temporal aggregation. It should match the method used in your trend test.
-    -   `'none'`: Default. No aggregation.
-    -   `'median'`: Aggregates to the median value. Recommended for general use.
-    -   `'robust_median'`: A specialized median for censored data.
--   `agg_period`: The time window for aggregation (e.g., `'year'`, `'month'`, `'week'`). This is **required** if `agg_method` is not `'none'`.
--   `hicensor`: Applies a high-censoring rule, useful for data with varying detection limits over time.
+#### `x` and `t`
+-   **Description:** The data (`x`) and time (`t`) vectors.
+-   **Usefulness:** Just like in `trend_test`, `x` can be a numpy array or a DataFrame from `prepare_censored_data`. `t` can be numeric or datetime.
+
+#### `alpha`
+-   **Type:** `float`, **Default:** `0.05`
+-   **Description:** The significance level for the Kruskal-Wallis test.
+-   **Usefulness:** If the p-value is below this threshold, `is_seasonal` returns `True`. Adjust this if you need stricter (0.01) or looser (0.10) evidence of seasonality.
+
+#### `period`
+-   **Type:** `int`, **Default:** `12`
+-   **Description:** The number of seasons in a full cycle.
+-   **Usefulness:** Essential for numeric time data. For example, if `t` is in years, `period=4` implies quarterly data. Ignored if `season_type` is used with datetime data (except for 'month' where it defaults to 12).
+
+#### `season_type`
+-   **Type:** `str`, **Default:** `'month'`
+-   **Description:** Defines how to extract seasons from datetime objects. Options: `'month'`, `'quarter'`, `'day_of_week'`, etc.
+-   **Usefulness:** Allows you to test for different types of cycles (e.g., weekly cycles vs. annual cycles) without manual data manipulation.
+
+#### `agg_method`
+-   **Type:** `str`, **Default:** `'none'`
+-   **Description:** The method for temporal aggregation.
+-   **Benefits:** Ensures consistency with your trend test. If you plan to run `seasonal_trend_test(..., agg_method='median')`, you **must** set this to `'median'` here as well.
+-   **Options:** `'none'`, `'median'`, `'robust_median'`, `'lwp'`, `'middle'`, `'middle_lwp'`.
+
+#### `agg_period`
+-   **Type:** `str`, **Default:** `None`
+-   **Description:** The time window for aggregation (e.g., `'year'`, `'month'`).
+-   **Limitations:** This is **required** if `agg_method` is not `'none'`. It tells the function how to group the data (e.g., "group by month") before calculating the aggregate value (e.g., "median").
+
+#### `hicensor`
+-   **Type:** `bool` or `float`, **Default:** `False`
+-   **Description:** Activates the high-censor rule.
+-   **Usefulness:** If your data has varying detection limits, this ensures the seasonality check isn't biased by artifacts of the detection method. Consistent use across all your tests is key.
