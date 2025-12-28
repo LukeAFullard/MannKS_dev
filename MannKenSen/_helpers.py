@@ -146,6 +146,13 @@ def _value_for_time_increment(df: DataFrame, group_key: pd.Series, period: str) 
     selects the single observation that is closest in time to the theoretical
     midpoint of that increment.
 
+    Note:
+        The LWP R script uses a fixed 365/N day model for calculating
+        midpoints, where N is the number of increments per year (e.g., 12 for
+        months, 4 for quarters). This differs from standard calendar logic.
+        This function implements this fixed logic for Year, Quarter, and Month
+        periods to ensure compatibility.
+
     Args:
         df (pd.DataFrame): The input data frame, must contain 't_original'.
         group_key (pd.Series): A Series that defines the grouping for aggregation
@@ -159,25 +166,73 @@ def _value_for_time_increment(df: DataFrame, group_key: pd.Series, period: str) 
     grouped = df.groupby(group_key)
     aggregated_dfs = []
 
+    # Map period to number of increments per year (N) for Fixed LWP Logic
+    # R's MidTimeIncrList supports 1 to 12.
+    n_increments = None
+    p_upper = period.upper()
+
+    if p_upper.startswith('M'): # Month
+        n_increments = 12
+    elif p_upper.startswith('Q'): # Quarter
+        n_increments = 4
+    elif p_upper.startswith('Y') or p_upper.startswith('A'): # Year/Annual
+        n_increments = 1
+
+    # Pre-calculate fixed offsets if applicable
+    fixed_offsets = None
+    if n_increments:
+        # R logic: seq(365/N/2, 365-365/N/2, by=365/N) - 1
+        # Start: 365/(2N)
+        # Step: 365/N
+        start = 365.0 / (2 * n_increments)
+        step = 365.0 / n_increments
+        # Generate N offsets
+        fixed_offsets = np.arange(n_increments) * step + start - 1
+
     for name, group in grouped:
         if len(group) == 1:
             aggregated_dfs.append(group)
             continue
 
-        # Convert to datetime if not already, to use period logic
+        # Convert to datetime if not already
         if not pd.api.types.is_datetime64_any_dtype(group['t_original']):
             group['t_original'] = pd.to_datetime(group['t_original'])
 
-        # Get the start and end of the period for the group's first timestamp
-        # This defines the theoretical window for the entire group
-        ref_date = group['t_original'].min()
-        period_start = ref_date.to_period(period).start_time
-        period_end = ref_date.to_period(period).end_time
-        midpoint = period_start + (period_end - period_start) / 2
+        if n_increments:
+            # Use Fixed LWP Logic
+            first_dt = group['t_original'].iloc[0]
+            year = first_dt.year
+
+            # Determine index (0-based) of the increment within the year
+            # group_key usually retains time info if it's PeriodIndex or DatetimeIndex
+            # We use the first timestamp in the group to guess the period index
+            # This works for standard calendar alignments
+            incr_idx = 0
+            if n_increments == 12:
+                incr_idx = first_dt.month - 1
+            elif n_increments == 4:
+                incr_idx = first_dt.quarter - 1
+            elif n_increments == 1:
+                incr_idx = 0
+
+            offset = fixed_offsets[incr_idx]
+            start_of_year = pd.Timestamp(year=year, month=1, day=1)
+            midpoint = start_of_year + pd.Timedelta(days=offset)
+        else:
+            # Use Standard Calendar Logic for other periods (Week, Day, etc.)
+            ref_date = group['t_original'].min()
+            try:
+                p = ref_date.to_period(period)
+                period_start = p.start_time
+                period_end = p.end_time
+                midpoint = period_start + (period_end - period_start) / 2
+            except ValueError:
+                midpoint = pd.Timestamp(np.mean(group['t_original'].values.astype(np.int64)))
 
         # Find the observation closest to the midpoint
-        closest_idx = (group['t_original'] - midpoint).abs().idxmin()
-        aggregated_dfs.append(group.loc[[closest_idx]])
+        group_sorted = group.sort_values('t_original')
+        closest_idx = (group_sorted['t_original'] - midpoint).abs().idxmin()
+        aggregated_dfs.append(group_sorted.loc[[closest_idx]])
 
     return pd.concat(aggregated_dfs).reset_index(drop=True)
 
