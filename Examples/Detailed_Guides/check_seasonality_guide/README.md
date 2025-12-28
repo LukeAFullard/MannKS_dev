@@ -64,7 +64,7 @@ P-value: 0.0000
 
 --- Seasonality Check on Monthly Aggregated Data ---
 Is seasonal? True
-P-value: 0.0003
+P-value: 0.0004
 ```
 
 ### Interpretation of the Results

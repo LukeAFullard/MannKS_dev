@@ -13,19 +13,19 @@ Each example will be self-contained in its own directory within `Examples/` and 
 - **Functions:** `MannKenSen.inspect_trend_data(plot=True)`.
 
 #### Example 2: Basic Non-Seasonal Trend Test (Numeric Time)
-- **Goal:** Demonstrate the simplest use case with an integer time vector.
+- **Goal:** Demonstrate the simplest use case with an integer time vector (e.g., Years).
 - **Functions:** `MannKenSen.trend_test()`.
 
-#### Example 3: Non-Seasonal Trend Test with Timestamps
-- **Goal:** Introduce the handling of real-world time series data using `pandas` `datetime` objects.
-- **Functions:** `MannKenSen.trend_test()`, `plot_path`.
+#### Example 3: Non-Seasonal Trend Test with Timestamps & Slope Scaling
+- **Goal:** Introduce the handling of real-world time series data using `pandas` `datetime` objects and demonstrate **Slope Scaling** to get results in user-friendly units (e.g., "mg/L per year").
+- **Functions:** `MannKenSen.trend_test(slope_scaling='year')`, `plot_path`.
 
 #### Example 4: Handling Basic Censored Data
 - **Goal:** Explain the essential workflow for data containing censored values.
 - **Functions:** `MannKenSen.prepare_censored_data()`, `MannKenSen.trend_test()`.
 
-#### Example 5: Basic Seasonal Trend Test
-- **Goal:** Introduce seasonal trend analysis for monthly data.
+#### Example 5: Basic Seasonal Trend Test & Seasonality Check
+- **Goal:** Introduce seasonal trend analysis for monthly data. Explicitly demonstrate the best practice of **Consistent Aggregation**: using the same aggregation method for both the `check_seasonality` step and the final `seasonal_trend_test`.
 - **Functions:** `MannKenSen.check_seasonality()`, `MannKenSen.seasonal_trend_test()`.
 
 ---
@@ -96,13 +96,13 @@ Each example will be self-contained in its own directory within `Examples/` and 
 - **Goal:** Show users how to "read" the output of `plot_trend` to diagnose issues.
 - **Scenarios:** Generate plots showing wide confidence intervals (high uncertainty), clear trends, and no trend.
 
-#### Example 20: Sen's Slope Methods for Censored Data (`sens_slope_method`)
-- **Goal:** Demonstrate the difference between the `'nan'` and `'lwp'` methods for calculating the Sen's slope with censored data.
-- **Comparison:** `sens_slope_method='nan'` vs. `sens_slope_method='lwp'`.
+#### Example 20: Advanced Sen's Slope Methods (ATS vs. LWP)
+- **Goal:** Demonstrate the difference between the standard methods and the robust **Akritas-Theil-Sen (ATS)** estimator for censored data.
+- **Comparison:** `sens_slope_method='nan'` vs. `sens_slope_method='lwp'` vs. `sens_slope_method='ats'`.
 
 ---
 
-### **Part 5: Advanced Seasonal Analysis**
+### **Part 5: Advanced Seasonal & High-Frequency Analysis**
 
 #### Example 21: Seasonal Trend with Weekly Data (Decreasing Trend)
 - **Goal:** Demonstrate seasonal analysis on weekly data (`season_type='day_of_week'`).
@@ -114,10 +114,12 @@ Each example will be self-contained in its own directory within `Examples/` and 
 - **Dataset:** Daily data with a "summer vs. winter" pattern but no overall upward or downward slope.
 - **Functions:** `seasonal_trend_test(season_type='month')`.
 
-#### Example 23: Seasonal Trend with Hourly Data (Increasing Trend)
-- **Goal:** Demonstrate analysis on high-frequency data, such as hourly measurements over several weeks.
-- **Dataset:** Hourly data showing a diurnal (daily) pattern with an overall increasing trend.
-- **Functions:** `seasonal_trend_test(season_type='hour')`.
+#### Example 23: High Frequency Data (Hours, Minutes, Seconds)
+- **Goal:** Demonstrate analysis on high-frequency data to verify the package handles various time units correctly.
+- **Dataset:**
+    -   **Hourly:** Data showing a diurnal (daily) pattern.
+    -   **Minutes/Seconds:** A short-duration, high-resolution dataset (e.g., sensor data) to demonstrate `slope_scaling` with small units.
+- **Functions:** `seasonal_trend_test(season_type='hour')`, `trend_test(slope_scaling='minute')`.
 
 #### Example 24: Advanced Seasonality with `day_of_year`
 - **Goal:** Showcase a more granular seasonal analysis using the day of the year, which is useful for environmental data.
