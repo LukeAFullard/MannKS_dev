@@ -32,9 +32,6 @@ def classify_trend(result: NamedTuple, category_map: Optional[Dict[float, str]] 
         str: A string describing the trend category (e.g.,
              "Highly Likely Increasing", "No Trend").
     """
-    if not result.h:
-        return "No Trend"
-
     if np.isnan(result.C):
         return "Insufficient Data"
 
