@@ -15,7 +15,7 @@ from ._helpers import (_prepare_data, _aggregate_by_group, _value_for_time_incre
 from .plotting import plot_trend
 from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
 from .classification import classify_trend
-
+from ._datetime import PERIOD_MAP
 
 from typing import Union, Tuple, Optional
 
@@ -30,7 +30,7 @@ def trend_test(
     sens_slope_method: str = 'nan',
     tau_method: str = 'b',
     agg_method: str = 'none',
-    agg_period: str = 'year',
+    agg_period: Optional[str] = None,
     min_size: Optional[int] = 10,
     mk_test_method: str = 'robust',
     ci_method: str = 'direct',
@@ -247,15 +247,15 @@ def trend_test(
 
         # LWP aggregation selects one value per time period (e.g., year, month).
         t_datetime = pd.to_datetime(data_filtered['t_original'])
-        period_map = {
-            'year': 'Y', 'month': 'M', 'quarter': 'Q',
-            'week': 'W', 'day': 'D'
-        }
-        if agg_period not in period_map:
-            raise ValueError(f"Invalid `agg_period` for LWP aggregation: {agg_period}. "
-                             f"Must be one of {list(period_map.keys())}.")
 
-        period_freq = period_map[agg_period]
+        # Default to 'year' for LWP methods if not specified
+        effective_period = agg_period if agg_period is not None else 'year'
+
+        if effective_period not in PERIOD_MAP:
+            raise ValueError(f"Invalid `agg_period` for LWP aggregation: {effective_period}. "
+                             f"Must be one of {list(PERIOD_MAP.keys())}.")
+
+        period_freq = PERIOD_MAP[effective_period]
         group_key = t_datetime.dt.to_period(period_freq)
 
         if agg_method == 'lwp':
@@ -275,6 +275,29 @@ def trend_test(
             ]
             data_filtered = pd.concat(agg_data_list, ignore_index=True)
             data_filtered = data_filtered.drop(columns=['period_group'], errors='ignore')
+
+    # New block: Handle standard aggregation WITH an explicit period
+    elif agg_period is not None and agg_method not in ['none']:
+        if not is_datetime:
+            raise ValueError(f"`agg_period` can only be used with datetime-like inputs for `t`.")
+
+        t_datetime = pd.to_datetime(data_filtered['t_original'])
+
+        if agg_period not in PERIOD_MAP:
+             raise ValueError(f"Invalid `agg_period`: {agg_period}. Must be one of {list(PERIOD_MAP.keys())}.")
+
+        period_freq = PERIOD_MAP[agg_period]
+        group_key = t_datetime.dt.to_period(period_freq)
+
+        data_filtered = data_filtered.copy()
+        data_filtered['period_group'] = group_key
+
+        agg_data_list = [
+            _aggregate_by_group(group, agg_method, is_datetime)
+            for _, group in data_filtered.groupby('period_group')
+        ]
+        data_filtered = pd.concat(agg_data_list, ignore_index=True)
+        data_filtered = data_filtered.drop(columns=['period_group'], errors='ignore')
 
     elif len(data_filtered['t']) != len(np.unique(data_filtered['t'])):
         if agg_method == 'none':

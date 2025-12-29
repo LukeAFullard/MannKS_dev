@@ -1,6 +1,17 @@
 import numpy as np
 import pandas as pd
 
+# Mapping of period names to pandas frequency aliases
+PERIOD_MAP = {
+    'year': 'Y',
+    'month': 'M',
+    'quarter': 'Q',
+    'week': 'W',
+    'day': 'D',
+    'hour': 'h',
+    'minute': 'min',
+    'second': 's'
+}
 
 def _is_datetime_like(x):
     """Checks if an array is datetime-like."""
