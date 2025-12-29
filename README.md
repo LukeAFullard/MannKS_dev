@@ -3,7 +3,7 @@
 
   # MannKenSen
 
-  **Robust Trend Analysis for Environmental Data in Python**
+  **Robust Trend Analysis in Python**
 </div>
 
 ---
