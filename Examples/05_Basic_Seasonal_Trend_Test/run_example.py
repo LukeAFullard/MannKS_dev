@@ -88,6 +88,10 @@ with contextlib.redirect_stdout(output_buffer):
 
 captured_output = output_buffer.getvalue()
 
+# Extract results for dynamic text
+res = local_scope['result']
+seas_res = local_scope['seasonality_result']
+
 # --- 3. Generate the README.md ---
 readme_content = f"""
 # Example 5: Basic Seasonal Trend Test & Seasonality Check
@@ -118,14 +122,14 @@ Before running the test, we often aggregate data (e.g., take the median of all s
 ## Interpreting the Results
 
 ### 1. Seasonality Check (`mk.check_seasonality`)
-*   **Is Seasonal? (True)**: The Kruskal-Wallis test confirms that values differ significantly between months (e.g., July is consistently higher than December).
-*   **p-value (0.0000)**: Extremely strong evidence of seasonality.
+*   **Is Seasonal? ({seas_res.is_seasonal})**: The Kruskal-Wallis test confirms that values differ significantly between months (e.g., July is consistently higher than December).
+*   **p-value ({seas_res.p_value:.4f})**: Extremely strong evidence of seasonality.
 *   **Conclusion**: Since seasonality is present, using `mk.trend_test` (non-seasonal) would be inappropriate. We *must* use `mk.seasonal_trend_test`.
 
 ### 2. Seasonal Trend Test (`mk.seasonal_trend_test`)
-*   **Trend (Increasing)**: After accounting for the seasonal "wobble", the underlying trend is upward.
-*   **Sen's Slope (0.4993 units/year)**: This is very close to the "true" trend of 0.5 we added to the synthetic data. This shows the method correctly recovered the trend despite the strong seasonal noise.
-*   **Confidence Interval**: The range `[0.4571, 0.5408]` includes the true value (0.5), validating the accuracy.
+*   **Trend ({res.trend.capitalize()})**: After accounting for the seasonal "wobble", the underlying trend is upward.
+*   **Sen's Slope ({res.slope:.4f} units/year)**: This is very close to the "true" trend of 0.5 we added to the synthetic data. This shows the method correctly recovered the trend despite the strong seasonal noise.
+*   **Confidence Interval**: The range `[{res.lower_ci:.4f}, {res.upper_ci:.4f}]` includes the true value (0.5), validating the accuracy.
 
 ### 3. Visual Results (`seasonal_plot.png`)
 The function generated this plot:
