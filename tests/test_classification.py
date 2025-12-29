@@ -5,10 +5,18 @@ from MannKS.classification import classify_trend
 # Define a mock result object for testing
 TrendResult = namedtuple('TrendResult', ['h', 'C', 'trend'])
 
-def test_classify_no_trend():
-    """Test that a non-significant result is classified as 'No Trend'."""
+def test_classify_no_trend_legacy():
+    """
+    Test that a non-significant result is no longer strictly 'No Trend'
+    but uses the confidence map.
+    """
     result = TrendResult(h=False, C=0.99, trend='increasing')
-    assert classify_trend(result) == "No Trend"
+    # With C=0.99, it should be "Highly Likely" even if h=False
+    assert classify_trend(result) == "Highly Likely Increasing"
+
+def test_classify_insufficient_data():
+    result = TrendResult(h=False, C=float('nan'), trend='no trend')
+    assert classify_trend(result) == "Insufficient Data"
 
 def test_classify_default_categories():
     """Test the default IPCC-style classification."""

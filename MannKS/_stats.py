@@ -272,7 +272,7 @@ def _z_score(s, var_s):
 def _p_value(z, alpha):
     p = 2 * (1 - norm.cdf(abs(z)))
     h = abs(z) > norm.ppf(1 - alpha / 2)
-    trend = 'decreasing' if z < 0 and h else 'increasing' if z > 0 and h else 'no trend'
+    trend = 'decreasing' if z < 0 else 'increasing' if z > 0 else 'no trend'
     return p, h, trend
 
 def _mk_probability(p, s):
