@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 import MannKenSen as mk
 import matplotlib.pyplot as plt
+import os
 
 def run_and_show_notes(scenario_name, x, t, **kwargs):
     print(f"\n--- Scenario: {scenario_name} ---")
@@ -100,10 +101,12 @@ axes[2].legend()
 axes[2].grid(True, linestyle='--', alpha=0.6)
 
 plt.tight_layout()
-# Note: In the generated script, we use the local directory for saving.
-# The wrapping script ensures this is the correct directory.
-plt.savefig('scenarios_plot.png')
-print("\nPlot saved to 'scenarios_plot.png'")
+
+# Save plot to current directory (which we will handle via wrapping script context or explicit path)
+# Here we use __file__ based path for robustness if run directly
+plot_path = os.path.join(os.path.dirname(__file__), 'scenarios_plot.png')
+plt.savefig(plot_path)
+print(f"\nPlot saved to 'scenarios_plot.png'")
 ```
 
 ### Step 2: Output and Interpretation

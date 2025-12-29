@@ -116,7 +116,7 @@ We run a simple trend test and then print out every major field in the result.
 13. **`Cd` (Decreasing Confidence)**: Specifically, the probability that the trend is *decreasing*.
     *   If trend is decreasing, $C_d = C$.
     *   If trend is increasing, $C_d = 1 - C$ (low).
-14. **`sen_probability`**: The probability that the Sen's slope is greater than zero.
+14. **`sen_probability`**: The probability that the Sen's slope is less than zero (for negative trends) or greater than zero (for positive trends), derived from the z-score of the rank correlation. It approximates the p-value.
 
 ### Metadata
 15. **`analysis_notes`**: A list of warnings or observations (e.g., "Tied values present"). **Always check this** for data quality issues.

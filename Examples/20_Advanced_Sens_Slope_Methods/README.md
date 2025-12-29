@@ -1,162 +1,130 @@
 
-# Example 20: Advanced Sen's Slope Methods (ATS vs. LWP)
+# Example 20: Advanced Sen's Slope Methods
 
 ## The "Why": Handling Ambiguity in Censored Trends
-When calculating the **Sen's Slope** (the median rate of change), the algorithm looks at the slope between every possible pair of data points.
 
-But what is the slope between a value of `< 5` and `< 10`?
-*   It could be positive (4 -> 9).
-*   It could be negative (4 -> 2).
-*   **It is ambiguous.**
+When you have censored data (e.g., `<1`), calculating a simple slope becomes tricky.
+*   Slope between `5` and `10`: Easy (5).
+*   Slope between `<1` and `10`: Ambiguous. Is `<1` actually `0.9`? `0.0`? `0.5`?
+    *   If it's `0.9`, slope is `(10 - 0.9)`.
+    *   If it's `0.0`, slope is `(10 - 0.0)`.
 
-Different statistical methods handle this ambiguity differently. This example explores the three options available in `MannKenSen`.
+Standard methods often just substitute a value (like 0.5), but this can be biased.
 
-1.  **`'nan'` (Default)**: Ignores ambiguous pairs. They are excluded from the calculation. This is simple but effectively reduces your sample size.
-2.  **`'lwp'` (LWP-Trends Compatibility)**: Forces ambiguous slopes to **zero**. This is a heuristic used by the LWP-TRENDS R script. It tends to be "conservative," often pulling the estimated slope towards zero (flat line) in heavily censored datasets.
-3.  **`'ats'` (Akritas-Theil-Sen)**: A robust statistical estimator. Instead of a simple median of slopes, it finds the slope value that makes the *Kendall's S of the residuals* equal to zero. This is theoretically the most rigorous method for censored data but is computationally more intensive.
+The package offers three methods for calculating the slope (`sens_slope_method`):
+1.  **`'nan'` (Robust/Default)**: If a pair is ambiguous (e.g., Left-Censored vs. Left-Censored), the slope is ignored (set to NaN). This is statistically safe.
+2.  **`'lwp'` (LWP-TRENDS)**: Ambiguous slopes are forced to **0**. This "dilutes" the trend, making the slope smaller (closer to zero). This mimics the specific behavior of the LWP-TRENDS R script.
+3.  **`'ats'` (Akritas-Theil-Sen)**: A generalized, robust estimator specifically designed for censored data (Turnbull estimate of slope).
 
-## The "How": Code Walkthrough
-
-We generate a synthetic dataset with a true underlying upward trend (slope ~ 0.1) but obscure it with ~50% censoring. We then run the test using all three methods.
+## The "How": Comparison
 
 ### Step 1: Python Code
 ```python
 import numpy as np
 import pandas as pd
 import MannKenSen as mk
-import matplotlib.pyplot as plt
+import os
 
 # 1. Generate Synthetic Data
-# We create a dataset designed to highlight the differences between slope estimators.
-# We'll use a dataset with a subtle increasing trend but heavy censoring.
-# This often results in many "ambiguous" pairs (e.g., <5 vs <10, or <5 vs 3).
+# We create a dataset with censored values that create ambiguous slopes.
+# Ambiguous: Slope between a censored value and a real value where direction is uncertain?
+# Actually, LWP defines ambiguous cases specifically.
+# Let's use a small dataset to trace it easily.
+x = [2, '<1', 5, 6, '<1', 8]
+t = np.arange(len(x))
 
-np.random.seed(42)
-n = 30
-t = np.arange(n)
-# True underlying trend: y = 0.1 * t + noise
-true_values = 0.1 * t + np.random.normal(0, 0.5, n) + 10
-
-# Create censoring
-# We'll make about 50% of the data left-censored at varying levels
-censored_mask = np.random.choice([True, False], size=n, p=[0.5, 0.5])
-# Censoring limits vary, creating "overlapping" censoring which is tricky
-limits = np.random.choice([10.5, 11.0, 11.5, 12.0], size=n)
-
-values = []
-censored_flags = []
-cen_types = []
-
-for i in range(n):
-    if censored_mask[i] and true_values[i] < limits[i]:
-        # Censored value
-        values.append(limits[i])
-        censored_flags.append(True)
-        cen_types.append('lt')
-    else:
-        # Uncensored value
-        values.append(true_values[i])
-        censored_flags.append(False)
-        cen_types.append('not')
-
-df = pd.DataFrame({
-    't': t,
-    'value': values,
-    'censored': censored_flags,
-    'cen_type': cen_types
-})
-
-print("--- Data Sample (First 5 Rows) ---")
-print(df.head())
-print(f"\nTotal Data Points: {n}")
-print(f"Proportion Censored: {df['censored'].mean():.1%}")
+# Prepare data
+df = mk.prepare_censored_data(x)
+print("--- Data ---")
+print(df[['value', 'censored', 'cen_type']])
 
 # 2. Run Trend Tests with Different Methods
 
-# Method A: 'nan' (Default/Neutral)
-# Ambiguous pairs (where we can't be sure of the direction) are set to NaN.
-# They are excluded from the median calculation.
-print("\n--- Running Method A: sens_slope_method='nan' ---")
-res_nan = mk.trend_test(df, df['t'], sens_slope_method='nan')
-print(f"Slope: {res_nan.slope:.4f}")
-print(f"Interval: [{res_nan.lower_ci:.4f}, {res_nan.upper_ci:.4f}]")
+# Method A: Robust (Standard) - 'nan'
+# Ambiguous slopes (e.g. <1 vs 10) are set to NaN and ignored.
+res_robust = mk.trend_test(df, t, mk_test_method='robust', sens_slope_method='nan')
 
-# Method B: 'lwp' (Conservative/Zero-Bias)
-# Ambiguous pairs are forced to a slope of 0.
-# This mimics the LWP-TRENDS R script. It often biases the slope towards zero
-# if there is a lot of censoring.
-print("\n--- Running Method B: sens_slope_method='lwp' ---")
-res_lwp = mk.trend_test(df, df['t'], sens_slope_method='lwp')
+# Method B: LWP - 'lwp'
+# Ambiguous slopes are set to 0.
+# Also, right-censored handling is different (if we had any).
+res_lwp = mk.trend_test(df, t, mk_test_method='lwp', sens_slope_method='lwp')
+
+# Method C: ATS (Akritas-Theil-Sen) - 'ats'
+# A completely different, robust estimator for censored data.
+res_ats = mk.trend_test(df, t, sens_slope_method='ats')
+
+print("\n--- 1. Robust (Nan) Method ---")
+print(f"Trend: {res_robust.trend}")
+print(f"Slope: {res_robust.slope:.4f}")
+
+print("\n--- 2. LWP Method (Ambiguous=0) ---")
+print(f"Trend: {res_lwp.trend}")
 print(f"Slope: {res_lwp.slope:.4f}")
-print(f"Interval: [{res_lwp.lower_ci:.4f}, {res_lwp.upper_ci:.4f}]")
 
-# Method C: 'ats' (Robust/Statistical)
-# The Akritas-Theil-Sen estimator. It uses a more complex statistical approach
-# (finding the slope that zeroes the generalized Kendall's S of residuals).
-# It handles censored data theoretically correctly without simple heuristics.
-print("\n--- Running Method C: sens_slope_method='ats' ---")
-res_ats = mk.trend_test(df, df['t'], sens_slope_method='ats')
+print("\n--- 3. ATS Method ---")
+print(f"Trend: {res_ats.trend}")
 print(f"Slope: {res_ats.slope:.4f}")
-print(f"Interval: [{res_ats.lower_ci:.4f}, {res_ats.upper_ci:.4f}]")
 
 # 3. Visualization
-# We will plot the data and the three different trend lines.
+import matplotlib.pyplot as plt
+plot_path = os.path.join(os.path.dirname(__file__), 'slope_comparison.png')
 
 plt.figure(figsize=(10, 6))
 
-# Plot censored data (triangles pointing down)
-cen = df[df['censored']]
-plt.scatter(cen['t'], cen['value'], marker='v', color='red', label='Censored (<)', alpha=0.6)
+# Plot Data
+# We plot censored values (limit) as triangles, observed as circles
+vals = df['value']
+censored = df['censored']
+plt.scatter(t[~censored], vals[~censored], color='tab:green', label='Observed', s=50, zorder=5)
+plt.scatter(t[censored], vals[censored], color='tab:red', marker='v', label='Censored (Limit)', s=50, zorder=5)
 
-# Plot uncensored data (dots)
-uncen = df[~df['censored']]
-plt.scatter(uncen['t'], uncen['value'], marker='o', color='blue', label='Observed', alpha=0.8)
+# Plot Trend Lines (pivoted at median time/value roughly for visualization)
+# Note: Intercepts are not returned by all methods in a comparable way (ATS is complex),
+# so we will anchor lines at the median of non-censored data for visual comparison.
+t_med = np.median(t)
+y_med = np.median(vals) # rough anchor
 
-# Helper to generate line points
-def get_line(res, label, color, style, data_frame):
-    if np.isnan(res.slope): return
-    # y = mx + c
-    # Note: intercept in result is y_bar - slope * t_bar
-    y_vals = res.intercept + res.slope * data_frame['t']
-    plt.plot(data_frame['t'], y_vals, label=f"{label} (Slope={res.slope:.3f})", color=color, linestyle=style, linewidth=2)
+# Define a helper to plot line with slope m
+def plot_slope(t_vals, m, color, label, tm, ym):
+    # y = m * (x - t_med) + y_med
+    y_vals = m * (t_vals - tm) + ym
+    plt.plot(t_vals, y_vals, color=color, linestyle='--', label=f'Slope={m:.2f} ({label})', linewidth=2)
 
-get_line(res_nan, "Method 'nan'", "green", "--", df)
-get_line(res_lwp, "Method 'lwp'", "orange", "-.", df)
-get_line(res_ats, "Method 'ats'", "purple", "-", df)
+plot_slope(t, res_robust.slope, 'tab:green', 'Robust', t_med, y_med)
+plot_slope(t, res_lwp.slope, 'tab:red', 'LWP', t_med, y_med)
+plot_slope(t, res_ats.slope, 'tab:blue', 'ATS', t_med, y_med)
 
-plt.title(f"Comparison of Sen's Slope Methods (True Slope ~ 0.1)")
+plt.title("Comparison of Sen's Slope Methods on Censored Data")
 plt.xlabel("Time")
-plt.ylabel("Concentration")
+plt.ylabel("Value")
 plt.legend()
 plt.grid(True, alpha=0.3)
-plt.savefig('slope_comparison.png')
-print("\nPlot saved to 'slope_comparison.png'")
+plt.savefig(plot_path)
+print(f"\nPlot saved to 'slope_comparison.png'")
 ```
 
 ### Step 2: Text Output
 ```text
---- Data Sample (First 5 Rows) ---
-   t      value  censored cen_type
-0  0  10.248357     False      not
-1  1  10.500000      True       lt
-2  2  11.500000      True       lt
-3  3  11.061515     False      not
-4  4  12.000000      True       lt
+--- Data ---
+   value  censored cen_type
+0    2.0     False      not
+1    1.0      True       lt
+2    5.0     False      not
+3    6.0     False      not
+4    1.0      True       lt
+5    8.0     False      not
 
-Total Data Points: 30
-Proportion Censored: 23.3%
+--- 1. Robust (Nan) Method ---
+Trend: no trend
+Slope: 1.1000
 
---- Running Method A: sens_slope_method='nan' ---
-Slope: 0.1139
-Interval: [0.0748, 0.1942]
+--- 2. LWP Method (Ambiguous=0) ---
+Trend: no trend
+Slope: 1.0000
 
---- Running Method B: sens_slope_method='lwp' ---
-Slope: 0.0743
-Interval: [0.0183, 0.1097]
-
---- Running Method C: sens_slope_method='ats' ---
-Slope: 0.0866
-Interval: [0.0687, 0.1043]
+--- 3. ATS Method ---
+Trend: no trend
+Slope: 1.1146
 
 Plot saved to 'slope_comparison.png'
 
@@ -164,20 +132,21 @@ Plot saved to 'slope_comparison.png'
 
 ## Interpreting the Results
 
-### 1. The Slopes
-*   **Method 'nan' (Slope=0.1139)**: Often gives a reasonable estimate but might be slightly unstable if too many pairs are excluded.
-*   **Method 'lwp' (Slope=0.0743)**: Notice how this is often **lower** (closer to zero) than the others. By forcing ambiguous pairs to zero, it "dampens" the trend signal. If your goal is to match the LWP-TRENDS R script, use this.
-*   **Method 'ats' (Slope=0.0866)**: The Akritas-Theil-Sen estimator often provides the most robust estimate for the "true" trend, using the information from censored ranks more effectively than the simple pairwise heuristics.
+### 1. The Numbers
+*   **Robust (`'nan'`)**: Calculates the median of only the "sure" slopes. It gives the steepest trend here because it ignores the confusing pairs.
+*   **LWP (`'lwp'`)**: Returns a smaller slope. Why? Because it took all those "I'm not sure" pairs and called them "0 slope". If you have many censored values, this method will strongly bias your trend magnitude towards zero.
+*   **ATS (`'ats'`)**: Often considered the "gold standard" for censored trends. It handles the probability distribution of the censored values rather than just substituting a single number.
 
-### 2. Visual Comparison (`slope_comparison.png`)
+In this dataset, the LWP method yields a much lower slope (1.00 vs 1.10) because it treats the ambiguous pairs (between censored and non-censored) as "zero slope" (no trend), which drags the median down. The ATS method (1.11) provides a compromise that is statistically grounded.
 
+### 2. Visualizing the Difference
 ![Slope Comparison](slope_comparison.png)
 
-*   **Purple Line ('ats')**: Usually tracks the central tendency of the data structure best in complex censoring cases.
-*   **Orange Line ('lwp')**: Often flatter (less steep) due to the zero-bias heuristic.
-*   **Green Dashed ('nan')**: similar to ATS but can deviate depending on which specific pairs were excluded.
+*   **Green Line (Robust)**: Steepest.
+*   **Red Line (LWP)**: Flattest (biased towards 0).
+*   **Blue Line (ATS)**: The robust statistical estimate.
 
-## Recommendations
-*   **General Use:** Use **`'ats'`** if you have significant censoring (> 20%) and want the most statistically defensible slope.
-*   **Quick/Simple:** Use **`'nan'`** (default) for light censoring or initial checks.
-*   **Replication:** Use **`'lwp'`** *only* if you need to strictly replicate results from the legacy LWP-TRENDS R script.
+## Recommendation
+*   Use **`'ats'`** for the most rigorous scientific analysis of censored data.
+*   Use **`'nan'`** (default) for a good balance of speed and robustness.
+*   Use **`'lwp'`** only if you strictly need to match legacy numbers from the LWP-TRENDS R script.

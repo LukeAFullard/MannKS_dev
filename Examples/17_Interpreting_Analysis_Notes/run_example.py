@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import MannKenSen as mk
 import matplotlib.pyplot as plt
+import os
 
 def run_and_show_notes(scenario_name, x, t, **kwargs):
     print(f"\\n--- Scenario: {scenario_name} ---")
@@ -96,10 +97,12 @@ axes[2].legend()
 axes[2].grid(True, linestyle='--', alpha=0.6)
 
 plt.tight_layout()
-# Note: In the generated script, we use the local directory for saving.
-# The wrapping script ensures this is the correct directory.
-plt.savefig('scenarios_plot.png')
-print("\\nPlot saved to 'scenarios_plot.png'")
+
+# Save plot to current directory (which we will handle via wrapping script context or explicit path)
+# Here we use __file__ based path for robustness if run directly
+plot_path = os.path.join(os.path.dirname(__file__), 'scenarios_plot.png')
+plt.savefig(plot_path)
+print(f"\\nPlot saved to 'scenarios_plot.png'")
 """
 
 # --- 2. Execute the Code and Capture Output ---
@@ -108,18 +111,11 @@ output_buffer = io.StringIO()
 # Determine the directory where this script is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Change working directory to the script's location so that
-# any files created by exec() (like the plot) are saved there.
-original_cwd = os.getcwd()
-os.chdir(script_dir)
-
-try:
-    with contextlib.redirect_stdout(output_buffer):
-        local_scope = {}
-        exec(example_code, globals(), local_scope)
-finally:
-    # Always return to the original directory
-    os.chdir(original_cwd)
+with contextlib.redirect_stdout(output_buffer):
+    local_scope = {}
+    exec_globals = globals().copy()
+    exec_globals['__file__'] = __file__
+    exec(example_code, exec_globals, local_scope)
 
 captured_output = output_buffer.getvalue()
 
