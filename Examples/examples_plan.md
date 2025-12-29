@@ -4,6 +4,11 @@ This document outlines a plan for creating a comprehensive suite of examples to 
 
 Each example will be self-contained in its own directory within `Examples/` and will include a Python script and a markdown (`.md`) file explaining the process, code, and results with embedded plots.
 
+**IMPORTANT:** **Example 1 (`Examples/01_Getting_Started_Inspecting_Data/`) serves as the definitive template for all subsequent examples.**
+*   All examples must be "lecture-style": deep, educational, and explanatory, not just code dumps.
+*   They must be self-contained, generating their own `README.md` and plots.
+*   The generated `README.md` must include the Python code used, the textual output, and embedded plots.
+
 ---
 
 ### **Part 1: Core Concepts & Basic Workflow**

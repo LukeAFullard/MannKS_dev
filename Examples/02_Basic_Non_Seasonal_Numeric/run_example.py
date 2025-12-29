@@ -1,0 +1,102 @@
+import os
+import io
+import contextlib
+import numpy as np
+import pandas as pd
+import MannKenSen as mk
+import matplotlib.pyplot as plt
+
+# --- 1. Define the Example Code as a String ---
+example_code = """
+import numpy as np
+import pandas as pd
+import MannKenSen as mk
+
+# 1. Generate Synthetic Data
+# We create a simple dataset with 10 yearly observations.
+# The time vector 't' is just a sequence of integers (years).
+# The value vector 'x' has a clear upward trend.
+t = np.arange(2000, 2011)  # Years 2000 to 2010
+x = np.array([5.1, 5.5, 5.9, 6.2, 6.8, 7.1, 7.5, 7.9, 8.2, 8.5, 9.0])
+
+print(f"Time (t): {t}")
+print(f"Values (x): {x}")
+
+# 2. Run the Trend Test
+# The trend_test function returns a namedtuple with all statistical results.
+# We pass 'plot_path' to automatically generate a visualization.
+print("\\nRunning Mann-Kendall Trend Test...")
+result = mk.trend_test(x, t, plot_path='trend_plot.png')
+
+# 3. Inspect the Results
+# The namedtuple has fields like 'trend', 's', 'p', 'slope', 'C' (confidence), etc.
+print("\\n--- Trend Test Results ---")
+print(f"Trend: {result.trend} (Confidence: {result.C:.1%})")
+print(f"Kendall's S: {result.s}")
+print(f"p-value: {result.p:.4f}")
+print(f"Sen's Slope: {result.slope:.4f}")
+print(f"Confidence Interval: [{result.lower_ci:.4f}, {result.upper_ci:.4f}]")
+"""
+
+# --- 2. Execute the Code and Capture Output ---
+output_buffer = io.StringIO()
+
+with contextlib.redirect_stdout(output_buffer):
+    local_scope = {}
+    exec(example_code, globals(), local_scope)
+
+captured_output = output_buffer.getvalue()
+
+# --- 3. Generate the README.md ---
+readme_content = f"""
+# Example 2: Basic Non-Seasonal Trend Test (Numeric Time)
+
+## The "Why": The Fundamental Trend Test
+This example demonstrates the core function of the package: `mk.trend_test`.
+It answers the most basic question: **"Is there a statistically significant upward or downward trend in my data?"**
+
+We use the **Mann-Kendall test** for significance and **Sen's Slope** for magnitude because they are "non-parametric." This means:
+1.  They don't assume your data follows a bell curve (normal distribution).
+2.  They are robust to outliers (one crazy high value won't ruin the result).
+3.  They handle missing data gracefully.
+
+## The "How": Code Walkthrough
+
+We analyze a simple dataset where time is represented by numeric years (integers).
+
+### Step 1: Python Code
+```python
+{example_code.strip()}
+```
+
+### Step 2: Text Output
+```text
+{captured_output}
+```
+
+## Interpreting the Results
+
+### 1. Statistical Results
+*   **Trend: Increasing**: The test detected an upward trend.
+*   **Confidence (result.C): 100.0%**: This is derived from the p-value (`1 - p/2` for increasing trends). It means we are very certain this isn't just random noise.
+*   **Kendall's S (55.0)**: This is the raw score. It implies that when comparing all possible pairs of data points, 55 more pairs were increasing than decreasing. A positive number indicates growth.
+*   **p-value (0.0000)**: The probability that this trend happened by random chance is virtually zero. Standard practice considers $p < 0.05$ as significant.
+*   **Sen's Slope (0.3889)**: The median rate of change. Since our time unit is "years", this means the value increases by roughly **0.39 units per year**.
+
+### 2. Visual Results (`trend_plot.png`)
+The function automatically generated this plot:
+
+![Trend Plot](trend_plot.png)
+
+*   **Blue Dots**: The actual data points.
+*   **Red Line**: The Sen's Slope trend line. Notice it passes through the "center of gravity" of the data but doesn't necessarily hit the mean.
+*   **Dashed Lines**: The 90% confidence interval (default `alpha=0.1`). If the trend is significant, the slope of these lines usually won't cross zero (flat).
+
+## Key Takeaway
+For simple numeric time series (years, index numbers), `mk.trend_test(x, t)` is all you need. It provides both the "Yes/No" (significance) and the "How Much" (slope).
+"""
+
+with open(os.path.join(os.path.dirname(__file__), 'README.md'), 'w') as f:
+    f.write(readme_content)
+
+print("Example 2 generated successfully.")
