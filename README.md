@@ -1,77 +1,105 @@
-# MannKenSen
+<div align="center">
+  <img src="assets/logo.png" alt="MannKenSen Logo" width="300"/>
 
-`MannKenSen` is a Python package for conducting Mann-Kendall trend tests and calculating Sen's slope. It is specifically designed to handle the complexities of real-world environmental and time-series data, including **unequally spaced timestamps**, **censored data**, **seasonality**, and the need for **regional-level trend aggregation**.
+  # MannKenSen
 
-The statistical methods are heavily inspired by the robust LWP-TRENDS R package.
-
----
-
-## Getting Started: A User Guide Through Examples
-
-The best way to learn how to use the `MannKenSen` package is to follow our comprehensive user guide. It is a collection of self-contained examples that walk you through every feature of the library, from basic tests to advanced, nuanced scenarios.
-
-**[Click here to access the full User Guide](./Examples/README.md)**
+  **Robust Trend Analysis for Environmental Data in Python**
+</div>
 
 ---
 
-## Features
+## 👋 Welcome
 
-- **Mann-Kendall Trend Test:** Performs the Mann-Kendall test for monotonic trends.
-- **Sen's Slope Estimator:** Calculates the Sen's slope, a robust, non-parametric estimate of the trend magnitude.
-- **Unequally Spaced Time Series:** A core feature of the package is its ability to correctly handle data that is not collected at regular time intervals.
-- **Censored Data Handling:** Provides a full suite of tools to work with censored data (e.g., values below a detection limit like `"<5"` or `">100"`), including robust statistical methods and options for compatibility with legacy systems.
-- **Seasonal Trend Analysis:** Supports seasonal trend testing for various seasonal patterns (e.g., monthly, quarterly, weekly, daily).
-- **Seasonality Checking:** Includes statistical tests (`check_seasonality`) and plotting utilities (`plot_seasonal_distribution`) to determine if your data has a seasonal pattern *before* you run a seasonal test.
-- **Regional Trend Aggregation:** Provides a `regional_test` function to aggregate trend results from multiple sites while correcting for inter-site correlation, allowing for a statistically sound regional trend assessment.
-- **Data Quality Warnings:** An "Analysis Notes" system automatically flags potential issues with your data, such as small sample sizes or an over-reliance on censored data for slope calculations.
-- **Plotting Utilities:** Built-in plotting functions to visualize trends, confidence intervals, and seasonal distributions.
-- **Customizable Trend Classification:** Automatically classifies trends into human-readable categories (e.g., "Likely Increasing") and allows for user-defined classification rules.
+Welcome to **MannKenSen**, a friendly and powerful Python package designed to help you analyze trends in your data.
 
-## Installation
+Whether you are tracking water quality, climate metrics, or any other time-series data, `MannKenSen` makes it easy to perform statistically rigorous tests—even if your data is "messy."
 
-To install the necessary dependencies for this package, run the following command:
+We built this tool specifically to handle the real-world challenges data scientists and environmental engineers face every day:
+*   **Irregular sampling?** No problem.
+*   **Missing or "censored" values (like `<5` or `>100`)?** We handle those natively.
+*   **Seasonal patterns?** We can detect and account for them.
 
+---
+
+## 🚀 Getting Started
+
+The best way to learn is by doing. We have prepared a comprehensive **User Guide** that takes you from a basic "Hello World" trend test to advanced regional analysis.
+
+### [📚 Click here to open the User Guide](./Examples/README.md)
+
+Each example is a self-contained "mini-chapter" with code you can run and explanations of the results.
+
+---
+
+## ✨ Key Features
+
+*   **📈 Mann-Kendall Trend Test**: Scientifically verify if your data is increasing, decreasing, or stable over time.
+*   **📐 Sen's Slope Estimator**: Calculate the *magnitude* of the trend (e.g., "increasing by 0.5 units per year").
+*   **🛡️ Robust Data Handling**:
+    *   **Censored Data**: Specialized support for data with detection limits (e.g., values reported as `<0.1`).
+    *   **Unequal Spacing**: Works perfectly with data collected at irregular intervals (e.g., daily sampling followed by monthly sampling).
+*   **🍂 Seasonal Analysis**:
+    *   **Seasonal Trend Test**: Separate the seasonal signal from the long-term trend.
+    *   **Seasonality Check**: Automatically test if your data exhibits seasonality.
+*   **🌍 Regional Aggregation**: Combine results from multiple monitoring sites to see the "big picture" for a region.
+*   **📊 Visualization**: Built-in plotting tools to visualize your trends and confidence intervals instantly.
+
+---
+
+## 📦 Installation
+
+You can install the package and its dependencies using `pip`.
+
+**1. Install Dependencies**
 ```bash
 pip install -r requirements.txt
 ```
-To install the package itself in an editable mode for development:
+
+**2. Install MannKenSen**
 ```bash
 pip install -e .
 ```
 
-## Quick Start Example
+---
 
-Here is a brief example of a non-seasonal trend test with censored data. For a full explanation, please see our detailed examples.
+## ⚡ Quick Start
+
+Here is a simple example to get you running in seconds. We will look for a trend in a dataset that includes "censored" values (values below a detection limit).
 
 ```python
-import numpy as np
 import pandas as pd
 from MannKenSen import prepare_censored_data, trend_test
 
-# 1. Create a time vector
-t = pd.to_datetime(pd.date_range(start='2010-01-01', periods=10, freq='YE'))
+# 1. Prepare your data
+# We have values, some of which are 'censored' (marked with <)
+values = [10, 12, '<5', 14, 15, 18, 20, '<5', 25, 30]
+dates = pd.date_range(start='2020-01-01', periods=len(values), freq='ME') # Month End
 
-# 2. Create a data vector with mixed numeric and censored string values
-x_raw = [5, '<4', 3.5, '>6', 6.2, '<4', 3, 2.5, '<2', 2.1]
+# 2. Process the censored data
+# This converts strings like '<5' into a format our statistical engine understands
+data = prepare_censored_data(values)
 
-# 3. Pre-process the censored data into the required DataFrame format
-x_prepared = prepare_censored_data(x_raw)
+# 3. Run the test
+# We scale the slope to 'year' so the output is in units per year
+result = trend_test(x=data, t=dates, slope_scaling='year')
 
-# 4. Run the trend test
-result = trend_test(x=x_prepared, t=t)
-
-print(result)
+# 4. See the results
+print(f"Trend Direction: {result.trend}")
+print(f"Slope: {result.slope:.2f} units/year")
+print(f"P-value: {result.p:.4f}")
 ```
 
-## Comparison to LWP-TRENDS R Script
+**What happened?**
+The `trend_test` function automatically handled the `<5` values, calculated the trend significance (p-value), and estimated the rate of change (slope).
 
-While the `MannKenSen` package is heavily inspired by the LWP-TRENDS R script, it is not a 1:1 clone. Users should be aware of key methodological differences in areas such as time vector handling and the default methods for censored data. For a full breakdown of these differences, please consult the package's internal documentation.
+---
 
-## References
+## 📚 References
 
-1. Helsel, D.R. (2012). *Statistics for Censored Environmental Data Using Minitab and R* (2nd ed.). Wiley.
-2. Gilbert, R.O. (1987). *Statistical Methods for Environmental Pollution Monitoring*. Wiley.
-3. Hirsch, R.M., Slack, J.R., & Smith, R.A. (1982). Techniques of trend analysis for monthly water quality data. *Water Resources Research*, 18(1), 107-121.
-4. van Belle, G., & Hughes, J.P. (1984). Nonparametric tests for trend in water quality. *Water Resources Research*, 20(1), 127-136.
-5. Mann, H.B. (1945). Nonparametric tests against trend. *Econometrica*, 13(3), 245-259.
-6. Sen, P.K. (1968). Estimates of the regression coefficient based on a particular kind of rank correlation. *Journal of the American Statistical Association*, 63(324), 1379-1389.
+This package implements standard, peer-reviewed statistical methods.
+
+1.  **Helsel, D.R. (2012).** *Statistics for Censored Environmental Data Using Minitab and R* (2nd ed.). Wiley.
+2.  **Gilbert, R.O. (1987).** *Statistical Methods for Environmental Pollution Monitoring*. Wiley.
+3.  **Hirsch, R.M., Slack, J.R., & Smith, R.A. (1982).** Techniques of trend analysis for monthly water quality data. *Water Resources Research*, 18(1), 107-121.
+4.  **Mann, H.B. (1945).** Nonparametric tests against trend. *Econometrica*, 13(3), 245-259.
+5.  **Sen, P.K. (1968).** Estimates of the regression coefficient based on a particular kind of rank correlation. *Journal of the American Statistical Association*, 63(324), 1379-1389.
