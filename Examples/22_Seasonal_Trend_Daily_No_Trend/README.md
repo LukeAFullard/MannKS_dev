@@ -95,8 +95,8 @@ Sen's Slope: -0.0103 degrees/year
 ## Interpreting the Results
 
 ### 1. The Result: "No Trend"
-*   **p-value (0.7601)**: This is high (far above 0.05 or 0.1). It confirms that we cannot reject the null hypothesis. There is no statistically significant trend.
-*   **Sen's Slope (-0.0069)**: The estimated rate of change is effectively zero (less than 0.01 degrees per year).
+*   **p-value (0.6112)**: This is high (far above 0.05 or 0.1). It confirms that we cannot reject the null hypothesis. There is no statistically significant trend.
+*   **Sen's Slope (-0.0103)**: The estimated rate of change is effectively zero (less than 0.02 degrees per year).
 *   **Success:** The test correctly ignored the huge ±15°C seasonal swings and recognized that the 20°C average has not changed over the decade.
 
 ### 2. Visual Results (`seasonal_plot.png`)

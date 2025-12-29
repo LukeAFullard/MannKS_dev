@@ -114,7 +114,7 @@ The boxplots clearly show the "weekend effect" (Days 5 and 6 are higher).
 
 ### 2. Trend Results
 *   **Trend (Decreasing)**: The test correctly identifies the downward trend.
-*   **Sen's Slope (-4.9818)**: This is remarkably close to the true generated trend of -5.0.
+*   **Sen's Slope (-4.9343)**: This is remarkably close to the true generated trend of -5.0.
 *   **Confidence**: The result is "Highly Likely Decreasing" with p < 0.0001.
 
 ### 3. Visualizing the Trend (`seasonal_trend_plot.png`)

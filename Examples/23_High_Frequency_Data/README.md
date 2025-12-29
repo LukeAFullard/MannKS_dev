@@ -99,15 +99,15 @@ print(f"Confidence Interval: [{result_hourly.lower_ci:.4f}, {result_hourly.upper
 ```text
 --- Part 1: High-Frequency Sensor Data (Seconds) ---
 Detected Trend: increasing
-Sen's Slope: 0.5001 (degrees per minute)
+Sen's Slope: 0.5004 (degrees per minute)
 Expected Slope: 0.5000
-Confidence Interval: [0.4996, 0.5007]
+Confidence Interval: [0.4997, 0.5009]
 
 --- Part 2: Hourly Data with Diurnal Seasonality ---
 Detected Trend: increasing
-Sen's Slope: 0.0900 (units per day)
+Sen's Slope: 0.1036 (units per day)
 Expected Slope: 0.1000
-Confidence Interval: [0.0676, 0.1132]
+Confidence Interval: [0.0749, 0.1261]
 
 ```
 
