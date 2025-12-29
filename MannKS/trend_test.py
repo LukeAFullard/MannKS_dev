@@ -93,16 +93,21 @@ def trend_test(
                             datetime-like time vector `t`.
             - 'lwp_robust_median': Similar to 'lwp_median' but uses a robust median
                                    calculation suitable for censored data.
-            - 'median': Aggregates tied timestamps using the median of values and times.
-                        Does NOT thin data (reduce frequency), only handles exact ties.
-            - 'robust_median': A more statistically robust median for censored data at
-                               tied timestamps. Does NOT thin data.
-            - 'middle': Aggregates tied timestamps using the observation closest to the
-                        mean of the actual timestamps.
-            - 'middle_lwp': Aggregates tied timestamps using the observation closest to the
-                            theoretical midpoint of the time period.
-        agg_period (str): The time period for LWP aggregation ('year', 'month', etc.).
-                          Only used when `agg_method='lwp'`.
+            - 'median': Aggregates data using the median of values and times.
+                        If `agg_period` is provided (e.g., 'month'), aggregates all data
+                        within that period. Otherwise, aggregates only exact timestamp ties.
+            - 'robust_median': A more statistically robust median for censored data.
+                        If `agg_period` is provided, aggregates all data within that period.
+                        Otherwise, aggregates only exact timestamp ties.
+            - 'middle': Aggregates data using the observation closest to the
+                        mean of the actual timestamps in the group (tie or period).
+            - 'middle_lwp': Aggregates data using the observation closest to the
+                            theoretical midpoint of the time period (or tie group).
+        agg_period (str, optional): The time period for aggregation (e.g. 'year', 'month', 'day',
+                                    'hour', 'minute', 'second').
+                                    If provided, data is grouped by this period before `agg_method`
+                                    is applied.
+                                    If None (default), data is only aggregated if exact timestamp ties exist.
         min_size (int): Minimum sample size. Warnings issued if n < min_size.
                        Set to None to disable check.
         mk_test_method (str): The method for handling right-censored data in the
