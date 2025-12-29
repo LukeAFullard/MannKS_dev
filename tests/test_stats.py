@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from MannKenSen._stats import _confidence_intervals, _sens_estimator_censored
+from MannKS._stats import _confidence_intervals, _sens_estimator_censored
 
 def test_confidence_intervals_lwp_method():
     """

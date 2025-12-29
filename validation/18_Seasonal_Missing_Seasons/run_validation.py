@@ -6,12 +6,12 @@ import matplotlib.pyplot as plt
 from typing import Dict, List, Tuple
 from datetime import datetime, timedelta
 
-# Add repo root to path to ensure MannKenSen can be imported
+# Add repo root to path to ensure MannKS can be imported
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
 
-import MannKenSen as mk
+import MannKS as mk
 
 # RPy2 imports
 try:
@@ -516,11 +516,11 @@ class ValidationUtils:
                 for res in self.results:
                     test_id = res.get('test_id', 'Unknown')
                     methods = [
-                        ('MannKenSen (Standard)', 'mk_py'),
-                        ('MannKenSen (LWP Mode)', 'lwp_py'),
+                        ('MannKS (Standard)', 'mk_py'),
+                        ('MannKS (LWP Mode)', 'lwp_py'),
                         ('LWP-TRENDS (R)', 'r'),
                         ('LWP-TRENDS (R) [Patched]', 'r_patched'),
-                        ('MannKenSen (ATS)', 'ats_py'),
+                        ('MannKS (ATS)', 'ats_py'),
                         ('NADA2 (R)', 'nada_r')
                     ]
                     for method_name, prefix in methods:
@@ -567,7 +567,7 @@ Specifically, all data for **July (Month 7)** and **August (Month 8)** will be r
 This forces the test to skip these seasons and only analyze the remaining 10 months.
 
 **Note:** The LWP-TRENDS R script has a known fragility with missing seasons and may fail to run.
-The `mannkensen` package is expected to handle this gracefully by skipping the missing seasons and analyzing the rest.
+The `MannKS` package is expected to handle this gracefully by skipping the missing seasons and analyzing the rest.
 
 **R Workaround:** To verify if the LWP R script *can* run if the data is massaged, this validation
 script also runs a "Patched" version where missing seasons are filled with `NA` values to ensure

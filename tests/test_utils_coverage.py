@@ -4,11 +4,11 @@ Tests for _utils.py to improve test coverage.
 import unittest
 import pandas as pd
 import numpy as np
-from MannKenSen._datetime import (_is_datetime_like, _get_season_func,
+from MannKS._datetime import (_is_datetime_like, _get_season_func,
                                  _get_cycle_identifier)
-from MannKenSen._stats import (_rle_lengths, _z_score,
+from MannKS._stats import (_rle_lengths, _z_score,
                              _mk_score_and_var_censored)
-from MannKenSen._helpers import (_missing_values_analysis, _aggregate_censored_median)
+from MannKS._helpers import (_missing_values_analysis, _aggregate_censored_median)
 
 class TestUtilsCoverage(unittest.TestCase):
 

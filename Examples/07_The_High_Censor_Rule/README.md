@@ -16,7 +16,7 @@ We simulate a dataset where the true concentration is stable, but the reporting 
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import matplotlib.pyplot as plt
 
 # 1. Generate Synthetic Data
@@ -126,4 +126,4 @@ we remove any doubt that the trend might be an artifact.
 *(Note: With `hicensor=True`, the data is effectively flat. The plot shows the data points at the consistent `< 10` level.)*
 
 ## Key Takeaway
-If your data has changing detection limits, be very careful with substitution methods. The `MannKenSen` package handles this robustly by default, but `hicensor=True` provides an extra layer of safety by harmonizing the censoring levels across the entire time series.
+If your data has changing detection limits, be very careful with substitution methods. The `MannKS` package handles this robustly by default, but `hicensor=True` provides an extra layer of safety by harmonizing the censoring levels across the entire time series.

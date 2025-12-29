@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 # Import internal functions to be tested
-from MannKenSen._helpers import (
+from MannKS._helpers import (
     _preprocessing,
     _aggregate_censored_median,
     _value_for_time_increment,

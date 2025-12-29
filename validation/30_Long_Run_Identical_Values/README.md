@@ -10,12 +10,12 @@
     **Expected Behavior:**
     *   **Trend:** Likely no trend or non-significant.
     *   **Data Quality Warning:** The system should produce an analysis note warning about "Long run of single value" (e.g., "WARNING: Long run of single value...").
-    *   **Comparison:** We aim to verify if MannKenSen detects this pattern similarly to the LWP-TRENDS R script.
+    *   **Comparison:** We aim to verify if MannKS detects this pattern similarly to the LWP-TRENDS R script.
 
 
 **Verification Conclusion:**
 
-MannKenSen **performed robustly** by completing the analysis without crashing.
+MannKS **performed robustly** by completing the analysis without crashing.
 However, it **did not issue** a specific warning for the long run of identical values in the main output stream captured here. Users should check the 'analysis_notes' field in the result object for detailed data quality flags.
 
 
@@ -25,10 +25,10 @@ However, it **did not issue** a specific warning for the long run of identical v
 
 ## Results
       Test ID                Method         Slope       P-Value      Lower CI      Upper CI
-V-30_long_run MannKenSen (Standard)  0.000000e+00  6.946868e-01  0.000000e+00  0.000000e+00
-V-30_long_run MannKenSen (LWP Mode)  0.000000e+00  6.946868e-01  0.000000e+00  0.000000e+00
+V-30_long_run MannKS (Standard)  0.000000e+00  6.946868e-01  0.000000e+00  0.000000e+00
+V-30_long_run MannKS (LWP Mode)  0.000000e+00  6.946868e-01  0.000000e+00  0.000000e+00
 V-30_long_run        LWP-TRENDS (R) -2.147484e+09 -2.147484e+09 -2.147484e+09 -2.147484e+09
-V-30_long_run      MannKenSen (ATS)  0.000000e+00  6.946868e-01  0.000000e+00  0.000000e+00
+V-30_long_run      MannKS (ATS)  0.000000e+00  6.946868e-01  0.000000e+00  0.000000e+00
 V-30_long_run             NADA2 (R) -2.405412e-08  6.266181e-01           NaN           NaN
 
 ## Warnings

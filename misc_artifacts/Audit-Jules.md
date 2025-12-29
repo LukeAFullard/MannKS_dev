@@ -1,6 +1,6 @@
-# MannKenSen Package Audit (Jules)
+# MannKS Package Audit (Jules)
 
-This document contains the findings of a deep, comprehensive audit of the `MannKenSen` package, conducted to ensure its reliability as a scientific tool.
+This document contains the findings of a deep, comprehensive audit of the `MannKS` package, conducted to ensure its reliability as a scientific tool.
 
 ## Audit Summary
 

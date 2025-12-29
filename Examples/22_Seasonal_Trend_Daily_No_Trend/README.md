@@ -17,7 +17,7 @@ We simulate 10 years of daily temperature data. The data has a strong sine-wave 
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 
 # 1. Generate Synthetic Daily Data
 # Scenario: A 10-year dataset of daily temperature measurements.

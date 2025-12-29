@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # rpy2 setup
 import rpy2.robjects as ro
@@ -28,7 +28,7 @@ csv_path = os.path.join(os.path.dirname(__file__), 'data.csv')
 data.to_csv(csv_path, index=False)
 
 
-# --- 2. MannKenSen Analysis ---
+# --- 2. MannKS Analysis ---
 # Pre-process the censored data
 processed_data = mk.prepare_censored_data(data['value'])
 
@@ -88,14 +88,14 @@ readme_content = f"""
 This validation case verifies the handling of left-censored (`<`) data. The goal is to ensure all methods can detect a positive trend in a dataset where some lower values are censored.
 
 ## Data
-A synthetic dataset of {n} annual samples was generated with a known positive slope. Values below `{censor_threshold}` were converted to left-censored strings (e.g., `'<{censor_threshold}'`). The generated plot from the standard `mannkensen` analysis is shown below.
+A synthetic dataset of {n} annual samples was generated with a known positive slope. Values below `{censor_threshold}` were converted to left-censored strings (e.g., `'<{censor_threshold}'`). The generated plot from the standard `MannKS` analysis is shown below.
 
 ![Left-Censored Plot](left_censored_plot.png)
 
 ```python
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # Generate Data
 np.random.seed(42)
@@ -110,7 +110,7 @@ x = slope * np.arange(n) + intercept + noise
 censor_threshold = {censor_threshold}
 x_censored = [f"<{censor_threshold}" if val < censor_threshold else val for val in x]
 
-# Pre-process and run MannKenSen
+# Pre-process and run MannKS
 processed_data = mk.prepare_censored_data(x_censored)
 mk_results = mk.trend_test(processed_data, t)
 print("p-value:", mk_results.p)
@@ -118,7 +118,7 @@ print("p-value:", mk_results.p)
 
 ## Results Comparison
 
-| Metric              | MannKenSen (Standard) | MannKenSen (LWP Mode) | LWP-TRENDS R Script |
+| Metric              | MannKS (Standard) | MannKS (LWP Mode) | LWP-TRENDS R Script |
 |---------------------|-----------------------|-----------------------|---------------------|
 | p-value             | {mk_standard.p:.6f}   | {mk_lwp.p:.6f}        | {r_p_value:.6f}     |
 | Sen's Slope         | {mk_standard.slope:.6f} | {mk_lwp.slope:.6f}    | {r_slope:.6f}       |
@@ -126,9 +126,9 @@ print("p-value:", mk_results.p)
 | Upper CI (90%)      | {mk_standard.upper_ci:.6f} | {mk_lwp.upper_ci:.6f} | {r_upper_ci:.6f}    |
 
 ## Analysis
-The `sens_slope_method='lwp'` parameter is key in this test. It instructs `mannkensen` to set ambiguous pairwise slopes involving censored data to 0, mimicking the R script's behavior. This results in the **MannKenSen (LWP Mode)** slope and p-value being very close to the **LWP-TRENDS R Script**.
+The `sens_slope_method='lwp'` parameter is key in this test. It instructs `MannKS` to set ambiguous pairwise slopes involving censored data to 0, mimicking the R script's behavior. This results in the **MannKS (LWP Mode)** slope and p-value being very close to the **LWP-TRENDS R Script**.
 
-The **MannKenSen (Standard)** run uses a more robust default (`sens_slope_method='nan'`), which removes ambiguous slopes from the calculation. This can lead to a slightly different, but statistically sound, result. All methods correctly identified the significant increasing trend.
+The **MannKS (Standard)** run uses a more robust default (`sens_slope_method='nan'`), which removes ambiguous slopes from the calculation. This can lead to a slightly different, but statistically sound, result. All methods correctly identified the significant increasing trend.
 """
 
 readme_path = os.path.join(os.path.dirname(__file__), 'README.md')

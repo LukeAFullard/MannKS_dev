@@ -21,20 +21,20 @@
 ## Results
 | Test ID                | Method                |     Slope |     P-Value |   Lower CI |    Upper CI |
 |:-----------------------|:----------------------|----------:|------------:|-----------:|------------:|
-| V-08_strong_increasing | MannKenSen (Standard) |  5.64389  | 2.5735e-13  |   4.85093  |   6.98769   |
-| V-08_strong_increasing | MannKenSen (LWP Mode) |  5.48981  | 2.5735e-13  |   4.7352   |   6.81486   |
+| V-08_strong_increasing | MannKS (Standard) |  5.64389  | 2.5735e-13  |   4.85093  |   6.98769   |
+| V-08_strong_increasing | MannKS (LWP Mode) |  5.48981  | 2.5735e-13  |   4.7352   |   6.81486   |
 | V-08_strong_increasing | LWP-TRENDS (R)        |  5.48981  | 2.11501e-13 |   4.86003  |   6.6062    |
-| V-08_strong_increasing | MannKenSen (ATS)      |  4.88713  | 2.5735e-13  |   4.54168  |   5.23452   |
+| V-08_strong_increasing | MannKS (ATS)      |  4.88713  | 2.5735e-13  |   4.54168  |   5.23452   |
 | V-08_strong_increasing | NADA2 (R)             |  4.88952  | 2.11609e-13 | nan        | nan         |
-| V-08_weak_decreasing   | MannKenSen (Standard) | -1.14027  | 7.56878e-08 |  -2.12784  |  -0.704638  |
-| V-08_weak_decreasing   | MannKenSen (LWP Mode) | -1.07408  | 7.56878e-08 |  -1.89043  |  -0.665127  |
+| V-08_weak_decreasing   | MannKS (Standard) | -1.14027  | 7.56878e-08 |  -2.12784  |  -0.704638  |
+| V-08_weak_decreasing   | MannKS (LWP Mode) | -1.07408  | 7.56878e-08 |  -1.89043  |  -0.665127  |
 | V-08_weak_decreasing   | LWP-TRENDS (R)        | -1.07408  | 6.7985e-08  |  -1.69095  |  -0.709468  |
-| V-08_weak_decreasing   | MannKenSen (ATS)      | -0.7915   | 7.56878e-08 |  -0.991425 |  -0.603419  |
+| V-08_weak_decreasing   | MannKS (ATS)      | -0.7915   | 7.56878e-08 |  -0.991425 |  -0.603419  |
 | V-08_weak_decreasing   | NADA2 (R)             | -0.793479 | 6.7985e-08  | nan        | nan         |
-| V-08_stable            | MannKenSen (Standard) | -0.374044 | 0.274921    |  -1.03164  |   0.279845  |
-| V-08_stable            | MannKenSen (LWP Mode) | -0.292675 | 0.274921    |  -0.921535 |   0.153196  |
+| V-08_stable            | MannKS (Standard) | -0.374044 | 0.274921    |  -1.03164  |   0.279845  |
+| V-08_stable            | MannKS (LWP Mode) | -0.292675 | 0.274921    |  -0.921535 |   0.153196  |
 | V-08_stable            | LWP-TRENDS (R)        | -0.292675 | 0.273202    |  -0.812243 |   0.0951858 |
-| V-08_stable            | MannKenSen (ATS)      | -0.341235 | 0.274921    |  -0.762933 |   0.0506468 |
+| V-08_stable            | MannKS (ATS)      | -0.341235 | 0.274921    |  -0.762933 |   0.0506468 |
 | V-08_stable            | NADA2 (R)             | -0.341479 | 0.273202    | nan        | nan         |
 
 ## LWP Accuracy (Python vs R)

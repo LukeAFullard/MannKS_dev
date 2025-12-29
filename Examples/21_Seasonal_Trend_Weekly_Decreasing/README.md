@@ -22,7 +22,7 @@ We simulate 3 years of daily data with:
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import matplotlib.pyplot as plt
 
 # 1. Generate Synthetic Data: Weekly Pattern + Decreasing Trend

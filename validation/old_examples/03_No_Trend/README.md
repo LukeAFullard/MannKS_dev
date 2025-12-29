@@ -11,7 +11,7 @@ A synthetic dataset of 50 annual samples was generated with a slope of 0. The da
 ```python
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # Generate Data
 np.random.seed(42)
@@ -22,7 +22,7 @@ intercept = 5
 noise = np.random.normal(0, 1, n)
 x = slope * np.arange(n) + intercept + noise
 
-# Run MannKenSen Analyses
+# Run MannKS Analyses
 mk_standard = mk.trend_test(x, t)
 mk_lwp = mk.trend_test(
     x, t,
@@ -39,7 +39,7 @@ print("LWP MK p-value:", mk_lwp.p)
 
 The following table compares the key statistical outputs from the three analysis methods.
 
-| Metric              | MannKenSen (Standard) | MannKenSen (LWP Mode) | LWP-TRENDS R Script |
+| Metric              | MannKS (Standard) | MannKS (LWP Mode) | LWP-TRENDS R Script |
 |---------------------|-----------------------|-----------------------|---------------------|
 | p-value             | 0.170114   | 0.170114        | 0.170114     |
 | Sen's Slope         | -0.012359 | -0.012359    | -0.012359       |

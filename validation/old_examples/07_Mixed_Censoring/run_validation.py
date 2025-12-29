@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # rpy2 setup
 import rpy2.robjects as ro
@@ -36,7 +36,7 @@ csv_path = os.path.join(os.path.dirname(__file__), 'data.csv')
 data.to_csv(csv_path, index=False)
 
 
-# --- 2. MannKenSen Analysis ---
+# --- 2. MannKS Analysis ---
 # Pre-process the censored data
 processed_data = mk.prepare_censored_data(data['value'])
 
@@ -97,14 +97,14 @@ readme_content = f"""
 This validation case verifies the handling of a dataset that contains both left-censored (`<`) and right-censored (`>`) data.
 
 ## Data
-A synthetic dataset of {n} annual samples was generated with a positive slope. Values below `{left_censor_threshold}` were left-censored, and values above `{right_censor_threshold}` were right-censored. The generated plot from the standard `mannkensen` analysis is shown below.
+A synthetic dataset of {n} annual samples was generated with a positive slope. Values below `{left_censor_threshold}` were left-censored, and values above `{right_censor_threshold}` were right-censored. The generated plot from the standard `MannKS` analysis is shown below.
 
 ![Mixed-Censored Plot](mixed_censored_plot.png)
 
 ```python
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # Generate Data
 np.random.seed(45)
@@ -127,7 +127,7 @@ for val in x:
     else:
         x_censored.append(val)
 
-# Pre-process and run MannKenSen
+# Pre-process and run MannKS
 processed_data = mk.prepare_censored_data(x_censored)
 mk_results = mk.trend_test(processed_data, t)
 print("p-value:", mk_results.p)
@@ -135,7 +135,7 @@ print("p-value:", mk_results.p)
 
 ## Results Comparison
 
-| Metric              | MannKenSen (Standard) | MannKenSen (LWP Mode) | LWP-TRENDS R Script |
+| Metric              | MannKS (Standard) | MannKS (LWP Mode) | LWP-TRENDS R Script |
 |---------------------|-----------------------|-----------------------|---------------------|
 | p-value             | {mk_standard.p:.6f}   | {mk_lwp.p:.6f}        | {r_p_value:.6f}     |
 | Sen's Slope         | {mk_standard.slope:.6f} | {mk_lwp.slope:.6f}    | {r_slope:.6f}       |
@@ -145,9 +145,9 @@ print("p-value:", mk_results.p)
 ## Analysis
 This case combines the behaviors seen in the individual left-censored and right-censored tests.
 
-The **MannKenSen (LWP Mode)** continues to closely replicate the **LWP-TRENDS R Script** by using the same data substitution heuristics for both left- and right-censored data.
+The **MannKS (LWP Mode)** continues to closely replicate the **LWP-TRENDS R Script** by using the same data substitution heuristics for both left- and right-censored data.
 
-The **MannKenSen (Standard)** method uses its robust ranking approach for both types of censoring, treating ambiguous comparisons conservatively. As expected, this results in a slightly higher (less significant) p-value and a different Sen's slope, reflecting the increased uncertainty from having both left- and right-censored data in the same analysis.
+The **MannKS (Standard)** method uses its robust ranking approach for both types of censoring, treating ambiguous comparisons conservatively. As expected, this results in a slightly higher (less significant) p-value and a different Sen's slope, reflecting the increased uncertainty from having both left- and right-censored data in the same analysis.
 """
 
 readme_path = os.path.join(os.path.dirname(__file__), 'README.md')

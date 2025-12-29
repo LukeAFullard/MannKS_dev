@@ -6,7 +6,7 @@ from collections import namedtuple
 
 # Ensure correct package import
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-import MannKenSen as mk
+import MannKS as mk
 
 # Mock the TrendResult namedtuple structure used by classify_trend
 # Based on the actual code, it needs 'h', 'C', and 'trend' in addition to what I had.

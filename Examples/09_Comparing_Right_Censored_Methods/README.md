@@ -32,7 +32,7 @@ We simulate a dataset that hits a ceiling of 80.
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 
 # 1. Generate Synthetic Data
 # Scenario: A monitoring station measures a chemical concentration that is steadily increasing.

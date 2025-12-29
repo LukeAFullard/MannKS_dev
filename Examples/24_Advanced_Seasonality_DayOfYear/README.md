@@ -29,7 +29,7 @@ We run the `seasonal_trend_test` with `season_type='day_of_year'`.
 ```python
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # 1. Generate synthetic daily data (5 years)
 # (See run_example.py for details)

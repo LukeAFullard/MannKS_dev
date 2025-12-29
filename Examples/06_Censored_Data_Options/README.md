@@ -18,7 +18,7 @@ We analyze a synthetic dataset with an increasing trend that includes "Over Rang
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import os
 
 # 1. Generate Synthetic Data with Right-Censored Values

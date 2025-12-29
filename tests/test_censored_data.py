@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
 import pandas as pd
-from MannKenSen import trend_test, seasonal_trend_test
-from MannKenSen.preprocessing import prepare_censored_data
+from MannKS import trend_test, seasonal_trend_test
+from MannKS.preprocessing import prepare_censored_data
 
 # Unit tests for the new `prepare_censored_data` function
 def test_prepare_censored_data_valid():

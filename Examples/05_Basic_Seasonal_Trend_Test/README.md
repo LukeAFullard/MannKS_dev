@@ -18,7 +18,7 @@ Before running the test, we often aggregate data (e.g., take the median of all s
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import matplotlib.pyplot as plt
 
 # 1. Generate Synthetic Monthly Data

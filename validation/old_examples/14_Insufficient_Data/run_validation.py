@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 import warnings
 
 # rpy2 setup
@@ -16,12 +16,12 @@ def run_all_analyses(data, plot_path=None):
     t = data['time']
     x = data['value']
 
-    # MannKenSen (Standard)
+    # MannKS (Standard)
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         mk_standard = mk.trend_test(x, t, slope_scaling='year', alpha=0.1, plot_path=plot_path)
 
-    # MannKenSen (LWP Mode)
+    # MannKS (LWP Mode)
     mk_lwp = mk.trend_test(x, t, slope_scaling='year', alpha=0.1, mk_test_method='lwp', ci_method='lwp', tie_break_method='lwp')
 
     # R LWP-TRENDS Analysis
@@ -72,7 +72,7 @@ mk_std_n4, mk_lwp_n4, r_res_n4 = run_all_analyses(data_n4, plot_path=plot_path_n
 # --- Generate README Report ---
 def format_results_table(mk_std, mk_lwp, r_res):
     return f"""
-| Metric              | MannKenSen (Standard) | MannKenSen (LWP Mode) | LWP-TRENDS R Script |
+| Metric              | MannKS (Standard) | MannKS (LWP Mode) | LWP-TRENDS R Script |
 |---------------------|-----------------------|-----------------------|---------------------|
 | p-value             | {mk_std.p:.4f}        | {mk_lwp.p:.4f}        | {r_res['p'].iloc[0]:.4f}     |
 | Sen's Slope (/yr)   | {mk_std.slope:.4f}    | {mk_lwp.slope:.4f}    | {r_res['AnnualSenSlope'].iloc[0]:.4f}       |
@@ -84,7 +84,7 @@ readme_content = f"""
 # Validation Case V-14: Insufficient Data
 
 ## Objective
-This validation case verifies how the `mannkensen` package and the LWP-TRENDS R script handle datasets that are too small for a valid trend test. Two scenarios are tested: one where a test is impossible (n=1) and one where a test is possible but the sample size is very small (n=4).
+This validation case verifies how the `MannKS` package and the LWP-TRENDS R script handle datasets that are too small for a valid trend test. Two scenarios are tested: one where a test is impossible (n=1) and one where a test is possible but the sample size is very small (n=4).
 
 ---
 
@@ -97,7 +97,7 @@ A dataset with a single data point was created. No statistical trend can be calc
 
 ### Analysis (n=1)
 All three methods correctly identified that a trend test could not be performed.
--   **MannKenSen (Standard & LWP Mode):** Both returned a classification of "insufficient data" and populated the statistical fields with `NaN` or `0` as appropriate. This is a graceful failure.
+-   **MannKS (Standard & LWP Mode):** Both returned a classification of "insufficient data" and populated the statistical fields with `NaN` or `0` as appropriate. This is a graceful failure.
 -   **LWP-TRENDS R Script:** The R script fails internally during its pre-processing steps, and our wrapper script correctly catches the error and reports `NaN` for all results.
 
 ---
@@ -115,7 +115,7 @@ A dataset with four data points was created. While a test is technically possibl
 
 ### Analysis (n=4)
 All three methods ran the analysis but provided warnings about the small sample size.
--   **MannKenSen (Standard & LWP Mode):** Both functions executed correctly but produced an analysis note: `sample size (4) below minimum (10)`. This correctly alerts the user that the results may be unreliable.
+-   **MannKS (Standard & LWP Mode):** Both functions executed correctly but produced an analysis note: `sample size (4) below minimum (10)`. This correctly alerts the user that the results may be unreliable.
 -   **LWP-TRENDS R Script:** The R script also ran but produced its own analysis note (captured in the R object, not shown here) indicating that the Sen's slope confidence intervals could not be calculated due to the small sample size, resulting in `NaN` values for the CIs in the output.
 
 This validation confirms that all systems handle insufficient data gracefully and provide appropriate feedback to the user.

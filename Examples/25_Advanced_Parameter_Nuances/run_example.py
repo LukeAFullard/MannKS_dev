@@ -3,7 +3,7 @@ import io
 import contextlib
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import warnings
 import matplotlib.pyplot as plt
 
@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 example_code = """
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import warnings
 
 # === Topic 1: Kendall's Tau-a vs. Tau-b ===
@@ -122,7 +122,7 @@ readme_content = f"""
 # Example 25: Advanced Parameter Nuances
 
 ## The "Why": Fine-Tuning Your Analysis
-While the default settings of `MannKenSen` cover 95% of use cases, advanced users sometimes need more control. This example covers four specific "power user" features:
+While the default settings of `MannKS` cover 95% of use cases, advanced users sometimes need more control. This example covers four specific "power user" features:
 
 1.  **Kendall's Tau Method**: Choosing between the standard and tie-corrected correlation coefficient.
 2.  **Custom Classification**: Renaming trend confidence levels to match your organization's terminology (e.g., IPCC standards).

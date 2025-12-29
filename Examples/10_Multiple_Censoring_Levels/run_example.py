@@ -3,14 +3,14 @@ import io
 import contextlib
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import matplotlib.pyplot as plt
 
 # --- 1. Define the Example Code as a String ---
 example_code = """
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 
 # 1. Generate Synthetic Data with Multiple Censoring Levels
 # Imagine a dataset of chemical concentrations over 10 years.
@@ -171,7 +171,7 @@ The plot visualizes this complexity:
 *   **Trend Line**: The solid line shows the estimated rate of decrease, pivoting through the "middle" of this complex cloud of data.
 
 ## Key Takeaway
-The `MannKenSen` package is designed for this reality. You don't need to throw away censored data or use arbitrary substitution rules (like "replace with 1/2 DL").
+The `MannKS` package is designed for this reality. You don't need to throw away censored data or use arbitrary substitution rules (like "replace with 1/2 DL").
 1.  Use `mk.prepare_censored_data()` to parse your strings.
 2.  Pass the result to `mk.trend_test()`.
 3.  Trust the non-parametric statistics to handle the ambiguity correctly.

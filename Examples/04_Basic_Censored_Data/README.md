@@ -30,7 +30,7 @@ We pass the processed DataFrame to `trend_test`. By default, the test uses the `
 ```python
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # 1. Generate synthetic data with censored values
 # (See run_example.py for the full data generation function)

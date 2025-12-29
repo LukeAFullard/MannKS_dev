@@ -5,12 +5,12 @@ import pytest
 from unittest.mock import patch
 from collections import namedtuple
 
-from MannKenSen.plotting import (
+from MannKS.plotting import (
     plot_seasonal_distribution,
     plot_inspection_data,
     plot_trend
 )
-from MannKenSen.preprocessing import prepare_censored_data
+from MannKS.preprocessing import prepare_censored_data
 
 @pytest.fixture
 def temp_plot_path(tmpdir):

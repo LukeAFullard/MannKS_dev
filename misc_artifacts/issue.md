@@ -15,7 +15,7 @@ The identical results strongly suggest that Test 3 did **not** perform monthly a
 
 ## Code Analysis
 
-The issue lies in `MannKenSen/trend_test.py`.
+The issue lies in `MannKS/trend_test.py`.
 
 The code handles `lwp`-style aggregation (which inherently uses `agg_period`) in a dedicated block:
 

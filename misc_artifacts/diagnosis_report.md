@@ -1,6 +1,6 @@
 # Diagnosis of Results Discrepancies
 
-This report details the findings from investigating differences between the `MannKenSen` (Python) package and the `LWP-TRENDS` (R) script.
+This report details the findings from investigating differences between the `MannKS` (Python) package and the `LWP-TRENDS` (R) script.
 
 ## 1. Discrepancy in Slope Values (V-08 Strong Increasing)
 
@@ -38,7 +38,7 @@ After applying this fix to the validation harness, the results match perfectly:
 *   LWP-TRENDS (R): `1.58025`
 *   Error: `~1e-13` %
 
-This confirms that the `MannKenSen` package logic is correct and robust, and the initial discrepancy was purely due to an apples-to-oranges comparison of time coordinates in the test runner.
+This confirms that the `MannKS` package logic is correct and robust, and the initial discrepancy was purely due to an apples-to-oranges comparison of time coordinates in the test runner.
 
 ## 2. Zero Slope for "Weak Decreasing Trend"
 

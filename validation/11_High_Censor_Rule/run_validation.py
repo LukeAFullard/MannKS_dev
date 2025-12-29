@@ -6,11 +6,11 @@ import os
 import sys
 import warnings
 
-# Add the repository root to the path so we can import MannKenSen
+# Add the repository root to the path so we can import MannKS
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-import MannKenSen as mk
-from MannKenSen import trend_test
+import MannKS as mk
+from MannKS import trend_test
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 import rpy2.robjects as ro
@@ -231,11 +231,11 @@ def analyze_scenario(scenario_name, df):
     # Pre-process data for trend_test
     df_prep = mk.prepare_censored_data(df['value_str'])
 
-    # 1. MannKenSen Standard (Robust, no HiCensor)
+    # 1. MannKS Standard (Robust, no HiCensor)
     # Scale slope to year to match R
     mk_std = trend_test(df_prep, df['date'], mk_test_method='robust', slope_scaling='year')
 
-    # 2. MannKenSen LWP Mode (with HiCensor)
+    # 2. MannKS LWP Mode (with HiCensor)
     mk_lwp = trend_test(df_prep, df['date'],
                         mk_test_method='lwp',
                         ci_method='lwp',
@@ -248,7 +248,7 @@ def analyze_scenario(scenario_name, df):
     # 3. LWP R Script (v2102)
     r_slope, r_p, r_lci, r_uci = run_lwp_r_script_v2102(df)
 
-    # 4. MannKenSen ATS Mode
+    # 4. MannKS ATS Mode
     mk_ats = trend_test(df_prep, df['date'], sens_slope_method='ats', slope_scaling='year')
 
     # 5. NADA2 R Script
@@ -346,15 +346,15 @@ def generate_combined_plot(scenarios, filename, main_title):
             y_trend = mk_result.slope * t_numeric.values + mk_result.intercept
 
             # Fix: intercept in mk_result from scaled run might need adjustment if t basis differs?
-            # MannKenSen intercept is y_med - slope * t_med.
+            # MannKS intercept is y_med - slope * t_med.
             # If slope is scaled, t_med must match the unit?
             # Actually, trend_test scales slope but returns intercept based on unscaled t?
             # Let's trust the result object if we use the same t basis as input.
-            # But wait, we passed datetime. MannKenSen converts to seconds internally for unscaled.
+            # But wait, we passed datetime. MannKS converts to seconds internally for unscaled.
             # With `slope_scaling='year'`, it returns scaled slope.
             # The intercept logic: `intercept = y_med - t_med * slope`
             # If slope is per year, t_med should be in years?
-            # MannKenSen likely uses seconds for t_med if input was datetime.
+            # MannKS likely uses seconds for t_med if input was datetime.
             # So `intercept` might be inconsistent if `slope` is scaled but `t` wasn't converted?
             # Actually, `trend_test` doesn't automatically rescale `t` for the intercept calculation in the simple way.
             # Let's plot using the `slope` and pivot around median to be safe.
@@ -456,13 +456,13 @@ if __name__ == "__main__":
         for res in all_results_rows:
             test_id = res['test_id']
             # Standard
-            long_rows.append({'Test ID': test_id, 'Method': 'MannKenSen (Standard)', 'Slope': res['mk_py_slope'], 'P-Value': res['mk_py_p_value'], 'Lower CI': res['mk_py_lower_ci'], 'Upper CI': res['mk_py_upper_ci']})
+            long_rows.append({'Test ID': test_id, 'Method': 'MannKS (Standard)', 'Slope': res['mk_py_slope'], 'P-Value': res['mk_py_p_value'], 'Lower CI': res['mk_py_lower_ci'], 'Upper CI': res['mk_py_upper_ci']})
             # LWP Mode
-            long_rows.append({'Test ID': test_id, 'Method': 'MannKenSen (LWP Mode)', 'Slope': res['lwp_py_slope'], 'P-Value': res['lwp_py_p_value'], 'Lower CI': res['lwp_py_lower_ci'], 'Upper CI': res['lwp_py_upper_ci']})
+            long_rows.append({'Test ID': test_id, 'Method': 'MannKS (LWP Mode)', 'Slope': res['lwp_py_slope'], 'P-Value': res['lwp_py_p_value'], 'Lower CI': res['lwp_py_lower_ci'], 'Upper CI': res['lwp_py_upper_ci']})
             # R LWP
             long_rows.append({'Test ID': test_id, 'Method': 'LWP-TRENDS (R)', 'Slope': res['r_slope'], 'P-Value': res['r_p_value'], 'Lower CI': res['r_lower_ci'], 'Upper CI': res['r_upper_ci']})
             # ATS
-            long_rows.append({'Test ID': test_id, 'Method': 'MannKenSen (ATS)', 'Slope': res['ats_py_slope'], 'P-Value': res['ats_py_p_value'], 'Lower CI': res['ats_py_lower_ci'], 'Upper CI': res['ats_py_upper_ci']})
+            long_rows.append({'Test ID': test_id, 'Method': 'MannKS (ATS)', 'Slope': res['ats_py_slope'], 'P-Value': res['ats_py_p_value'], 'Lower CI': res['ats_py_lower_ci'], 'Upper CI': res['ats_py_upper_ci']})
             # NADA R
             long_rows.append({'Test ID': test_id, 'Method': 'NADA2 (R)', 'Slope': res['nada_r_slope'], 'P-Value': res['nada_r_p_value'], 'Lower CI': res['nada_r_lower_ci'], 'Upper CI': res['nada_r_upper_ci']})
 

@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # rpy2 setup
 import rpy2.robjects as ro
@@ -24,7 +24,7 @@ csv_path = os.path.join(os.path.dirname(__file__), 'data.csv')
 data.to_csv(csv_path, index=False)
 
 
-# --- 2. MannKenSen Analysis ---
+# --- 2. MannKS Analysis ---
 # Run with standard settings. No plot is generated as the time vector is numeric.
 mk_standard = mk.trend_test(x, t, alpha=0.1)
 
@@ -62,14 +62,14 @@ readme_content = f"""
 # Validation Case V-20: Numeric Time Vector
 
 ## Objective
-This validation case verifies that the `mannkensen` package functions correctly with a simple numeric time vector (e.g., fractional years) instead of datetime objects, and it highlights the comparative inflexibility of the LWP-TRENDS R script.
+This validation case verifies that the `MannKS` package functions correctly with a simple numeric time vector (e.g., fractional years) instead of datetime objects, and it highlights the comparative inflexibility of the LWP-TRENDS R script.
 
 ## Data
 A synthetic dataset of {n} samples was generated with a clear positive trend. The time vector `t` was created as a NumPy array of floating-point numbers representing unequally spaced fractional years.
 
 ```python
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # Generate Data
 np.random.seed(50)
@@ -80,7 +80,7 @@ intercept = {intercept}
 noise = np.random.normal(0, 1, n)
 x = slope * (t - t[0]) + intercept + noise
 
-# Run MannKenSen test
+# Run MannKS test
 result = mk.trend_test(x, t, alpha=0.1)
 
 print(f"Slope: {{result.slope:.4f}}")
@@ -89,15 +89,15 @@ print(f"P-value: {{result.p:.4f}}")
 
 ## Methodological Difference
 
--   **`mannkensen`**: The `trend_test` function is designed to be flexible. It natively accepts numeric arrays for the time vector `t` and correctly calculates the Sen's slope in "units of x per unit of t".
+-   **`MannKS`**: The `trend_test` function is designed to be flexible. It natively accepts numeric arrays for the time vector `t` and correctly calculates the Sen's slope in "units of x per unit of t".
 
 -   **LWP-TRENDS R Script**: The R script is rigid and not designed for numeric time vectors. Its internal functions require a datetime column named `myDate` to generate a `Year` column, which is essential for its workflow. To make the script run, the numeric years had to be manually coerced into a date format (`as.Date(paste0(floor(mydata$time), "-01-01"))`). This workaround forces the script to treat all fractional years as the start of that year, fundamentally altering the time data and leading to different results.
 
 ## Results Comparison
 
-The results below show that `mannkensen` runs successfully on the raw numeric data. The R script runs only after the time data is modified, leading to a different (and less accurate) result.
+The results below show that `MannKS` runs successfully on the raw numeric data. The R script runs only after the time data is modified, leading to a different (and less accurate) result.
 
-| Metric              | `mannkensen` (Standard) | LWP-TRENDS R Script (Modified Data) |
+| Metric              | `MannKS` (Standard) | LWP-TRENDS R Script (Modified Data) |
 |---------------------|-------------------------|-------------------------------------|
 | p-value             | {mk_standard.p:.6f}     | {r_p_value:.6f}                       |
 | Sen's Slope         | {mk_standard.slope:.6f}   | {r_slope:.6f}                         |
@@ -105,10 +105,10 @@ The results below show that `mannkensen` runs successfully on the raw numeric da
 | Upper CI (90%)      | {mk_standard.upper_ci:.6f} | {r_upper_ci:.6f}                      |
 
 ## Conclusion
-This validation case successfully demonstrates the superior flexibility of the `mannkensen` package.
+This validation case successfully demonstrates the superior flexibility of the `MannKS` package.
 
-- **`mannkensen` correctly and easily handles numeric time vectors**, providing an accurate trend analysis on the original, unmodified data.
-- The **LWP-TRENDS R script is not compatible with numeric time vectors** and requires significant data modification to run, which compromises the accuracy of the results. This highlights a key advantage of `mannkensen` for users with data in this common format.
+- **`MannKS` correctly and easily handles numeric time vectors**, providing an accurate trend analysis on the original, unmodified data.
+- The **LWP-TRENDS R script is not compatible with numeric time vectors** and requires significant data modification to run, which compromises the accuracy of the results. This highlights a key advantage of `MannKS` for users with data in this common format.
 """
 
 readme_path = os.path.join(os.path.dirname(__file__), 'README.md')

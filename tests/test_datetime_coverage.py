@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 
-from MannKenSen._datetime import _get_season_func, _get_agg_func
+from MannKS._datetime import _get_season_func, _get_agg_func
 
 # --- Tests for _get_season_func ---
 

@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 import warnings
 
 # rpy2 setup
@@ -45,7 +45,7 @@ x = data['value']
 plot_path = os.path.join(os.path.dirname(__file__), 'trend_plot.png')
 
 
-# --- 2. MannKenSen Analysis ---
+# --- 2. MannKS Analysis ---
 # Run with standard settings (no aggregation)
 # This should produce a warning about tied timestamps
 with warnings.catch_warnings(record=True) as w:
@@ -96,18 +96,18 @@ analysis_code_block = """
 ```python
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # Load data
 data = pd.read_csv("data.csv", parse_dates=["time"])
 x = data['value']
 t = data['time']
 
-# Run MannKenSen (Standard, no aggregation)
+# Run MannKS (Standard, no aggregation)
 # This generates a warning for tied timestamps
 mk_standard = mk.trend_test(x, t, slope_scaling='year')
 
-# Run MannKenSen (LWP Mode, with monthly aggregation)
+# Run MannKS (LWP Mode, with monthly aggregation)
 mk_lwp = mk.trend_test(
     x, t,
     slope_scaling='year',
@@ -133,29 +133,29 @@ A synthetic dataset of {len(x)} samples over {n} months was generated with a pos
 
 ![Trend Plot]({"trend_plot.png"})
 
-*Figure 1: Plot of the raw data, showing multiple samples in some months, and the Sen's slope calculated by the standard `mannkensen` method.*
+*Figure 1: Plot of the raw data, showing multiple samples in some months, and the Sen's slope calculated by the standard `MannKS` method.*
 
 ## Analysis Code
 {analysis_code_block}
 
 ## Results Comparison
 
-| Metric              | MannKenSen (Standard) | MannKenSen (LWP Mode) | LWP-TRENDS R Script |
+| Metric              | MannKS (Standard) | MannKS (LWP Mode) | LWP-TRENDS R Script |
 |---------------------|-----------------------|-----------------------|---------------------|
 | p-value             | {mk_standard.p:.6f}   | {mk_lwp.p:.6f}        | {r_results_df['p'].iloc[0]:.6f}     |
 | Sen's Slope (/yr)   | {mk_standard.slope:.6f} | {mk_lwp.slope:.6f}    | {r_results_df['AnnualSenSlope'].iloc[0]:.6f}       |
 | Lower CI (90%)      | {mk_standard.lower_ci:.6f} | {mk_lwp.lower_ci:.6f} | {r_results_df['Sen_Lci'].iloc[0]:.6f}    |
 | Upper CI (90%)      | {mk_standard.upper_ci:.6f} | {mk_lwp.upper_ci:.6f} | {r_results_df['Sen_Uci'].iloc[0]:.6f}    |
 
-**MannKenSen (Standard) Analysis Notes:**
+**MannKS (Standard) Analysis Notes:**
 `{''.join(mk_standard.analysis_notes)}`
 
 ## Analysis
-The **MannKenSen (Standard)** analysis was run on the raw, un-aggregated data. As expected, it produced an analysis note warning about tied timestamps, which can affect the Sen's slope calculation.
+The **MannKS (Standard)** analysis was run on the raw, un-aggregated data. As expected, it produced an analysis note warning about tied timestamps, which can affect the Sen's slope calculation.
 
-The **MannKenSen (LWP Mode)** analysis, with `agg_method='lwp'` and `agg_period='month'`, aggregates the data to one value per month before performing the trend test. This resolves the tied timestamp issue.
+The **MannKS (LWP Mode)** analysis, with `agg_method='lwp'` and `agg_period='month'`, aggregates the data to one value per month before performing the trend test. This resolves the tied timestamp issue.
 
-The results show that the **MannKenSen (LWP Mode)** outputs are nearly identical to those from the **LWP-TRENDS R Script**. This confirms that the monthly aggregation logic in `mannkensen` correctly emulates the behavior of the reference R script, which is a critical feature for LWP compatibility. The minor differences can be attributed to floating-point precision differences between Python and R.
+The results show that the **MannKS (LWP Mode)** outputs are nearly identical to those from the **LWP-TRENDS R Script**. This confirms that the monthly aggregation logic in `MannKS` correctly emulates the behavior of the reference R script, which is a critical feature for LWP compatibility. The minor differences can be attributed to floating-point precision differences between Python and R.
 """
 
 readme_path = os.path.join(os.path.dirname(__file__), 'README.md')

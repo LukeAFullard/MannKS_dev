@@ -6,11 +6,11 @@ import pandas as pd
 from contextlib import redirect_stdout
 import io
 
-# Ensure the MannKenSen package is importable
+# Ensure the MannKS package is importable
 import sys
 # Add the root directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
-from MannKenSen import check_seasonality
+from MannKS import check_seasonality
 
 def generate_guide():
     """
@@ -31,7 +31,7 @@ def generate_guide():
     code_block = textwrap.dedent("""
     import numpy as np
     import pandas as pd
-    from MannKenSen import check_seasonality
+    from MannKS import check_seasonality
 
     # --- 1. Synthetic Data Generation ---
     # Create a dataset with high-frequency (daily) data over several years.

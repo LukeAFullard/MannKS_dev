@@ -1,6 +1,6 @@
 import pytest
 from collections import namedtuple
-from MannKenSen.classification import classify_trend
+from MannKS.classification import classify_trend
 
 # Define a mock result object for testing
 TrendResult = namedtuple('TrendResult', ['h', 'C', 'trend'])

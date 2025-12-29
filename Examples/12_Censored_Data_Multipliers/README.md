@@ -26,7 +26,7 @@ By changing `lt_mult`, we drastically change the slopes calculated between the f
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import matplotlib.pyplot as plt
 import warnings
 

@@ -2,9 +2,9 @@ import pytest
 import numpy as np
 import pandas as pd
 import os
-from MannKenSen.check_seasonality import check_seasonality
-from MannKenSen.plotting import plot_seasonal_distribution
-from MannKenSen import trend_test, seasonal_trend_test
+from MannKS.check_seasonality import check_seasonality
+from MannKS.plotting import plot_seasonal_distribution
+from MannKS import trend_test, seasonal_trend_test
 
 @pytest.fixture
 def seasonal_data():

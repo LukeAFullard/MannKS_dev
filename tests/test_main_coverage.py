@@ -3,9 +3,9 @@ import pandas as pd
 import pytest
 import warnings
 
-from MannKenSen import trend_test, seasonal_trend_test, check_seasonality
-from MannKenSen.analysis_notes import get_sens_slope_analysis_note
-from MannKenSen._stats import _mk_score_and_var_censored
+from MannKS import trend_test, seasonal_trend_test, check_seasonality
+from MannKS.analysis_notes import get_sens_slope_analysis_note
+from MannKS._stats import _mk_score_and_var_censored
 
 # --- seasonal_trend_test coverage ---
 

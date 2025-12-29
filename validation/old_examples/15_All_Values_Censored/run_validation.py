@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # rpy2 setup
 import rpy2.robjects as ro
@@ -21,7 +21,7 @@ csv_path = os.path.join(os.path.dirname(__file__), 'data.csv')
 data.to_csv(csv_path, index=False)
 
 
-# --- 2. MannKenSen Analysis ---
+# --- 2. MannKS Analysis ---
 # Pre-process the censored data
 prepared_data = mk.prepare_censored_data(data['value'])
 
@@ -78,7 +78,7 @@ A synthetic dataset of {n} annual samples was generated where every value is the
 
 The following table compares the key statistical outputs. As expected, no trend could be calculated.
 
-| Metric              | MannKenSen (Standard) | MannKenSen (LWP Mode) | LWP-TRENDS R Script |
+| Metric              | MannKS (Standard) | MannKS (LWP Mode) | LWP-TRENDS R Script |
 |---------------------|-----------------------|-----------------------|---------------------|
 | p-value             | {mk_standard.p:.4f}   | {mk_lwp.p:.4f}        | {r_results_df['p'].iloc[0]:.4f}     |
 | Sen's Slope         | {mk_standard.slope:.4f} | {mk_lwp.slope:.4f}    | {r_results_df['AnnualSenSlope'].iloc[0]:.4f}       |
@@ -89,7 +89,7 @@ The following table compares the key statistical outputs. As expected, no trend 
 ## Analysis
 All three methods correctly determined that no trend could be calculated from a dataset composed entirely of identical censored values.
 
--   **MannKenSen (Standard & LWP Mode):** Both functions returned a p-value of `1.0` and a Sen's slope of `0.0`, correctly identifying the complete lack of any trend. The analysis notes properly flag that there is only one unique value, which is the root cause.
+-   **MannKS (Standard & LWP Mode):** Both functions returned a p-value of `1.0` and a Sen's slope of `0.0`, correctly identifying the complete lack of any trend. The analysis notes properly flag that there is only one unique value, which is the root cause.
 -   **LWP-TRENDS R Script:** The R script also produces `NA` (Not Available) for its primary results, as no valid statistical comparison can be made. Our wrapper correctly translates this to `nan`.
 
 This confirms that all systems behave as expected and do not produce misleading results when faced with this edge case.

@@ -23,7 +23,7 @@ This example explains:
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import matplotlib.pyplot as plt
 import os
 
@@ -89,7 +89,7 @@ print(f"  New Classification: {result_custom.classification}")
 
 # OR we can just use the helper function `classify_trend` on an existing result
 # This is faster if you just want to change labels without re-calculating statistics.
-from MannKenSen import classify_trend
+from MannKS import classify_trend
 new_label = classify_trend(result, category_map=my_custom_map)
 print(f"  Re-classified via helper: {new_label}")
 

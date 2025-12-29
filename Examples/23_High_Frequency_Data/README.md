@@ -20,7 +20,7 @@ We will perform two analyses:
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 
 # --- Part 1: High Frequency Data (Minutes/Seconds) ---
 # Goal: Demonstrate that the package can handle very small time increments

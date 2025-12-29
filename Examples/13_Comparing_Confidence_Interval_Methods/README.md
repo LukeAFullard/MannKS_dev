@@ -28,7 +28,7 @@ We use a small dataset where the differences are more noticeable.
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 
 # 1. Generate Synthetic Data
 # We use a small dataset (n=12) because differences in Confidence Interval (CI) calculation methods

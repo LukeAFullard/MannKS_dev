@@ -1,7 +1,7 @@
 # Validation Case V-14: Insufficient Data
 
 ## Objective
-This validation case verifies how the `mannkensen` package and the LWP-TRENDS R script handle datasets that are too small for a valid trend test. Two scenarios are tested: one where a test is impossible (n=1) and one where a test is possible but the sample size is very small (n=4).
+This validation case verifies how the `MannKS` package and the LWP-TRENDS R script handle datasets that are too small for a valid trend test. Two scenarios are tested: one where a test is impossible (n=1) and one where a test is possible but the sample size is very small (n=4).
 
 ---
 
@@ -10,7 +10,7 @@ This validation case verifies how the `mannkensen` package and the LWP-TRENDS R 
 A dataset with a single data point was created. No statistical trend can be calculated from one point.
 
 ### Results (n=1)
-| Metric              | MannKenSen (Standard) | MannKenSen (LWP Mode) | LWP-TRENDS R Script |
+| Metric              | MannKS (Standard) | MannKS (LWP Mode) | LWP-TRENDS R Script |
 |---------------------|-----------------------|-----------------------|---------------------|
 | p-value             | nan        | nan        | nan     |
 | Sen's Slope (/yr)   | nan    | nan    | nan       |
@@ -19,7 +19,7 @@ A dataset with a single data point was created. No statistical trend can be calc
 
 ### Analysis (n=1)
 All three methods correctly identified that a trend test could not be performed.
--   **MannKenSen (Standard & LWP Mode):** Both returned a classification of "insufficient data" and populated the statistical fields with `NaN` or `0` as appropriate. This is a graceful failure.
+-   **MannKS (Standard & LWP Mode):** Both returned a classification of "insufficient data" and populated the statistical fields with `NaN` or `0` as appropriate. This is a graceful failure.
 -   **LWP-TRENDS R Script:** The R script fails internally during its pre-processing steps, and our wrapper script correctly catches the error and reports `NaN` for all results.
 
 ---
@@ -33,7 +33,7 @@ A dataset with four data points was created. While a test is technically possibl
 *Figure 1: Plot of the n=4 data. A trend line can be calculated, but the confidence intervals are extremely wide due to the low sample size.*
 
 ### Results (n=4)
-| Metric              | MannKenSen (Standard) | MannKenSen (LWP Mode) | LWP-TRENDS R Script |
+| Metric              | MannKS (Standard) | MannKS (LWP Mode) | LWP-TRENDS R Script |
 |---------------------|-----------------------|-----------------------|---------------------|
 | p-value             | 0.7341        | 0.7341        | nan     |
 | Sen's Slope (/yr)   | -0.0970    | -0.0970    | nan       |
@@ -42,7 +42,7 @@ A dataset with four data points was created. While a test is technically possibl
 
 ### Analysis (n=4)
 All three methods ran the analysis but provided warnings about the small sample size.
--   **MannKenSen (Standard & LWP Mode):** Both functions executed correctly but produced an analysis note: `sample size (4) below minimum (10)`. This correctly alerts the user that the results may be unreliable.
+-   **MannKS (Standard & LWP Mode):** Both functions executed correctly but produced an analysis note: `sample size (4) below minimum (10)`. This correctly alerts the user that the results may be unreliable.
 -   **LWP-TRENDS R Script:** The R script also ran but produced its own analysis note (captured in the R object, not shown here) indicating that the Sen's slope confidence intervals could not be calculated due to the small sample size, resulting in `NaN` values for the CIs in the output.
 
 This validation confirms that all systems handle insufficient data gracefully and provide appropriate feedback to the user.

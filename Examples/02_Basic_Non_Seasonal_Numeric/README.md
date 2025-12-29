@@ -18,7 +18,7 @@ We analyze a simple dataset where time is represented by numeric years (integers
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 
 # 1. Generate Synthetic Data
 # We create a simple dataset with 10 yearly observations.

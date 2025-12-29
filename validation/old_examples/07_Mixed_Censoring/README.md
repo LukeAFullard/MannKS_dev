@@ -4,14 +4,14 @@
 This validation case verifies the handling of a dataset that contains both left-censored (`<`) and right-censored (`>`) data.
 
 ## Data
-A synthetic dataset of 60 annual samples was generated with a positive slope. Values below `12.0` were left-censored, and values above `19.0` were right-censored. The generated plot from the standard `mannkensen` analysis is shown below.
+A synthetic dataset of 60 annual samples was generated with a positive slope. Values below `12.0` were left-censored, and values above `19.0` were right-censored. The generated plot from the standard `MannKS` analysis is shown below.
 
 ![Mixed-Censored Plot](mixed_censored_plot.png)
 
 ```python
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # Generate Data
 np.random.seed(45)
@@ -34,7 +34,7 @@ for val in x:
     else:
         x_censored.append(val)
 
-# Pre-process and run MannKenSen
+# Pre-process and run MannKS
 processed_data = mk.prepare_censored_data(x_censored)
 mk_results = mk.trend_test(processed_data, t)
 print("p-value:", mk_results.p)
@@ -42,7 +42,7 @@ print("p-value:", mk_results.p)
 
 ## Results Comparison
 
-| Metric              | MannKenSen (Standard) | MannKenSen (LWP Mode) | LWP-TRENDS R Script |
+| Metric              | MannKS (Standard) | MannKS (LWP Mode) | LWP-TRENDS R Script |
 |---------------------|-----------------------|-----------------------|---------------------|
 | p-value             | 0.000002   | 0.000000        | 0.000000     |
 | Sen's Slope         | 0.279090 | 0.252884    | 0.252884       |
@@ -52,6 +52,6 @@ print("p-value:", mk_results.p)
 ## Analysis
 This case combines the behaviors seen in the individual left-censored and right-censored tests.
 
-The **MannKenSen (LWP Mode)** continues to closely replicate the **LWP-TRENDS R Script** by using the same data substitution heuristics for both left- and right-censored data.
+The **MannKS (LWP Mode)** continues to closely replicate the **LWP-TRENDS R Script** by using the same data substitution heuristics for both left- and right-censored data.
 
-The **MannKenSen (Standard)** method uses its robust ranking approach for both types of censoring, treating ambiguous comparisons conservatively. As expected, this results in a slightly higher (less significant) p-value and a different Sen's slope, reflecting the increased uncertainty from having both left- and right-censored data in the same analysis.
+The **MannKS (Standard)** method uses its robust ranking approach for both types of censoring, treating ambiguous comparisons conservatively. As expected, this results in a slightly higher (less significant) p-value and a different Sen's slope, reflecting the increased uncertainty from having both left- and right-censored data in the same analysis.

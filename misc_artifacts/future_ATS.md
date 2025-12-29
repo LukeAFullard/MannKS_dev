@@ -113,7 +113,7 @@ Copy into a `.py` or use directly in a Jupyter notebook.
 
 ## 6. Seasonal ATS: Methodological Improvement (Stratified ATS)
 
-This section describes the **Stratified ATS Estimator** implemented in `MannKenSen`, which differs intentionally from the reference `censeaken` R script.
+This section describes the **Stratified ATS Estimator** implemented in `MannKS`, which differs intentionally from the reference `censeaken` R script.
 
 ### The Problem with the `censeaken` Method
 
@@ -122,7 +122,7 @@ The `censeaken` R script calculates the overall seasonal trend slope by running 
 
 ### The Solution: Stratified ATS
 
-To provide a more robust seasonal trend estimate, `MannKenSen` implements a **Stratified Akritas-Theil-Sen Estimator**. This method respects the independence of seasons, similar to how the Seasonal Kendall test respects seasons for p-value calculation.
+To provide a more robust seasonal trend estimate, `MannKS` implements a **Stratified Akritas-Theil-Sen Estimator**. This method respects the independence of seasons, similar to how the Seasonal Kendall test respects seasons for p-value calculation.
 
 **Methodology:**
 

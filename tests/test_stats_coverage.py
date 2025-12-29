@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import pandas as pd
-from MannKenSen import trend_test
+from MannKS import trend_test
 
 def test_zero_variance_handling():
     """

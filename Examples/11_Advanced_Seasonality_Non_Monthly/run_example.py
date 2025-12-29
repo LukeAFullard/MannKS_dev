@@ -3,14 +3,14 @@ import io
 import contextlib
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import matplotlib.pyplot as plt
 
 # --- 1. Define the Example Code as a String ---
 example_code = """
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import matplotlib.pyplot as plt
 
 # 1. Generate Synthetic Daily Data with Weekly Seasonality
@@ -113,7 +113,7 @@ While "seasonality" often refers to months of the year, the concept applies to a
 *   **Daily Cycles**: Temperature or dissolved oxygen might rise during the day and fall at night.
 *   **Quarterly Cycles**: Financial or business reporting data.
 
-The `MannKenSen` package can handle any of these by adjusting the `season_type` and `period` parameters.
+The `MannKS` package can handle any of these by adjusting the `season_type` and `period` parameters.
 
 ## The Scenario: Weekly Patterns
 In this example, we analyze daily data over 3 years. The data has:

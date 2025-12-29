@@ -4,7 +4,7 @@ Tests for the regional_test function.
 import unittest
 import pandas as pd
 import numpy as np
-from MannKenSen import trend_test, regional_test
+from MannKS import trend_test, regional_test
 
 class TestRegionalAggregation(unittest.TestCase):
     def test_regional_test_basic(self):

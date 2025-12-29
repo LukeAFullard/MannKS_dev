@@ -3,14 +3,14 @@ import io
 import contextlib
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import matplotlib.pyplot as plt
 
 # --- 1. Define the Example Code as a String ---
 example_code = """
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 
 # 1. Generate Real-World Data (Datetime Objects)
 # In the real world, data doesn't always come nicely indexed as "Year 1, Year 2".

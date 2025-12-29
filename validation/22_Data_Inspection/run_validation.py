@@ -6,7 +6,7 @@ import numpy as np
 
 # Ensure correct package import
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-import MannKenSen as mk
+import MannKS as mk
 
 def run_v22():
     print("Running V-22: Data Inspection Validation")

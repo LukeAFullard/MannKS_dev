@@ -1,10 +1,10 @@
 
 import numpy as np
 import pandas as pd
-from MannKenSen.trend_test import trend_test
-from MannKenSen.seasonal_trend_test import seasonal_trend_test
-from MannKenSen.preprocessing import prepare_censored_data
-from MannKenSen._stats import _sens_estimator_censored
+from MannKS.trend_test import trend_test
+from MannKS.seasonal_trend_test import seasonal_trend_test
+from MannKS.preprocessing import prepare_censored_data
+from MannKS._stats import _sens_estimator_censored
 
 def test_trend_test_custom_multipliers():
     # Using non-monotonic data around the censored value

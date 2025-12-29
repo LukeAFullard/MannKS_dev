@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 import io
 import contextlib
 
-# Ensure the local MannKenSen package is importable
+# Ensure the local MannKS package is importable
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-import MannKenSen as mk
+import MannKS as mk
 
 def create_synthetic_data():
     """
@@ -88,7 +88,7 @@ We pass the processed DataFrame to `trend_test`. By default, the test uses the `
 ```python
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # 1. Generate synthetic data with censored values
 # (See run_example.py for the full data generation function)

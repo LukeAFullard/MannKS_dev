@@ -4,7 +4,7 @@
 ## The "Why": Trusting Your Results
 Statistical tests like Mann-Kendall are powerful, but they have assumptions. If your data violates these assumptions—like having too few points, too many ties, or heavy censoring—the results might be misleading.
 
-The `MannKenSen` package includes a built-in "Quality Assurance" system. Every time you run a test, it checks your data against several rules (inspired by the LWP-TRENDS R script) and returns **Analysis Notes** if potential issues are found.
+The `MannKS` package includes a built-in "Quality Assurance" system. Every time you run a test, it checks your data against several rules (inspired by the LWP-TRENDS R script) and returns **Analysis Notes** if potential issues are found.
 
 This example teaches you how to interpret these warnings and visualizes the data patterns that trigger them.
 
@@ -14,7 +14,7 @@ This example teaches you how to interpret these warnings and visualizes the data
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import matplotlib.pyplot as plt
 import os
 

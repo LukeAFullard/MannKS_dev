@@ -1,5 +1,5 @@
 """
-MannKenSen: A Python package for non-parametric trend analysis on unequally spaced time series data.
+MannKS: A Python package for non-parametric trend analysis on unequally spaced time series data.
 
 This package provides implementations of the Mann-Kendall test and Sen's slope
 estimator, with additional support for seasonal analysis, seasonality testing,

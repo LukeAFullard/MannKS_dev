@@ -11,7 +11,7 @@ A synthetic dataset of 50 annual samples was generated with a positive slope. Mu
 ```python
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # Generate Data
 np.random.seed(42)
@@ -26,7 +26,7 @@ x[5:10] = x[5]
 x[20:25] = x[20]
 x[35:40] = x[35]
 
-# Run MannKenSen Analyses
+# Run MannKS Analyses
 mk_standard = mk.trend_test(x, t, tau_method='b') # Default is 'b' for ties
 mk_lwp = mk.trend_test(
     x, t,
@@ -43,7 +43,7 @@ print("LWP MK p-value:", mk_lwp.p)
 
 The following table compares the key statistical outputs from the three analysis methods.
 
-| Metric              | MannKenSen (Standard) | MannKenSen (LWP Mode) | LWP-TRENDS R Script |
+| Metric              | MannKS (Standard) | MannKS (LWP Mode) | LWP-TRENDS R Script |
 |---------------------|-----------------------|-----------------------|---------------------|
 | p-value             | 0.000000   | 0.000000        | 0.000000     |
 | Sen's Slope         | 0.082351 | 0.082351    | 0.082351       |
@@ -53,6 +53,6 @@ The following table compares the key statistical outputs from the three analysis
 ## Analysis
 All three methods correctly identified the significant increasing trend despite the presence of tied values.
 
-The `mannkensen` package's standard method uses the Mann-Kendall Tau-b test, which is specifically designed to correctly handle ties in the variance calculation. The LWP emulation mode uses a different tie-breaking method (`tie_break_method='lwp'`) designed to replicate the R script's behavior.
+The `MannKS` package's standard method uses the Mann-Kendall Tau-b test, which is specifically designed to correctly handle ties in the variance calculation. The LWP emulation mode uses a different tie-breaking method (`tie_break_method='lwp'`) designed to replicate the R script's behavior.
 
-As shown in the table, the results from **MannKenSen (LWP Mode)** and the **LWP-TRENDS R Script** are nearly identical, demonstrating a successful replication of the R script's tie-handling logic. The standard method produces a slightly different but statistically consistent result.
+As shown in the table, the results from **MannKS (LWP Mode)** and the **LWP-TRENDS R Script** are nearly identical, demonstrating a successful replication of the R script's tie-handling logic. The standard method produces a slightly different but statistically consistent result.

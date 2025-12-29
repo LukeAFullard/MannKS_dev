@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # rpy2 setup
 import rpy2.robjects as ro
@@ -24,7 +24,7 @@ csv_path = os.path.join(os.path.dirname(__file__), 'data.csv')
 data.to_csv(csv_path, index=False)
 
 
-# --- 2. MannKenSen Analysis ---
+# --- 2. MannKS Analysis ---
 # Generate plot for the report
 plot_path = os.path.join(os.path.dirname(__file__), 'no_trend_plot.png')
 mk_standard = mk.trend_test(x, t, slope_scaling='year', alpha=0.1, plot_path=plot_path)
@@ -80,7 +80,7 @@ A synthetic dataset of {n} annual samples was generated with a slope of 0. The d
 ```python
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # Generate Data
 np.random.seed(42)
@@ -91,7 +91,7 @@ intercept = {intercept}
 noise = np.random.normal(0, 1, n)
 x = slope * np.arange(n) + intercept + noise
 
-# Run MannKenSen Analyses
+# Run MannKS Analyses
 mk_standard = mk.trend_test(x, t)
 mk_lwp = mk.trend_test(
     x, t,
@@ -108,7 +108,7 @@ print("LWP MK p-value:", mk_lwp.p)
 
 The following table compares the key statistical outputs from the three analysis methods.
 
-| Metric              | MannKenSen (Standard) | MannKenSen (LWP Mode) | LWP-TRENDS R Script |
+| Metric              | MannKS (Standard) | MannKS (LWP Mode) | LWP-TRENDS R Script |
 |---------------------|-----------------------|-----------------------|---------------------|
 | p-value             | {mk_standard.p:.6f}   | {mk_lwp.p:.6f}        | {r_p_value:.6f}     |
 | Sen's Slope         | {mk_standard.slope:.6f} | {mk_lwp.slope:.6f}    | {r_slope:.6f}       |

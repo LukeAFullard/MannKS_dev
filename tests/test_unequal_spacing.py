@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
 import pandas as pd
-from MannKenSen.trend_test import trend_test
-from MannKenSen.seasonal_trend_test import seasonal_trend_test
+from MannKS.trend_test import trend_test
+from MannKS.seasonal_trend_test import seasonal_trend_test
 
 @pytest.fixture
 def unequal_linear_data():

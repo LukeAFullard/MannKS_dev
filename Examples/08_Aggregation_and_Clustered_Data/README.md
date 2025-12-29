@@ -30,7 +30,7 @@ The `trend_test` function provides powerful aggregation tools built-in.
 import os
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import matplotlib.pyplot as plt
 
 # Determine where to save the plots (current directory by default)

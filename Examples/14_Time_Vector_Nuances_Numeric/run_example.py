@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 import io
 import contextlib
 
-# Ensure the local MannKenSen package is importable
+# Ensure the local MannKS package is importable
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-import MannKenSen as mk
+import MannKS as mk
 
 def create_synthetic_data():
     """
@@ -85,7 +85,7 @@ We create a time vector `t` representing the decimal year: `Year + (Month - 1)/1
 ```python
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # 1. Generate synthetic data (Monthly data for 10 years)
 df = create_synthetic_data()

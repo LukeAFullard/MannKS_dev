@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import pytest
-from MannKenSen import trend_test, seasonal_trend_test
-import MannKenSen as mk
+from MannKS import trend_test, seasonal_trend_test
+import MannKS as mk
 
 def test_ats_slope_non_seasonal():
     """
