@@ -103,8 +103,8 @@ The function automatically generated this plot:
 ![Trend Plot](trend_plot.png)
 
 *   **Blue Dots**: The actual data points.
-*   **Red Line**: The Sen's Slope trend line. Notice it passes through the "center of gravity" of the data but doesn't necessarily hit the mean.
-*   **Dashed Lines**: The 90% confidence interval (default `alpha=0.1`). If the trend is significant, the slope of these lines usually won't cross zero (flat).
+*   **Solid Line**: The Sen's Slope trend line. Notice it passes through the "center of gravity" of the data but doesn't necessarily hit the mean.
+*   **Shaded Area**: The 90% confidence interval (default `alpha=0.1`). If the trend is significant, the edges of this zone usually won't cross zero (flat).
 
 ## Key Takeaway
 For simple numeric time series (years, index numbers), `mk.trend_test(x, t)` is all you need. It provides the "Yes/No" (significance), the "How Much" (slope), and a user-friendly classification.
