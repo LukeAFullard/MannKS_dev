@@ -23,15 +23,25 @@ print(f"Time (t): {t}")
 print(f"Values (x): {x}")
 
 # 2. Run the Trend Test
-# The trend_test function returns a namedtuple with all statistical results.
-# We pass 'plot_path' to automatically generate a visualization.
+# The `trend_test` function is the core of the package. It performs two key statistical tasks:
+#   A. Mann-Kendall Test: Checks *if* there is a trend (Significance).
+#      - It compares every pair of data points to see if they increase or decrease.
+#   B. Sen's Slope Estimator: Calculates *how strong* the trend is (Magnitude).
+#      - It finds the median of all pairwise slopes.
+# We pass 'plot_path' to automatically generate a visualization of these results.
 print("\\nRunning Mann-Kendall Trend Test...")
 result = mk.trend_test(x, t, plot_path='trend_plot.png')
 
 # 3. Inspect the Results
-# The namedtuple has fields like 'trend', 's', 'p', 'slope', 'C' (confidence), etc.
+# The function returns a namedtuple with all statistical metrics.
+# Key fields include:
+#   - result.trend: A basic description ('increasing', 'decreasing', 'no trend').
+#   - result.classification: A more nuanced category (e.g., 'Likely Increasing') based on confidence.
+#   - result.p: The p-value (significance).
+#   - result.slope: The magnitude of change per unit time.
 print("\\n--- Trend Test Results ---")
-print(f"Trend: {result.trend} (Confidence: {result.C:.1%})")
+print(f"Basic Trend: {result.trend} (Confidence: {result.C:.1%})")
+print(f"Classification: {result.classification}")
 print(f"Kendall's S: {result.s}")
 print(f"p-value: {result.p:.4f}")
 print(f"Sen's Slope: {result.slope:.4f}")
@@ -77,8 +87,12 @@ We analyze a simple dataset where time is represented by numeric years (integers
 ## Interpreting the Results
 
 ### 1. Statistical Results
-*   **Trend: Increasing**: The test detected an upward trend.
-*   **Confidence (result.C): 100.0%**: This is derived from the p-value (`1 - p/2` for increasing trends). It means we are very certain this isn't just random noise.
+*   **Basic Trend (Increasing)**: The test detected an upward trend.
+*   **Classification (Increasing)**: The package assigns a descriptive category based on the confidence level (`result.C`).
+    *   **Increasing/Decreasing**: High confidence (≥ 90% or 95% depending on `alpha`).
+    *   **Likely Increasing/Decreasing**: Moderate confidence (e.g., 85-90%).
+    *   **Stable/No Trend**: Low confidence.
+*   **Confidence (result.C) (100.0%)**: This is derived from the p-value (`1 - p/2` for increasing trends). It means we are very certain this isn't just random noise.
 *   **Kendall's S (55.0)**: This is the raw score. It implies that when comparing all possible pairs of data points, 55 more pairs were increasing than decreasing. A positive number indicates growth.
 *   **p-value (0.0000)**: The probability that this trend happened by random chance is virtually zero. Standard practice considers $p < 0.05$ as significant.
 *   **Sen's Slope (0.3889)**: The median rate of change. Since our time unit is "years", this means the value increases by roughly **0.39 units per year**.
@@ -93,7 +107,7 @@ The function automatically generated this plot:
 *   **Dashed Lines**: The 90% confidence interval (default `alpha=0.1`). If the trend is significant, the slope of these lines usually won't cross zero (flat).
 
 ## Key Takeaway
-For simple numeric time series (years, index numbers), `mk.trend_test(x, t)` is all you need. It provides both the "Yes/No" (significance) and the "How Much" (slope).
+For simple numeric time series (years, index numbers), `mk.trend_test(x, t)` is all you need. It provides the "Yes/No" (significance), the "How Much" (slope), and a user-friendly classification.
 """
 
 with open(os.path.join(os.path.dirname(__file__), 'README.md'), 'w') as f:

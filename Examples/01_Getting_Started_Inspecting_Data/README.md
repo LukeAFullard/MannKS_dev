@@ -20,7 +20,11 @@ import pandas as pd
 import MannKenSen as mk
 
 # 1. Generate Synthetic Data
-# (Same setup as before: 5 years, monthly, trend + noise + gaps + censored)
+# We create a 5-year monthly dataset (60 points) with some "messy" real-world features:
+# - An underlying upward trend.
+# - Some random noise.
+# - Missing data (NaNs).
+# - Censored data (values below detection limit).
 np.random.seed(42)
 n_years = 5
 dates = pd.date_range(start='2020-01-01', periods=n_years*12, freq='ME')
@@ -33,10 +37,23 @@ values_str[10:13] = np.nan
 values_str[45] = np.nan
 
 # 2. Pre-process the Data
+# Raw environmental data often comes as strings (e.g., '< 0.5', '12.4').
+# Standard statistical functions fail on these strings.
+# The `prepare_censored_data` function is critical because it:
+#   1. Parses the strings to identify censored values (detects '<').
+#   2. Separates the data into a numeric 'value' column and a boolean 'censored' column.
+#   3. Handles multiple detection limits automatically.
 df = mk.prepare_censored_data(values_str)
 df['date'] = dates
 
 # 3. Inspect the Data
+# Before running a trend test, we must verify the data is suitable.
+# The `inspect_trend_data` function acts as a diagnostic tool.
+# It checks for:
+#   - Data Availability: Do we have enough data points?
+#   - Time Structure: Is the data monthly? Quarterly? Irregular?
+#   - Gaps: Are there long periods with no data?
+#   - Censoring: What percentage of data is non-detect?
 # We request `return_summary=True` to get the statistical table back.
 print("Running Data Inspection...")
 result = mk.inspect_trend_data(
