@@ -165,58 +165,96 @@ def bracket_and_bisect(x: np.ndarray, lower: np.ndarray, upper: np.ndarray,
 def estimate_intercept_turnbull(residual_lower: np.ndarray, residual_upper: np.ndarray, tol=1e-6, max_iter=100) -> float:
     """
     Estimates the median of interval-censored data using a Turnbull-style approach.
-    This is a pragmatic implementation of the core logic, not a full port of a library like Icens.
-    It finds the ECDF and returns the 0.5 quantile (median).
+    Correctly handles point masses (uncensored data) and infinite intervals (censored data).
     """
-    # Get all unique, finite interval endpoints
-    endpoints = np.unique(np.concatenate([residual_lower[np.isfinite(residual_lower)],
-                                          residual_upper[np.isfinite(residual_upper)]]))
+    # 1. Identify Unique Endpoints
+    # We include all boundaries, including -inf and +inf if present.
+    endpoints = np.unique(np.concatenate([residual_lower, residual_upper]))
 
-    if len(endpoints) == 0:
+    # 2. Construct Candidate Sets
+    # We partition the real line into disjoint sets based on endpoints:
+    # - Point sets [e_i, e_i] (for finite e_i)
+    # - Open intervals (e_i, e_{i+1})
+    candidate_sets = []
+
+    for i in range(len(endpoints)):
+        # Point set [e_i, e_i] - only for finite values
+        if np.isfinite(endpoints[i]):
+            candidate_sets.append((endpoints[i], endpoints[i]))
+
+        # Open interval (e_i, e_{i+1})
+        if i < len(endpoints) - 1:
+            candidate_sets.append((endpoints[i], endpoints[i+1]))
+
+    candidates = np.array(candidate_sets)
+    if len(candidates) == 0:
         return 0.0
-    if len(endpoints) == 1:
-        return endpoints[0]
 
-    # The Turnbull sets (intervals between endpoints)
-    turnbull_intervals = np.array([(endpoints[i], endpoints[i+1]) for i in range(len(endpoints)-1)])
-    midpoints = np.mean(turnbull_intervals, axis=1)
-
+    # 3. Initialize P
     n_obs = len(residual_lower)
-    n_intervals = len(turnbull_intervals)
+    n_sets = len(candidates)
+    p = np.full(n_sets, 1.0 / n_sets)
 
-    # Initialize probabilities for each interval
-    p = np.full(n_intervals, 1.0 / n_intervals)
+    # 4. Pre-calculate Containment Matrix
+    # A candidate set [c_L, c_R] is contained in observation [o_L, o_R] if:
+    # o_L <= c_L AND c_R <= o_R
 
+    L_col = residual_lower[:, np.newaxis]
+    R_col = residual_upper[:, np.newaxis]
+    C_start = candidates[:, 0]
+    C_end = candidates[:, 1]
+
+    is_contained = (C_start >= L_col) & (C_end <= R_col)
+
+    # Filter out candidates that are never contained in any observation to save computation
+    # (Though typically with endpoints derived from obs, most are relevant)
+    valid_candidates_idx = np.where(is_contained.any(axis=0))[0]
+    if len(valid_candidates_idx) == 0:
+        return 0.0 # Should not happen
+
+    p = p[valid_candidates_idx]
+    p /= np.sum(p) # Renormalize
+    is_contained = is_contained[:, valid_candidates_idx]
+    candidates = candidates[valid_candidates_idx]
+    n_sets = len(p)
+
+    # 5. EM Loop
     for _ in range(max_iter):
         p_old = p.copy()
 
-        # E-step: Calculate expected number of observations in each interval
-        alpha = np.zeros((n_obs, n_intervals))
-        for i in range(n_obs):
-            # Find which turnbull intervals are contained within the i-th observation's residual interval
-            contained_mask = (turnbull_intervals[:, 0] >= residual_lower[i]) & (turnbull_intervals[:, 1] <= residual_upper[i])
+        # E-step
+        numer = p * is_contained
+        denoms = np.sum(numer, axis=1, keepdims=True)
+        denoms[denoms == 0] = 1.0 # Avoid division by zero
+        alpha = numer / denoms
 
-            sum_p_contained = np.sum(p[contained_mask])
-            if sum_p_contained > 0:
-                alpha[i, contained_mask] = p[contained_mask] / sum_p_contained
-
-        # M-step: Update probabilities
+        # M-step
         p = np.sum(alpha, axis=0) / n_obs
 
-        # Check for convergence
         if np.sum(np.abs(p - p_old)) < tol:
             break
 
-    # Calculate ECDF and find the median
+    # 6. Find Median
     ecdf = np.cumsum(p)
+    # Find first index where cumulative probability >= 0.5
+    median_indices = np.where(ecdf >= 0.5)[0]
+    if len(median_indices) == 0:
+        median_idx = len(p) - 1
+    else:
+        median_idx = median_indices[0]
 
-    # Find the first midpoint where the ECDF crosses 0.5
-    median_idx = np.where(ecdf >= 0.5)[0]
-    if len(median_idx) == 0:
-        # If all probabilities are tiny, return the last midpoint
-        return midpoints[-1]
+    chosen = candidates[median_idx]
 
-    return midpoints[median_idx[0]]
+    # Return representative value
+    if chosen[0] == chosen[1]:
+        return chosen[0] # Point mass
+    else:
+        # Interval (a, b)
+        a, b = chosen[0], chosen[1]
+        # Handle infinite bounds heuristically for plot/intercept purposes
+        if np.isneginf(a): return b # Left tail -> return upper bound
+        if np.isposinf(b): return a # Right tail -> return lower bound
+        return (a + b) / 2.0
 
 
 # ---------- Public wrapper (Non-Seasonal) ----------
