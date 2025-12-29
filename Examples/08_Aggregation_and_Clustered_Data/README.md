@@ -173,9 +173,9 @@ P-value: 0.00000
 Analysis Notes: ["'median' aggregation used with censored data"]
 
 --- Test 3: Monthly Aggregation (agg_period='month') ---
-Slope: 6.38199
-P-value: 0.00000
-Analysis Notes: ["'median' aggregation used with censored data"]
+Slope: 6.11697
+P-value: 0.00001
+Analysis Notes: []
 
 --- Test 4: LWP Aggregation (agg_method='lwp') ---
 Slope: 5.83502
