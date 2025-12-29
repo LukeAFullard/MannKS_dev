@@ -15,9 +15,12 @@ Welcome to **MannKenSen**, a friendly and powerful Python package designed to he
 Whether you are tracking water quality, climate metrics, or any other time-series data, `MannKenSen` makes it easy to perform statistically rigorous tests—even if your data is "messy."
 
 We built this tool specifically to handle the real-world challenges data scientists and environmental engineers face every day:
-*   **Irregular sampling?** No problem.
+*   **Irregular sampling?** No problem. existing Python packages like `pyMannKendall` often do not account for unequally sampled time series, leading to inaccurate slope estimates. `MannKenSen` correctly handles this by using the exact time difference between observations.
 *   **Missing or "censored" values (like `<5` or `>100`)?** We handle those natively.
 *   **Seasonal patterns?** We can detect and account for them.
+
+### 🙏 Inspiration & Credit
+This package was heavily inspired by the excellent work done by **[LandWaterPeople (LWP)](https://landwaterpeople.co.nz/)**. Much of the robust functionality for handling censored data and regional aggregation is based on their R scripts and methodologies. We owe them a debt of gratitude for their contributions to the field.
 
 ---
 
@@ -103,3 +106,5 @@ This package implements standard, peer-reviewed statistical methods.
 3.  **Hirsch, R.M., Slack, J.R., & Smith, R.A. (1982).** Techniques of trend analysis for monthly water quality data. *Water Resources Research*, 18(1), 107-121.
 4.  **Mann, H.B. (1945).** Nonparametric tests against trend. *Econometrica*, 13(3), 245-259.
 5.  **Sen, P.K. (1968).** Estimates of the regression coefficient based on a particular kind of rank correlation. *Journal of the American Statistical Association*, 63(324), 1379-1389.
+6.  **Fraser, C., & Whitehead, A. L. (2022).** Continuous measures of confidence in direction of environmental trends at site and other spatial scales. *Environmental Challenges*, 9, 100601.
+7.  **Fraser, C., Snelder, T., & Matthews, A. (2018).** State and trends of river water quality in the Manawatu-Whanganui region: for all records up to 30 June 2017. Prepared for Abby Matthews; prepared by Caroline Fraser and Ton Snelder.
