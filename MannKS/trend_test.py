@@ -30,7 +30,7 @@ def trend_test(
     sens_slope_method: str = 'nan',
     tau_method: str = 'b',
     agg_method: str = 'none',
-    agg_period: str = 'year',
+    agg_period: Optional[str] = None,
     min_size: Optional[int] = 10,
     mk_test_method: str = 'robust',
     ci_method: str = 'direct',
@@ -241,27 +241,40 @@ def trend_test(
 
 
     # Handle tied timestamps and temporal aggregation
-    if agg_method in ['lwp', 'lwp_median', 'lwp_robust_median']:
+    lwp_methods = ['lwp', 'lwp_median', 'lwp_robust_median']
+    using_period_agg = (agg_period is not None) or (agg_method in lwp_methods)
+
+    if using_period_agg:
         if not is_datetime:
+            if agg_period is not None:
+                raise ValueError("`agg_period` can only be used with datetime-like inputs for `t`.")
             raise ValueError(f"`agg_method='{agg_method}'` can only be used with datetime-like inputs for `t`.")
 
         # LWP aggregation selects one value per time period (e.g., year, month).
         t_datetime = pd.to_datetime(data_filtered['t_original'])
         period_map = {
             'year': 'Y', 'month': 'M', 'quarter': 'Q',
-            'week': 'W', 'day': 'D'
+            'week': 'W', 'day': 'D',
+            'hour': 'h', 'minute': 'min', 'second': 's'
         }
-        if agg_period not in period_map:
-            raise ValueError(f"Invalid `agg_period` for LWP aggregation: {agg_period}. "
+
+        # Determine effective period (default to 'year' for LWP methods if not specified)
+        effective_period = agg_period
+        if effective_period is None and agg_method in lwp_methods:
+            effective_period = 'year'
+
+        if effective_period not in period_map:
+            raise ValueError(f"Invalid `agg_period`: {effective_period}. "
                              f"Must be one of {list(period_map.keys())}.")
 
-        period_freq = period_map[agg_period]
+        period_freq = period_map[effective_period]
         group_key = t_datetime.dt.to_period(period_freq)
 
         if agg_method == 'lwp':
             data_filtered = _value_for_time_increment(data_filtered, group_key, period_freq)
         else:
             # Map lwp_median -> median, lwp_robust_median -> robust_median for the helper
+            # For standard methods (e.g., 'median', 'mean') used with agg_period, use the method name directly.
             helper_method = agg_method.replace('lwp_', '')
 
             # Need to assign group key to the dataframe to use it in groupby
@@ -280,7 +293,7 @@ def trend_test(
         if agg_method == 'none':
             analysis_notes.append('tied timestamps present without aggregation')
         else:
-            # Standard aggregation for tied timestamps.
+            # Standard aggregation for tied timestamps (exact matches).
             if data_filtered['censored'].any() and agg_method not in ['robust_median']:
                 analysis_notes.append(f"'{agg_method}' aggregation used with censored data")
 
