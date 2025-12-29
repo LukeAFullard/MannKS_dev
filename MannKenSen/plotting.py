@@ -176,14 +176,51 @@ def plot_trend(data, results, save_path, alpha):
     is_datetime = 't_original' in data.columns and _is_datetime_like(data['t_original'].values)
     x_axis = pd.to_datetime(data['t_original']) if is_datetime else data['t']
 
-    # Scatter plot for censored and non-censored data
-    censored_data = data[data['censored']]
-    non_censored_data = data[~data['censored']]
+    # Scatter plot with potential seasonal coloring
+    if 'season' in data.columns:
+        # Get unique seasons for colormap mapping
+        unique_seasons = sorted(data['season'].unique())
+        cmap = plt.get_cmap('tab10')
+        colors = {season: cmap(i % 10) for i, season in enumerate(unique_seasons)}
 
-    plt.scatter(x_axis[non_censored_data.index], non_censored_data['value'],
-                color='blue', label='Non-censored', marker='o')
-    plt.scatter(x_axis[censored_data.index], censored_data['value'],
-                color='red', label='Censored', marker='x')
+        # Plot non-censored data (circles)
+        non_censored_data = data[~data['censored']]
+        if not non_censored_data.empty:
+            for season in unique_seasons:
+                season_mask = non_censored_data['season'] == season
+                if season_mask.any():
+                    plt.scatter(
+                        x_axis[non_censored_data[season_mask].index],
+                        non_censored_data.loc[season_mask, 'value'],
+                        color=colors[season],
+                        label=f'Season {season}',
+                        marker='o'
+                    )
+
+        # Plot censored data (x markers)
+        censored_data = data[data['censored']]
+        if not censored_data.empty:
+            for season in unique_seasons:
+                season_mask = censored_data['season'] == season
+                if season_mask.any():
+                    # For legend clarity, we might not label every censored season individually
+                    # if we already labeled the non-censored ones.
+                    # But to keep it simple, we plot them with the same color scheme.
+                    plt.scatter(
+                        x_axis[censored_data[season_mask].index],
+                        censored_data.loc[season_mask, 'value'],
+                        color=colors[season],
+                        marker='x'
+                    )
+    else:
+        # Standard coloring (Blue=Observed, Red=Censored)
+        censored_data = data[data['censored']]
+        non_censored_data = data[~data['censored']]
+
+        plt.scatter(x_axis[non_censored_data.index], non_censored_data['value'],
+                    color='blue', label='Non-censored', marker='o')
+        plt.scatter(x_axis[censored_data.index], censored_data['value'],
+                    color='red', label='Censored', marker='x')
 
     # Trend line and confidence intervals
     if pd.notna(results.slope):
