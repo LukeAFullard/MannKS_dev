@@ -172,7 +172,7 @@ The table shows the Mann-Kendall score (`s`) and Confidence (`C`) for each site.
 
 ### 2. Regional Results
 *   **Modal Trend Direction (Increasing)**: The dominant direction across the region is UP.
-*   **Regional Tau (0.9)**: This indicates high consistency. 90% of the "trend evidence" points in the modal direction.
+*   **Regional Tau (1.0)**: This indicates high consistency. 90% of the "trend evidence" points in the modal direction.
 *   **Regional Confidence**: This is the key value. It tells us how confident we are that the *region as a whole* is trending, after discounting the fact that the sites are just copying each other's ups and downs.
 
 ### 3. Visualizing the Region (`regional_plot.png`)

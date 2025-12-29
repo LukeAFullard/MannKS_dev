@@ -142,6 +142,8 @@ Plot saved to 'ci_comparison_plot.png'
 ## Interpreting the Results
 
 ### 1. Numerical Difference
+*   **Lower CI Difference**: 0.000971
+*   **Upper CI Difference**: 0.007099
 *   **LWP Method**: Produced a wider interval in this case, due to interpolation between ranks.
 *   **Significance**: In large datasets (n > 50), these two methods usually converge and the difference becomes negligible. In small datasets (n < 20), the difference can be noticeable, though rarely changes the overall conclusion of the test.
 

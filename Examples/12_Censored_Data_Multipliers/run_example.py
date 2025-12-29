@@ -109,6 +109,15 @@ with contextlib.redirect_stdout(output_buffer):
 
 captured_output = output_buffer.getvalue()
 
+# Extract results from local_scope for dynamic interpretation
+res_default = local_scope['res_default']
+res_high = local_scope['res_high']
+res_low = local_scope['res_low']
+
+slope_default = f"{res_default.slope:.4f}"
+slope_high = f"{res_high.slope:.4f}"
+slope_low = f"{res_low.slope:.4f}"
+
 # --- 3. Generate the README.md ---
 # Use concatenation to avoid f-string parsing issues with backslashes/quotes in code blocks
 readme_part1 = """
@@ -120,8 +129,8 @@ When dealing with censored data (e.g., "< 5 mg/L"), we know the value is somewhe
 For the **Mann-Kendall test** (significance), this usually doesn't matter much because it is rank-based.
 
 However, for **Sen's Slope** (magnitude), we need actual numbers to calculate the slope between two points. If we have a point at `Time=0, Value=<5` and `Time=1, Value=6`, the calculated slope depends entirely on what value we substitute for `<5`.
-*   If `<5` is treated as 0.5 (Low multiplier): Slope = (6 - 0.5) / 1 = 5.5.
-*   If `<5` is treated as 4.5 (High multiplier): Slope = (6 - 4.5) / 1 = 1.5.
+*   If `<5` is treated as 0.5 (e.g., `lt_mult=0.1`): Slope = (6 - 0.5) / 1 = 5.5.
+*   If `<5` is treated as 4.5 (e.g., `lt_mult=0.9`): Slope = (6 - 4.5) / 1 = 1.5.
 
 The `lt_mult` (less-than multiplier) and `gt_mult` (greater-than multiplier) parameters allow you to control this assumption.
 *   `lt_mult=0.5` (Default): Replaces `<X` with `0.5 * X`.
@@ -146,15 +155,15 @@ readme_part2 = """
 ```text
 """
 
-readme_part3 = """
+readme_part3 = f"""
 ```
 
 ## Interpreting the Results
 
 ### 1. Sensitivity Analysis
-*   **Default (0.5)**: The slope is **4.5000**.
-*   **High (0.9)**: The censored value is treated as being close to 10 (9.0). This reduces the rise to the next point (12.0), flattening the slope to **2.5000**.
-*   **Low (0.1)**: The censored value is treated as near zero (1.0). This creates a steep rise to the next point (12.0), increasing the slope to **6.5000**.
+*   **Default (0.5)**: The slope is **{slope_default}**.
+*   **High (0.9)**: The censored value is treated as being close to 10 (9.0). This reduces the rise to the next point (12.0), flattening the slope to **{slope_high}**.
+*   **Low (0.1)**: The censored value is treated as near zero (1.0). This creates a steep rise to the next point (12.0), increasing the slope to **{slope_low}**.
 
 ### 2. Visual Comparison (`multiplier_comparison.png`)
 ![Multiplier Comparison](multiplier_comparison.png)

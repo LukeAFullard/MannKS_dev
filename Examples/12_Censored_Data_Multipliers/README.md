@@ -7,8 +7,8 @@ When dealing with censored data (e.g., "< 5 mg/L"), we know the value is somewhe
 For the **Mann-Kendall test** (significance), this usually doesn't matter much because it is rank-based.
 
 However, for **Sen's Slope** (magnitude), we need actual numbers to calculate the slope between two points. If we have a point at `Time=0, Value=<5` and `Time=1, Value=6`, the calculated slope depends entirely on what value we substitute for `<5`.
-*   If `<5` is treated as 0.5 (Low multiplier): Slope = (6 - 0.5) / 1 = 5.5.
-*   If `<5` is treated as 4.5 (High multiplier): Slope = (6 - 4.5) / 1 = 1.5.
+*   If `<5` is treated as 0.5 (e.g., `lt_mult=0.1`): Slope = (6 - 0.5) / 1 = 5.5.
+*   If `<5` is treated as 4.5 (e.g., `lt_mult=0.9`): Slope = (6 - 4.5) / 1 = 1.5.
 
 The `lt_mult` (less-than multiplier) and `gt_mult` (greater-than multiplier) parameters allow you to control this assumption.
 *   `lt_mult=0.5` (Default): Replaces `<X` with `0.5 * X`.
