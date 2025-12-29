@@ -77,7 +77,7 @@ Confidence Interval: [0.3667, 0.4000]
 
 ### 1. Statistical Results
 *   **Basic Trend (Increasing)**: The test detected an upward trend.
-*   **Classification (Increasing)**: The package assigns a descriptive category based on the confidence level (`result.C`).
+*   **Classification (Highly Likely Increasing)**: The package assigns a descriptive category based on the confidence level (`result.C`).
     *   **Increasing/Decreasing**: High confidence (≥ 90% or 95% depending on `alpha`).
     *   **Likely Increasing/Decreasing**: Moderate confidence (e.g., 85-90%).
     *   **Stable/No Trend**: Low confidence.
