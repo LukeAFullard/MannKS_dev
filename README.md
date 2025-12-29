@@ -10,7 +10,7 @@
 
 ## 👋 Welcome
 
-Welcome to **MannKS**, a friendly and powerful Python package designed to help you analyze trends in your data.
+Welcome to **MannKS** (short for **Mann**-**K**endall **S**en), a friendly and powerful Python package designed to help you analyze trends in your data.
 
 Whether you are tracking water quality, climate metrics, or any other time-series data, `MannKS` makes it easy to perform statistically rigorous tests—even if your data is "messy."
 
