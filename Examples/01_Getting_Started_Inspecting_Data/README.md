@@ -1,32 +1,95 @@
 
 # Example 1: Getting Started - Inspecting Your Data
 
-The first and most important step in any trend analysis is to thoroughly inspect your data. The `MannKenSen.inspect_trend_data` function is designed for this purpose. It provides a quick statistical and visual overview of your time series, helping you identify potential issues like missing data, censored values, and irregular sampling.
+## The "Why": Verify Before You Analyze
+In environmental data analysis, datasets are rarely perfect. They often contain:
+*   **Missing values (Gaps):** Sensors fail, samples get lost.
+*   **Censored data:** Concentrations fall below laboratory detection limits (e.g., `< 0.5 mg/L`).
+*   **Irregular sampling:** Samples might be taken daily in summer but monthly in winter.
 
-## Script: `run_example.py`
-The script performs the following actions:
-1.  Generates a synthetic 5-year monthly dataset with an upward trend.
-2.  Intentionally introduces missing data (`NaN`) and left-censored (`<`) values to simulate a real-world dataset.
-3.  Calls `mks.prepare_censored_data` to process the raw data.
-4.  Calls `mks.inspect_trend_data` with `plot=True` to generate a summary and a set of diagnostic plots.
-5.  Dynamically generates this `README.md` file, embedding the captured output below.
+Running a trend test blindly on such data can lead to misleading results. The `MannKenSen.inspect_trend_data` function is your "sanity check."
 
-## Results
+## The "How": Code Walkthrough
 
-### Statistical Summary
-The `inspect_trend_data` function prints a high-level summary of the dataset's properties. This includes the time range, number of records, percentage of missing and censored data, and the number of unique censoring levels.
+In this example, we generate a synthetic "messy" dataset and inspect it. We use `return_summary=True` to get a programmatic report on data availability across different potential time increments (monthly, quarterly, etc.).
+
+### Step 1: Python Code
+```python
+import numpy as np
+import pandas as pd
+import MannKenSen as mk
+
+# 1. Generate Synthetic Data
+# (Same setup as before: 5 years, monthly, trend + noise + gaps + censored)
+np.random.seed(42)
+n_years = 5
+dates = pd.date_range(start='2020-01-01', periods=n_years*12, freq='ME')
+t = np.arange(len(dates))
+values = 0.1 * t + np.random.normal(0, 1, len(t)) + 10
+censored_mask = values < 10.5
+values_str = values.astype(str)
+values_str[censored_mask] = '<' + np.round(values[censored_mask] + 0.5, 1).astype(str)
+values_str[10:13] = np.nan
+values_str[45] = np.nan
+
+# 2. Pre-process the Data
+df = mk.prepare_censored_data(values_str)
+df['date'] = dates
+
+# 3. Inspect the Data
+# We request `return_summary=True` to get the statistical table back.
+print("Running Data Inspection...")
+result = mk.inspect_trend_data(
+    data=df,
+    time_col='date',
+    return_summary=True,
+    plot=True,
+    plot_path='inspection_plots.png'
+)
+
+# Print the availability summary
+print("\nData Availability Summary:")
+print(result.summary.to_markdown(index=False))
+```
+
+### Step 2: Text Output
+The function returns a summary DataFrame, which we printed:
 
 ```text
+Running Data Inspection...
+
+Data Availability Summary:
+| increment   |   n_obs |   n_year |   prop_year |   n_incr_year |   prop_incr_year | data_ok   |
+|:------------|--------:|---------:|------------:|--------------:|-----------------:|:----------|
+| daily       |      56 |        5 |           1 |            56 |        0.0306849 | False     |
+| weekly      |      56 |        5 |           1 |            56 |        0.215385  | False     |
+| monthly     |      56 |        5 |           1 |            56 |        0.933333  | True      |
+| bi-monthly  |      56 |        5 |           1 |            29 |        0.966667  | True      |
+| quarterly   |      56 |        5 |           1 |            20 |        1         | True      |
+| bi-annually |      56 |        5 |           1 |            10 |        1         | True      |
+| annually    |      56 |        5 |           1 |             5 |        1         | True      |
 
 ```
 
-### Visual Inspection (`inspection_plots.png`)
-The function also generates a 2x2 grid of plots for a quick visual diagnosis:
--   **Time Series Plot:** Shows the data over time, with censored values marked.
--   **Value Matrix:** A heatmap showing the distribution of values by year and month.
--   **Censoring Matrix:** A heatmap indicating where censored data occurs.
--   **Sample Count Matrix:** A heatmap showing the number of samples per period, which is useful for identifying irregular sampling.
+## Interpreting the Results
+
+### 1. Statistical Summary (Text Output)
+The table above evaluates different time increments (monthly, quarterly, etc.) to see if they are suitable for analysis:
+*   **`increment`**: The time unit being tested.
+*   **`prop_year`**: Fraction of years that have at least one sample. High values (near 1.0) are good.
+*   **`prop_incr_year`**: Fraction of expected periods (e.g., 12 months/year) that have data.
+*   **`data_ok`**: A boolean flag suggesting if this increment is viable for seasonal analysis.
+    *   For **monthly** analysis, we see high coverage, confirming our data is suitable despite the gaps.
+
+### 2. Visual Diagnostics (Plots)
+The function generated `inspection_plots.png`:
 
 ![Inspection Plots](inspection_plots.png)
 
-**Conclusion:** Before performing any trend tests, always inspect your data. This initial step can reveal critical issues that might otherwise lead to incorrect or misleading trend results.
+*   **Top-Left (Time Series):** Visualizes the trend, gaps, and censored values (red dots).
+*   **Top-Right (Value Matrix):** Heatmap of values (Row=Year, Col=Month). Useful for spotting seasonal blocks.
+*   **Bottom-Left (Censoring Matrix):** Heatmap of censored data locations.
+*   **Bottom-Right (Sample Count Matrix):** Heatmap of sampling frequency.
+
+## Conclusion
+We have confirmed our data is messy but sufficient for a **monthly** trend analysis. We are ready to proceed!
