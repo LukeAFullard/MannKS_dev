@@ -156,7 +156,7 @@ def plot_inspection_data(data, plot_path, value_col, time_col, time_increment, i
 
     return plot_path
 
-def plot_trend(data, results, save_path, alpha):
+def plot_trend(data, results, save_path, alpha, seasonal_coloring=False):
     """
     Generates and saves a plot of the data with the calculated trend line.
 
@@ -166,6 +166,8 @@ def plot_trend(data, results, save_path, alpha):
         results (namedtuple): The results from original_test or seasonal_test.
         save_path (str): The file path to save the plot.
         alpha (float): The significance level for the confidence intervals.
+        seasonal_coloring (bool): If True and 'season' is in data, points are
+                                  colored by season. Default is False.
     """
     if save_path is None:
         return
@@ -176,32 +178,8 @@ def plot_trend(data, results, save_path, alpha):
     is_datetime = 't_original' in data.columns and _is_datetime_like(data['t_original'].values)
     x_axis = pd.to_datetime(data['t_original']) if is_datetime else data['t']
 
-    # Scatter plot for censored and non-censored data
-    censored_data = data[data['censored']]
-    non_censored_data = data[~data['censored']]
-
-    plt.scatter(x_axis[non_censored_data.index], non_censored_data['value'],
-                color='blue', label='Non-censored', marker='o')
-
-    if 'cen_type' in data.columns:
-        # Differentiate between left ('lt') and right ('gt') censored data
-        lt_censored = censored_data[censored_data['cen_type'] == 'lt']
-        gt_censored = censored_data[censored_data['cen_type'] == 'gt']
-        other_censored = censored_data[~censored_data['cen_type'].isin(['lt', 'gt'])]
-
-        if not lt_censored.empty:
-            plt.scatter(x_axis[lt_censored.index], lt_censored['value'],
-                        color='red', label='Left-Censored', marker='v')
-        if not gt_censored.empty:
-            plt.scatter(x_axis[gt_censored.index], gt_censored['value'],
-                        color='blue', label='Right-Censored', marker='^')
-        if not other_censored.empty:
-            plt.scatter(x_axis[other_censored.index], other_censored['value'],
-                        color='red', label='Censored (Other)', marker='x')
-    else:
-        # Fallback if cen_type is missing
     # Scatter plot with potential seasonal coloring
-    if 'season' in data.columns:
+    if seasonal_coloring and 'season' in data.columns:
         # Get unique seasons for colormap mapping
         unique_seasons = sorted(data['season'].unique())
         cmap = plt.get_cmap('tab10')
@@ -243,8 +221,25 @@ def plot_trend(data, results, save_path, alpha):
 
         plt.scatter(x_axis[non_censored_data.index], non_censored_data['value'],
                     color='blue', label='Non-censored', marker='o')
-        plt.scatter(x_axis[censored_data.index], censored_data['value'],
-                    color='red', label='Censored', marker='x')
+
+        if 'cen_type' in data.columns:
+            # Differentiate between left ('lt') and right ('gt') censored data
+            lt_censored = censored_data[censored_data['cen_type'] == 'lt']
+            gt_censored = censored_data[censored_data['cen_type'] == 'gt']
+            other_censored = censored_data[~censored_data['cen_type'].isin(['lt', 'gt'])]
+
+            if not lt_censored.empty:
+                plt.scatter(x_axis[lt_censored.index], lt_censored['value'],
+                            color='red', label='Left-Censored', marker='v')
+            if not gt_censored.empty:
+                plt.scatter(x_axis[gt_censored.index], gt_censored['value'],
+                            color='blue', label='Right-Censored', marker='^')
+            if not other_censored.empty:
+                plt.scatter(x_axis[other_censored.index], other_censored['value'],
+                            color='red', label='Censored (Other)', marker='x')
+        else:
+            plt.scatter(x_axis[censored_data.index], censored_data['value'],
+                        color='red', label='Censored', marker='x')
 
     # Trend line and confidence intervals
     if pd.notna(results.slope):

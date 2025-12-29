@@ -37,7 +37,8 @@ def trend_test(
     tie_break_method: str = 'robust',
     category_map: Optional[dict] = None,
     x_unit: str = "units",
-    slope_scaling: Optional[str] = None
+    slope_scaling: Optional[str] = None,
+    seasonal_coloring: bool = False
 ) -> namedtuple:
     """
     Mann-Kendall test for unequally spaced time series.
@@ -130,6 +131,8 @@ def trend_test(
                                        For example, if `slope_scaling='year'`, the slope will be
                                        converted to units per year. This only applies when using
                                        a datetime-like time vector `t`.
+        seasonal_coloring (bool): If True and 'season' is present in data, points in the plot
+                                  are colored by season. Default is False.
     Output:
         A namedtuple containing the following fields:
         - trend: The trend of the data ('increasing', 'decreasing', or 'no trend').
@@ -412,6 +415,6 @@ def trend_test(
     final_results = results._replace(classification=classification, analysis_notes=final_notes)
 
     if plot_path:
-        plot_trend(data_filtered, final_results, plot_path, alpha)
+        plot_trend(data_filtered, final_results, plot_path, alpha, seasonal_coloring=seasonal_coloring)
 
     return final_results
