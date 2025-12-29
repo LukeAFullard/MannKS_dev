@@ -99,6 +99,7 @@ result_none = mk.trend_test(x, t, agg_method='none', slope_scaling='year',
 print(f"Slope: {result_none.slope:.5f}")
 print(f"P-value: {result_none.p:.5f}")
 print(f"Analysis Notes: {result_none.analysis_notes}")
+print(f"Sample Size (effective): {result_none.n if hasattr(result_none, 'n') else 'N/A'}")
 
 
 # 3. Analysis 2: Simple Median Aggregation
@@ -110,6 +111,9 @@ result_median = mk.trend_test(x, t, agg_method='median', slope_scaling='year',
                               plot_path=os.path.join(output_dir, 'plot_median.png'))
 print(f"Slope: {result_median.slope:.5f}")
 print(f"P-value: {result_median.p:.5f}")
+# Check if aggregation happened (implied by N, but N is not in standard namedtuple, need to inspect logic or assume)
+# But we can verify by checking if analysis notes are empty (good)
+print(f"Analysis Notes: {result_median.analysis_notes}")
 
 
 # 4. Analysis 3: Temporal Aggregation (Monthly)
@@ -121,6 +125,7 @@ result_monthly = mk.trend_test(x, t, agg_method='median', agg_period='month', sl
                                plot_path=os.path.join(output_dir, 'plot_monthly.png'))
 print(f"Slope: {result_monthly.slope:.5f}")
 print(f"P-value: {result_monthly.p:.5f}")
+print(f"Analysis Notes: {result_monthly.analysis_notes}")
 # Note: The 'n' attribute is not exposed in the result namedtuple, but we can infer it
 # from the conceptual aggregation (12 months).
 
@@ -134,6 +139,7 @@ result_lwp = mk.trend_test(x, t, agg_method='lwp', agg_period='month', slope_sca
                            plot_path=os.path.join(output_dir, 'plot_lwp.png'))
 print(f"Slope: {result_lwp.slope:.5f}")
 print(f"P-value: {result_lwp.p:.5f}")
+print(f"Analysis Notes: {result_lwp.analysis_notes}")
 ```
 
 ### Step 2: Text Output
@@ -159,18 +165,22 @@ First 10 rows:
 Slope: 6.24070
 P-value: 0.00000
 Analysis Notes: ['tied timestamps present without aggregation']
+Sample Size (effective): N/A
 
 --- Test 2: Median Aggregation (agg_method='median') ---
 Slope: 6.38199
 P-value: 0.00000
+Analysis Notes: ["'median' aggregation used with censored data"]
 
 --- Test 3: Monthly Aggregation (agg_period='month') ---
 Slope: 6.38199
 P-value: 0.00000
+Analysis Notes: ["'median' aggregation used with censored data"]
 
 --- Test 4: LWP Aggregation (agg_method='lwp') ---
 Slope: 5.83502
 P-value: 0.00016
+Analysis Notes: []
 
 ```
 

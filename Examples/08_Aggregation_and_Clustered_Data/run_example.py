@@ -112,6 +112,7 @@ result_none = mk.trend_test(x, t, agg_method='none', slope_scaling='year',
 print(f"Slope: {result_none.slope:.5f}")
 print(f"P-value: {result_none.p:.5f}")
 print(f"Analysis Notes: {result_none.analysis_notes}")
+print(f"Sample Size (effective): {result_none.n if hasattr(result_none, 'n') else 'N/A'}")
 
 
 # 3. Analysis 2: Simple Median Aggregation
@@ -123,6 +124,9 @@ result_median = mk.trend_test(x, t, agg_method='median', slope_scaling='year',
                               plot_path=os.path.join(output_dir, 'plot_median.png'))
 print(f"Slope: {result_median.slope:.5f}")
 print(f"P-value: {result_median.p:.5f}")
+# Check if aggregation happened (implied by N, but N is not in standard namedtuple, need to inspect logic or assume)
+# But we can verify by checking if analysis notes are empty (good)
+print(f"Analysis Notes: {result_median.analysis_notes}")
 
 
 # 4. Analysis 3: Temporal Aggregation (Monthly)
@@ -134,6 +138,7 @@ result_monthly = mk.trend_test(x, t, agg_method='median', agg_period='month', sl
                                plot_path=os.path.join(output_dir, 'plot_monthly.png'))
 print(f"Slope: {result_monthly.slope:.5f}")
 print(f"P-value: {result_monthly.p:.5f}")
+print(f"Analysis Notes: {result_monthly.analysis_notes}")
 # Note: The 'n' attribute is not exposed in the result namedtuple, but we can infer it
 # from the conceptual aggregation (12 months).
 
@@ -147,6 +152,7 @@ result_lwp = mk.trend_test(x, t, agg_method='lwp', agg_period='month', slope_sca
                            plot_path=os.path.join(output_dir, 'plot_lwp.png'))
 print(f"Slope: {result_lwp.slope:.5f}")
 print(f"P-value: {result_lwp.p:.5f}")
+print(f"Analysis Notes: {result_lwp.analysis_notes}")
 
 """
 
@@ -156,7 +162,6 @@ output_buffer = io.StringIO()
 # We need to set 'output_dir' in the local_scope so that when we exec(),
 # it uses the correct directory (the one containing this script).
 script_dir = os.path.dirname(__file__)
-local_scope = {'output_dir': script_dir}
 
 with contextlib.redirect_stdout(output_buffer):
     try:
@@ -170,7 +175,9 @@ with contextlib.redirect_stdout(output_buffer):
         # This way the generated README will show `output_dir = '.'` (clean),
         # but the execution will use the correct path.
 
-        code_to_run = example_code.replace("output_dir = '.'", f"output_dir = '{script_dir}'")
+        # Using .replace(os.sep, '/') to ensure paths are safe for string injection on Windows (and Linux accepts forward slashes)
+        safe_script_dir = script_dir.replace(os.sep, '/')
+        code_to_run = example_code.replace("output_dir = '.'", f"output_dir = '{safe_script_dir}'")
 
         exec(code_to_run, globals(), {})
     except Exception as e:
