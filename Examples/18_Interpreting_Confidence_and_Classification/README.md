@@ -25,9 +25,11 @@ import numpy as np
 import pandas as pd
 import MannKenSen as mk
 import matplotlib.pyplot as plt
+import os
 
 # Determine where to save the plots (current directory by default)
-output_dir = '.'
+# Note: When run directly, this should be the script's directory.
+output_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else '.'
 
 # 1. Understanding Confidence (C) and Probability (p)
 # The Mann-Kendall test calculates a "score" (S).
@@ -50,7 +52,8 @@ x = 10 + 0.1 * t + np.random.normal(0, 1.0, n)
 
 print("Running Trend Test on Weak Trend Data...")
 # We use a standard alpha of 0.1 (90% confidence)
-result = mk.trend_test(x, t, alpha=0.1, plot_path=os.path.join(output_dir, 'plot_weak_trend.png'))
+plot_path = os.path.join(output_dir, 'plot_weak_trend.png')
+result = mk.trend_test(x, t, alpha=0.1, plot_path=plot_path)
 
 print(f"  Mann-Kendall Score (S): {result.s}")
 print(f"  p-value: {result.p:.4f}")

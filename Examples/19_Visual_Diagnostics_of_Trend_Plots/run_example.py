@@ -11,9 +11,13 @@ example_code = """
 import numpy as np
 import pandas as pd
 import MannKenSen as mk
+import os
 
 # Set random seed for reproducibility
 np.random.seed(42)
+
+# Determine where to save the plots (current directory by default)
+output_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else '.'
 
 # Common time vector for all scenarios (15 years)
 t = np.arange(2005, 2020)
@@ -26,7 +30,8 @@ noise_low = np.random.normal(0, 0.5, n)
 x_clear = 5 + 0.8 * (t - 2005) + noise_low
 
 print("\\n--- Scenario 1: Clear Trend ---")
-result_clear = mk.trend_test(x_clear, t, plot_path='plot_clear_trend.png')
+plot_path_clear = os.path.join(output_dir, 'plot_clear_trend.png')
+result_clear = mk.trend_test(x_clear, t, plot_path=plot_path_clear)
 print(f"Trend: {result_clear.trend} ({result_clear.classification})")
 print(f"p-value: {result_clear.p:.4f}, Slope: {result_clear.slope:.4f}")
 
@@ -38,7 +43,8 @@ noise_high = np.random.normal(0, 5.0, n) # 10x more noise
 x_noisy = 5 + 0.8 * (t - 2005) + noise_high
 
 print("\\n--- Scenario 2: High Uncertainty (Wide CI) ---")
-result_noisy = mk.trend_test(x_noisy, t, plot_path='plot_wide_ci.png')
+plot_path_noisy = os.path.join(output_dir, 'plot_wide_ci.png')
+result_noisy = mk.trend_test(x_noisy, t, plot_path=plot_path_noisy)
 print(f"Trend: {result_noisy.trend} ({result_noisy.classification})")
 print(f"p-value: {result_noisy.p:.4f}, Slope: {result_noisy.slope:.4f}")
 
@@ -48,7 +54,8 @@ print(f"p-value: {result_noisy.p:.4f}, Slope: {result_noisy.slope:.4f}")
 x_flat = 10 + np.random.normal(0, 2.0, n)
 
 print("\\n--- Scenario 3: No Trend ---")
-result_flat = mk.trend_test(x_flat, t, plot_path='plot_no_trend.png')
+plot_path_flat = os.path.join(output_dir, 'plot_no_trend.png')
+result_flat = mk.trend_test(x_flat, t, plot_path=plot_path_flat)
 print(f"Trend: {result_flat.trend} ({result_flat.classification})")
 print(f"p-value: {result_flat.p:.4f}, Slope: {result_flat.slope:.4f}")
 """
@@ -58,7 +65,9 @@ output_buffer = io.StringIO()
 
 with contextlib.redirect_stdout(output_buffer):
     local_scope = {}
-    exec(example_code, globals(), local_scope)
+    exec_globals = globals().copy()
+    exec_globals['__file__'] = __file__
+    exec(example_code, exec_globals, local_scope)
 
 captured_output = output_buffer.getvalue()
 
