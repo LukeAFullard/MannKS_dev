@@ -156,7 +156,7 @@ def plot_inspection_data(data, plot_path, value_col, time_col, time_increment, i
 
     return plot_path
 
-def plot_trend(data, results, save_path, alpha):
+def plot_trend(data, results, save_path, alpha, seasonal_coloring=False):
     """
     Generates and saves a plot of the data with the calculated trend line.
 
@@ -166,6 +166,8 @@ def plot_trend(data, results, save_path, alpha):
         results (namedtuple): The results from original_test or seasonal_test.
         save_path (str): The file path to save the plot.
         alpha (float): The significance level for the confidence intervals.
+        seasonal_coloring (bool): If True and 'season' is in data, points are
+                                  colored by season. Default is False.
     """
     if save_path is None:
         return
@@ -177,7 +179,7 @@ def plot_trend(data, results, save_path, alpha):
     x_axis = pd.to_datetime(data['t_original']) if is_datetime else data['t']
 
     # Scatter plot with potential seasonal coloring
-    if 'season' in data.columns:
+    if seasonal_coloring and 'season' in data.columns:
         # Get unique seasons for colormap mapping
         unique_seasons = sorted(data['season'].unique())
         cmap = plt.get_cmap('tab10')
