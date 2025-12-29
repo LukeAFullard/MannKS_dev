@@ -137,14 +137,14 @@ Before running statistics, we visualize the data. The `plot_seasonal_distributio
 
 ### 2. Seasonality Check
 *   **Is Seasonal? (True)**: The test confirms the difference between weekdays and weekends is statistically significant.
-*   **p-value**: Extremely low, indicating strong evidence of a pattern.
+*   **p-value**: 0.0000, indicating strong evidence of a pattern.
 
 ### 3. Seasonal Trend Test
 *   **Trend (Decreasing)**: The test correctly identifies the downward trend.
-*   **Sen's Slope (-2.0435 units/year)**: The estimated slope is very close to the true generated trend of -2.0.
+*   **Sen's Slope (-1.9965 units/year)**: The estimated slope is very close to the true generated trend of -2.0.
 *   **Comparison**: By comparing "Mondays to Mondays" and "Sundays to Sundays", the test removes the noise caused by the weekly jumps, providing a clean estimate of the long-term decline.
 
 ### 4. Trend Plot (`trend_plot.png`)
 ![Trend Plot](trend_plot.png)
 
-*   **Graph**: Shows the daily data points. The black trend line indicates the overall decline. The seasonal coloring might look like a blur due to the high density of points, but the trend line clearly cuts through the noise.
+*   **Graph**: Shows the daily data points. The black trend line indicates the overall decline. The data points cluster vertically due to the seasonal shifts, but the trend line clearly cuts through the noise.

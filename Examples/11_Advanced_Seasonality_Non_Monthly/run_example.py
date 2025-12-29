@@ -93,6 +93,16 @@ with contextlib.redirect_stdout(output_buffer):
 
 captured_output = output_buffer.getvalue()
 
+# Extract results from local_scope for dynamic interpretation
+seasonality_result = local_scope['seasonality_result']
+result = local_scope['result']
+
+is_seasonal_text = str(seasonality_result.is_seasonal)
+seasonality_p_value = f"{seasonality_result.p_value:.4f}"
+trend_direction = result.trend.capitalize()
+sens_slope = f"{result.slope:.4f}"
+trend_p_value = f"{result.p:.4f}"
+
 # --- 3. Generate the README.md ---
 readme_content = f"""
 # Example 11: Advanced Seasonality (Non-Monthly Data)
@@ -134,18 +144,18 @@ Before running statistics, we visualize the data. The `plot_seasonal_distributio
 *   **Observation**: You should clearly see that the boxes for Day 5 (Saturday) and Day 6 (Sunday) are higher than Days 0-4. This visually confirms our "weekend effect."
 
 ### 2. Seasonality Check
-*   **Is Seasonal? (True)**: The test confirms the difference between weekdays and weekends is statistically significant.
-*   **p-value**: Extremely low, indicating strong evidence of a pattern.
+*   **Is Seasonal? ({is_seasonal_text})**: The test confirms the difference between weekdays and weekends is statistically significant.
+*   **p-value**: {seasonality_p_value}, indicating strong evidence of a pattern.
 
 ### 3. Seasonal Trend Test
-*   **Trend (Decreasing)**: The test correctly identifies the downward trend.
-*   **Sen's Slope (-2.0435 units/year)**: The estimated slope is very close to the true generated trend of -2.0.
+*   **Trend ({trend_direction})**: The test correctly identifies the downward trend.
+*   **Sen's Slope ({sens_slope} units/year)**: The estimated slope is very close to the true generated trend of -2.0.
 *   **Comparison**: By comparing "Mondays to Mondays" and "Sundays to Sundays", the test removes the noise caused by the weekly jumps, providing a clean estimate of the long-term decline.
 
 ### 4. Trend Plot (`trend_plot.png`)
 ![Trend Plot](trend_plot.png)
 
-*   **Graph**: Shows the daily data points. The black trend line indicates the overall decline. The seasonal coloring might look like a blur due to the high density of points, but the trend line clearly cuts through the noise.
+*   **Graph**: Shows the daily data points. The black trend line indicates the overall decline. The data points cluster vertically due to the seasonal shifts, but the trend line clearly cuts through the noise.
 """
 
 with open(os.path.join(os.path.dirname(__file__), 'README.md'), 'w') as f:

@@ -122,6 +122,11 @@ res_l = local_scope['result_lwp']
 width_d = res_d.upper_ci - res_d.lower_ci
 width_l = res_l.upper_ci - res_l.lower_ci
 
+# Format differences for display
+diff_lower_val = abs(res_d.lower_ci - res_l.lower_ci)
+diff_upper_val = abs(res_d.upper_ci - res_l.upper_ci)
+
+# Dynamic comparison text
 if width_d > width_l:
     width_comparison = "**Direct Method**: Produced a wider interval in this case. It picked specific slopes from the ranked list."
 elif width_l > width_d:
@@ -169,6 +174,8 @@ We use a small dataset where the differences are more noticeable.
 ## Interpreting the Results
 
 ### 1. Numerical Difference
+*   **Lower CI Difference**: {diff_lower_val:.6f}
+*   **Upper CI Difference**: {diff_upper_val:.6f}
 *   {width_comparison}
 *   **Significance**: In large datasets (n > 50), these two methods usually converge and the difference becomes negligible. In small datasets (n < 20), the difference can be noticeable, though rarely changes the overall conclusion of the test.
 

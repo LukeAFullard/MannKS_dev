@@ -133,6 +133,11 @@ with contextlib.redirect_stdout(output_buffer):
 
 captured_output = output_buffer.getvalue()
 
+# Extract results from local_scope for dynamic interpretation
+regional_result = local_scope['regional_result']
+dt_val = regional_result.DT
+tau_val = f"{regional_result.TAU:.1f}"
+
 # --- 3. Generate the README.md ---
 readme_part1 = """
 # Example 15: Regional Trend Analysis
@@ -166,7 +171,7 @@ readme_part2 = """
 ```text
 """
 
-readme_part3 = """
+readme_part3 = f"""
 ```
 
 ## Interpreting the Results
@@ -178,8 +183,8 @@ The table shows the Mann-Kendall score (`s`) and Confidence (`C`) for each site.
 *   Site E shows low confidence (near 50%).
 
 ### 2. Regional Results
-*   **Modal Trend Direction (Increasing)**: The dominant direction across the region is UP.
-*   **Regional Tau (0.9)**: This indicates high consistency. 90% of the "trend evidence" points in the modal direction.
+*   **Modal Trend Direction ({dt_val})**: The dominant direction across the region is UP.
+*   **Regional Tau ({tau_val})**: This indicates high consistency. 90% of the "trend evidence" points in the modal direction.
 *   **Regional Confidence**: This is the key value. It tells us how confident we are that the *region as a whole* is trending, after discounting the fact that the sites are just copying each other's ups and downs.
 
 ### 3. Visualizing the Region (`regional_plot.png`)
