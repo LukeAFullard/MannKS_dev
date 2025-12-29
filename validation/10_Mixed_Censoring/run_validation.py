@@ -494,6 +494,7 @@ def run():
     utils = ValidationUtils(os.path.dirname(__file__))
     scenarios = []
 
+    # slope=0.2 per month -> 2.4 per year
     np.random.seed(42)
     df_strong = generate_mixed_censored_data(n=60, trend_slope=0.2, noise_std=1.0, censor_fraction=0.3)
     _, mk_strong = utils.run_comparison(
@@ -502,7 +503,7 @@ def run():
         scenario_name="Strong_Increasing",
         mk_kwargs={},
         lwp_mode_kwargs={'mk_test_method': 'lwp', 'ci_method': 'lwp', 'sens_slope_method': 'lwp'},
-        true_slope=0.2
+        true_slope=2.4
     )
     scenarios.append({
         'df': df_strong,
@@ -510,6 +511,7 @@ def run():
         'mk_result': mk_strong
     })
 
+    # slope=-0.05 per month -> -0.6 per year
     np.random.seed(43)
     df_weak = generate_mixed_censored_data(n=60, trend_slope=-0.05, noise_std=1.5, censor_fraction=0.3)
     _, mk_weak = utils.run_comparison(
@@ -518,7 +520,7 @@ def run():
         scenario_name="Weak_Decreasing",
         mk_kwargs={},
         lwp_mode_kwargs={'mk_test_method': 'lwp', 'ci_method': 'lwp', 'sens_slope_method': 'lwp'},
-        true_slope=-0.05
+        true_slope=-0.6
     )
     scenarios.append({
         'df': df_weak,
@@ -526,6 +528,7 @@ def run():
         'mk_result': mk_weak
     })
 
+    # slope=0.0 -> 0.0
     np.random.seed(44)
     df_stable = generate_mixed_censored_data(n=60, trend_slope=0.0, noise_std=1.0, censor_fraction=0.3)
     _, mk_stable = utils.run_comparison(
