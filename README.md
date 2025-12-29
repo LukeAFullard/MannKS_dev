@@ -84,13 +84,26 @@ data = prepare_censored_data(values)
 
 # 3. Run the test
 # We scale the slope to 'year' so the output is in units per year
-result = trend_test(x=data, t=dates, slope_scaling='year')
+# We also save a plot of the results
+result = trend_test(x=data, t=dates, slope_scaling='year', plot_path='quick_start_trend.png')
 
 # 4. See the results
 print(f"Trend Direction: {result.trend}")
 print(f"Slope: {result.slope:.2f} units/year")
 print(f"P-value: {result.p:.4f}")
 ```
+
+**Output:**
+
+```text
+Trend Direction: increasing
+Slope: 24.57 units/year
+P-value: 0.0153
+```
+
+**Generated Plot:**
+
+<img src="assets/quick_start_trend.png" alt="Trend Analysis Plot" width="600"/>
 
 **What happened?**
 The `trend_test` function automatically handled the `<5` values, calculated the trend significance (p-value), and estimated the rate of change (slope).
