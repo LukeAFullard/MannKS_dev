@@ -2,7 +2,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-from MannKenSen import trend_test
+from MannKS import trend_test
 
 def test_median_thinning_not_implemented():
     """

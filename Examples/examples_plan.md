@@ -1,6 +1,6 @@
-# Plan for `MannKenSen` Package Examples (Comprehensive)
+# Plan for `MannKS` Package Examples (Comprehensive)
 
-This document outlines a plan for creating a comprehensive suite of examples to guide users through the functionality of the `MannKenSen` package. The examples are designed to build upon each other, progressing from basic usage to advanced, nuanced scenarios.
+This document outlines a plan for creating a comprehensive suite of examples to guide users through the functionality of the `MannKS` package. The examples are designed to build upon each other, progressing from basic usage to advanced, nuanced scenarios.
 
 Each example will be self-contained in its own directory within `Examples/` and will include a Python script and a markdown (`.md`) file explaining the process, code, and results with embedded plots.
 
@@ -15,23 +15,23 @@ Each example will be self-contained in its own directory within `Examples/` and 
 
 #### Example 1: Getting Started - Inspecting Your Data
 - **Goal:** Showcase the first step in any analysis: visualizing and understanding the data's structure.
-- **Functions:** `MannKenSen.inspect_trend_data(plot=True)`.
+- **Functions:** `MannKS.inspect_trend_data(plot=True)`.
 
 #### Example 2: Basic Non-Seasonal Trend Test (Numeric Time)
 - **Goal:** Demonstrate the simplest use case with an integer time vector (e.g., Years).
-- **Functions:** `MannKenSen.trend_test()`.
+- **Functions:** `MannKS.trend_test()`.
 
 #### Example 3: Non-Seasonal Trend Test with Timestamps & Slope Scaling
 - **Goal:** Introduce the handling of real-world time series data using `pandas` `datetime` objects and demonstrate **Slope Scaling** to get results in user-friendly units (e.g., "mg/L per year").
-- **Functions:** `MannKenSen.trend_test(slope_scaling='year')`, `plot_path`.
+- **Functions:** `MannKS.trend_test(slope_scaling='year')`, `plot_path`.
 
 #### Example 4: Handling Basic Censored Data
 - **Goal:** Explain the essential workflow for data containing censored values.
-- **Functions:** `MannKenSen.prepare_censored_data()`, `MannKenSen.trend_test()`.
+- **Functions:** `MannKS.prepare_censored_data()`, `MannKS.trend_test()`.
 
 #### Example 5: Basic Seasonal Trend Test & Seasonality Check
 - **Goal:** Introduce seasonal trend analysis for monthly data. Explicitly demonstrate the best practice of **Consistent Aggregation**: using the same aggregation method for both the `check_seasonality` step and the final `seasonal_trend_test`.
-- **Functions:** `MannKenSen.check_seasonality()`, `MannKenSen.seasonal_trend_test()`.
+- **Functions:** `MannKS.check_seasonality()`, `MannKS.seasonal_trend_test()`.
 
 ---
 
@@ -79,7 +79,7 @@ Each example will be self-contained in its own directory within `Examples/` and 
 
 #### Example 15: Regional Trend Analysis
 - **Goal:** Demonstrate how to aggregate trend results from multiple sites.
-- **Functions:** `MannKenSen.regional_test()`.
+- **Functions:** `MannKS.regional_test()`.
 
 ---
 

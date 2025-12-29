@@ -13,7 +13,7 @@ repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
 
-import MannKenSen as mk
+import MannKS as mk
 
 # RPy2 imports
 try:
@@ -58,7 +58,7 @@ def generate_site_data(site_id, n_years=10, trend_type='increasing', noise_std=1
         'value': values
     })
 
-    # Pre-process for MannKenSen (add censored columns even if not used)
+    # Pre-process for MannKS (add censored columns even if not used)
     # For this regional test, we assume no censoring for simplicity unless needed
     df = mk.prepare_censored_data(df['value'])
     df['site'] = site_id
@@ -71,7 +71,7 @@ def generate_site_data(site_id, n_years=10, trend_type='increasing', noise_std=1
 
 def run_python_regional_test(all_site_data):
     """
-    Runs MannKenSen trend test for each site and then the regional test.
+    Runs MannKS trend test for each site and then the regional test.
     """
     site_results = []
 

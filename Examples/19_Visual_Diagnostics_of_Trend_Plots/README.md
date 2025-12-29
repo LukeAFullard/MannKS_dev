@@ -37,7 +37,7 @@ We generate synthetic data to simulate these three specific conditions.
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import os
 
 # Set random seed for reproducibility

@@ -3,7 +3,7 @@ import os
 import sys
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import warnings
 
 # Add repo root to path

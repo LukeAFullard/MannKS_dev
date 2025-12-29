@@ -6,13 +6,13 @@ import matplotlib.pyplot as plt
 from typing import Dict, List, Tuple
 from datetime import datetime
 
-# Add repo root to path to ensure MannKenSen can be imported
+# Add repo root to path to ensure MannKS can be imported
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
 
-import MannKenSen as mk
-from MannKenSen.analysis_notes import get_analysis_note, get_sens_slope_analysis_note
+import MannKS as mk
+from MannKS.analysis_notes import get_analysis_note, get_sens_slope_analysis_note
 
 # RPy2 imports
 try:
@@ -44,7 +44,7 @@ class ValidationUtils:
         if values.dtype == object:
              values = mk.prepare_censored_data(values)
 
-        # Run MannKenSen Trend Test
+        # Run MannKS Trend Test
         try:
             if 'date' in df.columns:
                 t = pd.to_datetime(df['date'])

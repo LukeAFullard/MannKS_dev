@@ -51,4 +51,4 @@ The result of `0.0` for the Weak Decreasing Trend is **not a bug**. It is the co
 1.  **Signal-to-Noise:** The weak trend (-0.5) was overwhelmed by noise (1.5), scattering the slopes.
 2.  **LWP Heuristic on Negative Data:** The `0.5 * Value` substitution creates "larger" censored values when data is negative, causing the algorithm to flag many valid slopes as "ambiguous" (Rules 2 & 3) and force them to zero.
 
-This confirms the `mannkensen` package accurately replicates the statistical behavior of the LWP R script, including its heuristics and edge-case behaviors.
+This confirms the `MannKS` package accurately replicates the statistical behavior of the LWP R script, including its heuristics and edge-case behaviors.

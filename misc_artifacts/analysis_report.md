@@ -10,7 +10,7 @@ The LWP R script includes a specific data pre-processing step called `ShiftTempD
 3.  The adjacent month has no observations.
 
 **MKS Python Behavior:**
-The `MannKenSen` package **does not** implement this logic. It strictly respects the timestamp provided by the user.
+The `MannKS` package **does not** implement this logic. It strictly respects the timestamp provided by the user.
 
 **Recommendation for Comparison:**
 To perform a fair "apples-to-apples" comparison between MKS and the LWP R script, you must disable this feature in the R analysis.

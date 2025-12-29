@@ -1,20 +1,20 @@
-# MannKenSen Verification Plan
+# MannKS Verification Plan
 
-This document outlines a comprehensive plan for verifying the `mannkensen` Python package against the original LWP-TRENDS R script. The goal is to ensure that `mannkensen`'s LWP-emulation mode produces results that are as close as possible to the R script, and to clearly document any intentional deviations.
+This document outlines a comprehensive plan for verifying the `MannKS` Python package against the original LWP-TRENDS R script. The goal is to ensure that `MannKS`'s LWP-emulation mode produces results that are as close as possible to the R script, and to clearly document any intentional deviations.
 
 ## Verification Methodology
 
 For each verification case, five analyses will be performed and their results compared:
 
-1.  **`mannkensen` (Standard):** A standard run of the relevant `mannkensen` function (`trend_test` or `seasonal_trend_test`) using its default, robust statistical methods.
-2.  **`mannkensen` (LWP Mode):** A run of the `mannkensen` function with all LWP-compatibility parameters enabled. This typically includes:
+1.  **`MannKS` (Standard):** A standard run of the relevant `MannKS` function (`trend_test` or `seasonal_trend_test`) using its default, robust statistical methods.
+2.  **`MannKS` (LWP Mode):** A run of the `MannKS` function with all LWP-compatibility parameters enabled. This typically includes:
     *   `mk_test_method='lwp'`
     *   `ci_method='lwp'`
     *   `agg_method='lwp'` (or other LWP-style aggregation)
     *   `sens_slope_method='lwp'`
     *   `tie_break_method='lwp'` (for non-seasonal tests)
 3.  **LWP-TRENDS R Script:** A run of the original `LWPTrends_v2502.r` script using `rpy2` to execute the analysis on the identical synthetic dataset.
-4.  **`mannkensen` (ATS Mode):** A run of the `mannkensen` function using the Akritas-Theil-Sen estimator (`sens_slope_method='ats'`).
+4.  **`MannKS` (ATS Mode):** A run of the `MannKS` function using the Akritas-Theil-Sen estimator (`sens_slope_method='ats'`).
 5.  **R NADA2 Script:** A run of the relevant NADA2 function (`cenken` for non-seasonal, `censeaken` for seasonal) using `rpy2` to execute the analysis on the identical synthetic dataset.
 
 All data used for these tests will be synthetically generated to provide full control over the inputs and expected outcomes. The majority of tests will use monthly data frequency, with a smaller subset using annual data to ensure both are handled correctly.
@@ -32,10 +32,10 @@ The results for all three scenarios will be presented in a single summary table 
 
 A master CSV file, `validation/master_results.csv`, will be created and updated as part of the verification process. This file will consolidate the key outputs from every single test run. For each test (e.g., "V-01_strong_increasing"), the CSV will contain a row with the following columns:
 *   `test_id`: A unique identifier (e.g., "V-01_strong_increasing").
-*   `mk_py_slope`, `mk_py_p_value`, `mk_py_lower_ci`, `mk_py_upper_ci`: Results from `mannkensen` (Standard).
-*   `lwp_py_slope`, `lwp_py_p_value`, `lwp_py_lower_ci`, `lwp_py_upper_ci`: Results from `mannkensen` (LWP Mode).
+*   `mk_py_slope`, `mk_py_p_value`, `mk_py_lower_ci`, `mk_py_upper_ci`: Results from `MannKS` (Standard).
+*   `lwp_py_slope`, `lwp_py_p_value`, `lwp_py_lower_ci`, `lwp_py_upper_ci`: Results from `MannKS` (LWP Mode).
 *   `r_slope`, `r_p_value`, `r_lower_ci`, `r_upper_ci`: Results from the LWP-TRENDS R Script.
-*   `ats_py_slope`, `ats_py_p_value`, `ats_py_lower_ci`, `ats_py_upper_ci`: Results from `mannkensen` (ATS Mode).
+*   `ats_py_slope`, `ats_py_p_value`, `ats_py_lower_ci`, `ats_py_upper_ci`: Results from `MannKS` (ATS Mode).
 *   `nada_r_slope`, `nada_r_p_value`, `nada_r_lower_ci`, `nada_r_upper_ci`: Results from the R NADA2 Script.
 *   `slope_error`: The absolute error (`lwp_py_slope` - `r_slope`).
 *   `slope_pct_error`: The percentage error, calculated as `(slope_error / r_slope) * 100`.
@@ -65,7 +65,7 @@ This master file will provide a quantitative, high-level overview of the accurac
 *   **Data Description:** Data with multiple observations at the same timestamp, testing 'median', 'robust_median', 'middle', and 'middle_lwp' aggregation methods.
 
 **V-05: Unequally Spaced Time Series**
-*   **Objective:** Verify a core feature of `mannkensen` on a non-seasonal, unequally spaced time series.
+*   **Objective:** Verify a core feature of `MannKS` on a non-seasonal, unequally spaced time series.
 *   **Data Description:** Data with a clear trend but with random, non-uniform time gaps between samples. This test highlights a key methodological difference where the R script is expected to differ.
 
 **V-06: Numeric Time Vector**

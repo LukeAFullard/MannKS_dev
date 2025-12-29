@@ -7,12 +7,12 @@ import matplotlib.pyplot as plt
 from typing import Dict, List, Tuple
 from datetime import datetime
 
-# Add repo root to path to ensure MannKenSen can be imported
+# Add repo root to path to ensure MannKS can be imported
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
 
-import MannKenSen as mk
+import MannKS as mk
 
 # RPy2 imports
 try:
@@ -496,10 +496,10 @@ class ValidationUtils:
                 for res in self.results:
                     test_id = res.get('test_id', 'Unknown')
                     methods = [
-                        ('MannKenSen (Standard)', 'mk_py'),
-                        ('MannKenSen (LWP Mode)', 'lwp_py'),
+                        ('MannKS (Standard)', 'mk_py'),
+                        ('MannKS (LWP Mode)', 'lwp_py'),
                         ('LWP-TRENDS (R)', 'r'),
-                        ('MannKenSen (ATS)', 'ats_py'),
+                        ('MannKS (ATS)', 'ats_py'),
                         ('NADA2 (R)', 'nada_r')
                     ]
                     for method_name, prefix in methods:
@@ -588,7 +588,7 @@ def run():
     **Expected Behavior:**
     *   **Slope:** Should be 0.0, as there is no change in the value.
     *   **Significance:** Should be non-significant (p-value = 1.0 or similar), or the test might issue a warning/error about insufficient unique values.
-    *   **Comparison:** We aim to verify if MannKenSen matches the LWP-TRENDS R script's handling of this edge case (whether it returns 0 slope or fails).
+    *   **Comparison:** We aim to verify if MannKS matches the LWP-TRENDS R script's handling of this edge case (whether it returns 0 slope or fails).
     """
 
     # Analyze results for conclusion
@@ -597,9 +597,9 @@ def run():
     slope = res.get('mk_py_slope')
 
     if np.isnan(slope) or slope == 0:
-        conclusion += "MannKenSen **performed as expected**. It correctly handled the all-censored data by returning a slope of 0.0 or NaN (no trend) without crashing.\n"
+        conclusion += "MannKS **performed as expected**. It correctly handled the all-censored data by returning a slope of 0.0 or NaN (no trend) without crashing.\n"
     else:
-        conclusion += f"MannKenSen returned a slope of {slope}, which requires investigation.\n"
+        conclusion += f"MannKS returned a slope of {slope}, which requires investigation.\n"
 
     if warnings_found:
         conclusion += f"It successfully issued relevant warnings ({len(warnings_found)} caught), alerting the user to the data quality issues (e.g., denominator near zero).\n"

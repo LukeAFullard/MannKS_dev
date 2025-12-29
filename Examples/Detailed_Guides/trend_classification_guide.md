@@ -1,6 +1,6 @@
 # A Comprehensive Guide to Trend Classification
 
-The `MannKenSen` package provides a sophisticated trend classification system to help you interpret the results of a trend analysis. This guide explains how the classification works, what the different categories mean, their uses and limitations, and how you can customize them.
+The `MannKS` package provides a sophisticated trend classification system to help you interpret the results of a trend analysis. This guide explains how the classification works, what the different categories mean, their uses and limitations, and how you can customize them.
 
 The classification is performed by the `classify_trend` function, which is automatically called by `trend_test` and `seasonal_trend_test`.
 

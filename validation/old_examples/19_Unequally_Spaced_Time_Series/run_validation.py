@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # rpy2 setup
 import rpy2.robjects as ro
@@ -31,7 +31,7 @@ csv_path = os.path.join(os.path.dirname(__file__), 'data.csv')
 data.to_csv(csv_path, index=False)
 
 
-# --- 2. MannKenSen Analysis ---
+# --- 2. MannKS Analysis ---
 plot_path = os.path.join(os.path.dirname(__file__), 'trend_plot.png')
 
 # Run with standard settings
@@ -82,7 +82,7 @@ readme_content = f"""
 # Validation Case V-19: Unequally Spaced Time Series
 
 ## Objective
-This validation case demonstrates and explains a key methodological difference between `mannkensen` and the LWP-TRENDS R script: the handling of unequally spaced time series data. The goal is to show *why* the results for p-value and confidence intervals diverge.
+This validation case demonstrates and explains a key methodological difference between `MannKS` and the LWP-TRENDS R script: the handling of unequally spaced time series data. The goal is to show *why* the results for p-value and confidence intervals diverge.
 
 ## Data
 A synthetic dataset of {n} samples was generated with a clear positive trend. The time gaps between samples were randomized to be between 10 and 100 days, simulating an irregular, non-annual sampling schedule.
@@ -93,7 +93,7 @@ A synthetic dataset of {n} samples was generated with a clear positive trend. Th
 
 The core difference lies in how the Mann-Kendall test's variance (`var(S)`) is calculated, which directly impacts the Z-score, p-value, and confidence intervals.
 
--   **`mannkensen`**: This package is designed for unequally spaced data. It uses the ranks of the numeric timestamps directly in its calculations. This is the statistically standard and correct approach for this type of data.
+-   **`MannKS`**: This package is designed for unequally spaced data. It uses the ranks of the numeric timestamps directly in its calculations. This is the statistically standard and correct approach for this type of data.
 
 -   **LWP-TRENDS R Script**: The R script's `GetKendal` function is not designed for continuous time. It converts the timestamps into simple integer ranks (`1, 2, 3, ...`). This effectively treats the unequally spaced data as if it were equally spaced, which can lead to an inaccurate estimation of the test's variance and, consequently, its significance. The Sen's slope itself, however, is calculated using the true time differences and should be similar.
 
@@ -101,7 +101,7 @@ The core difference lies in how the Mann-Kendall test's variance (`var(S)`) is c
 
 The results below highlight the expected divergence. The Sen's slopes are similar, but the p-values and confidence intervals differ due to the different variance calculations. The R script was run in its default aggregated mode (`TimeIncrMed=TRUE`) to bypass a known bug in its unaggregated workflow.
 
-| Metric              | MannKenSen (Standard) | MannKenSen (LWP Mode) | LWP-TRENDS R Script |
+| Metric              | MannKS (Standard) | MannKS (LWP Mode) | LWP-TRENDS R Script |
 |---------------------|-----------------------|-----------------------|---------------------|
 | p-value             | {mk_standard.p:.6f}   | {mk_lwp.p:.6f}        | {r_p_value:.6f}     |
 | Sen's Slope         | {mk_standard.slope:.6f} | {mk_lwp.slope:.6f}    | {r_slope:.6f}       |
@@ -109,12 +109,12 @@ The results below highlight the expected divergence. The Sen's slopes are simila
 | Upper CI (90%)      | {mk_standard.upper_ci:.6f} | {mk_lwp.upper_ci:.6f} | {r_upper_ci:.6f}    |
 
 ## Conclusion
-This validation case successfully demonstrates a key improvement of the `mannkensen` package over the LWP-TRENDS R script.
+This validation case successfully demonstrates a key improvement of the `MannKS` package over the LWP-TRENDS R script.
 
 - The **Sen's slopes are broadly similar** across all methods because the slope calculation correctly uses the true time differences.
-- The **p-values and confidence intervals diverge** because `mannkensen` correctly uses the rank of the continuous timestamps for its variance calculation, while the R script incorrectly uses integer ranks, treating the data as equally spaced.
+- The **p-values and confidence intervals diverge** because `MannKS` correctly uses the rank of the continuous timestamps for its variance calculation, while the R script incorrectly uses integer ranks, treating the data as equally spaced.
 
-This confirms that `mannkensen` provides a more statistically robust and accurate significance test for real-world, unequally spaced data.
+This confirms that `MannKS` provides a more statistically robust and accurate significance test for real-world, unequally spaced data.
 """
 
 readme_path = os.path.join(os.path.dirname(__file__), 'README.md')

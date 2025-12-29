@@ -19,20 +19,20 @@ This tests the robustness of the datetime handling and the flexibility of the se
 
 ## Results
                Test ID                Method     Slope  P-Value  Lower CI  Upper CI
-V-19_strong_increasing MannKenSen (Standard)  5.076052 0.000000  4.991450  5.198131
-V-19_strong_increasing MannKenSen (LWP Mode)  5.076052 0.000000  4.991921  5.196357
+V-19_strong_increasing MannKS (Standard)  5.076052 0.000000  4.991450  5.198131
+V-19_strong_increasing MannKS (LWP Mode)  5.076052 0.000000  4.991921  5.196357
 V-19_strong_increasing        LWP-TRENDS (R)       NaN      NaN       NaN       NaN
-V-19_strong_increasing      MannKenSen (ATS)  5.075987 0.000000  5.075987  5.075987
+V-19_strong_increasing      MannKS (ATS)  5.075987 0.000000  5.075987  5.075987
 V-19_strong_increasing             NADA2 (R)  4.709000 0.002000       NaN       NaN
-  V-19_weak_decreasing MannKenSen (Standard) -1.046334 0.000000 -1.142973 -0.961670
-  V-19_weak_decreasing MannKenSen (LWP Mode) -1.046334 0.000000 -1.141933 -0.961854
+  V-19_weak_decreasing MannKS (Standard) -1.046334 0.000000 -1.142973 -0.961670
+  V-19_weak_decreasing MannKS (LWP Mode) -1.046334 0.000000 -1.141933 -0.961854
   V-19_weak_decreasing        LWP-TRENDS (R)       NaN      NaN       NaN       NaN
-  V-19_weak_decreasing      MannKenSen (ATS) -1.047034 0.000000 -1.047034 -1.047034
+  V-19_weak_decreasing      MannKS (ATS) -1.047034 0.000000 -1.047034 -1.047034
   V-19_weak_decreasing             NADA2 (R) -1.385000 0.002000       NaN       NaN
-           V-19_stable MannKenSen (Standard)  0.012013 0.658787 -0.078212  0.099271
-           V-19_stable MannKenSen (LWP Mode)  0.012013 0.658787 -0.077952  0.099094
+           V-19_stable MannKS (Standard)  0.012013 0.658787 -0.078212  0.099271
+           V-19_stable MannKS (LWP Mode)  0.012013 0.658787 -0.077952  0.099094
            V-19_stable        LWP-TRENDS (R)       NaN      NaN       NaN       NaN
-           V-19_stable      MannKenSen (ATS)  0.012648 0.658787  0.012648  0.012648
+           V-19_stable      MannKS (ATS)  0.012648 0.658787  0.012648  0.012648
            V-19_stable             NADA2 (R) -0.336100 0.662000       NaN       NaN
 
 ## LWP Accuracy (Python vs R)

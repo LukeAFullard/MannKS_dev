@@ -6,12 +6,12 @@ import matplotlib.pyplot as plt
 from typing import Dict, List, Tuple
 from datetime import datetime, timedelta
 
-# Add repo root to path to ensure MannKenSen can be imported
+# Add repo root to path to ensure MannKS can be imported
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
 
-import MannKenSen as mk
+import MannKS as mk
 
 # RPy2 imports
 try:
@@ -426,10 +426,10 @@ class ValidationUtils:
                 for res in self.results:
                     test_id = res.get('test_id', 'Unknown')
                     methods = [
-                        ('MannKenSen (Standard)', 'mk_py'),
-                        ('MannKenSen (LWP Mode)', 'lwp_py'),
+                        ('MannKS (Standard)', 'mk_py'),
+                        ('MannKS (LWP Mode)', 'lwp_py'),
                         ('LWP-TRENDS (R)', 'r'),
-                        ('MannKenSen (ATS)', 'ats_py'),
+                        ('MannKS (ATS)', 'ats_py'),
                         ('NADA2 (R)', 'nada_r')
                     ]
                     for method_name, prefix in methods:
@@ -472,7 +472,7 @@ DESCRIPTION = """
 **V-14: Monthly Seasonal Trend**
 
 This test verifies the seasonal trend analysis functionality on a simple monthly dataset.
-It compares the standard `mannkensen` seasonal test against the LWP-TRENDS R script and NADA2.
+It compares the standard `MannKS` seasonal test against the LWP-TRENDS R script and NADA2.
 
 **Scenarios:**
 1.  **Strong Increasing:** Clear positive trend with seasonality.

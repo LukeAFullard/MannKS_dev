@@ -3,8 +3,8 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "MannKenSen"
+name = "MannKS"
 version = "0.1.0"
 
 [tool.setuptools]
-packages = ["MannKenSen"]
+packages = ["MannKS"]

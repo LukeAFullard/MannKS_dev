@@ -96,7 +96,7 @@ def generate_guide():
 
     ```python
     import pandas as pd
-    from MannKenSen import regional_test, trend_test
+    from MannKS import regional_test, trend_test
 
     # 1. Create sample data for multiple sites
     sites = ['Site A', 'Site B', 'Site C']

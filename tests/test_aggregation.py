@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
 import pandas as pd
-from MannKenSen import seasonal_trend_test
-from MannKenSen.preprocessing import prepare_censored_data
+from MannKS import seasonal_trend_test
+from MannKS.preprocessing import prepare_censored_data
 
 def test_seasonal_trend_test_aggregation_methods():
     """

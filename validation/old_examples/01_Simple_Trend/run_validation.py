@@ -16,7 +16,7 @@ except ImportError:
     print("Installing tabulate...")
     os.system(f'{sys.executable} -m pip install tabulate')
 
-import MannKenSen as mk
+import MannKS as mk
 
 # --- R Environment Setup ---
 # NOTE: The LWP-TRENDS R script has proven too brittle to run reliably via rpy2
@@ -40,7 +40,7 @@ def generate_annual_data(slope, intercept, n_years, noise_std, seed=42):
     return pd.DataFrame({'myDate': dates, 'Value': values, 'Year': years})
 
 # --- Analysis Functions ---
-def run_mannkensen_analyses(df):
+def run_MannKS_analyses(df):
     t = df['myDate']
     x = df['Value']
     mk_std_result = mk.trend_test(x, t, slope_scaling='year')
@@ -94,7 +94,7 @@ def main():
 
         data_df = generate_annual_data(slope=params['slope'], intercept=params['intercept'], n_years=15, noise_std=params['noise'], seed=params['seed'])
 
-        mk_std, mk_lwp = run_mannkensen_analyses(data_df)
+        mk_std, mk_lwp = run_MannKS_analyses(data_df)
         r_res = R_RESULTS[name]
 
         r_slope = r_res['AnnualSenSlope']
@@ -114,8 +114,8 @@ def main():
         }
         all_results_for_csv.append(csv_row)
 
-        report_data.append({'Scenario': name, 'Method': '`mannkensen` (Standard)', 'Sen\'s Slope (per year)': f'{mk_std.slope:.4f}', 'p-value': f'{mk_std.p:.4f}', 'Trend': mk.classify_trend(mk_std)})
-        report_data.append({'Scenario': '', 'Method': '`mannkensen` (LWP Mode)', 'Sen\'s Slope (per year)': f'{mk_lwp.slope:.4f}', 'p-value': f'{mk_lwp.p:.4f}', 'Trend': mk.classify_trend(mk_lwp)})
+        report_data.append({'Scenario': name, 'Method': '`MannKS` (Standard)', 'Sen\'s Slope (per year)': f'{mk_std.slope:.4f}', 'p-value': f'{mk_std.p:.4f}', 'Trend': mk.classify_trend(mk_std)})
+        report_data.append({'Scenario': '', 'Method': '`MannKS` (LWP Mode)', 'Sen\'s Slope (per year)': f'{mk_lwp.slope:.4f}', 'p-value': f'{mk_lwp.p:.4f}', 'Trend': mk.classify_trend(mk_lwp)})
         report_data.append({'Scenario': '', 'Method': 'LWP-TRENDS R Script', 'Sen\'s Slope (per year)': f'{r_slope:.4f}', 'p-value': f'{r_p:.4f}', 'Trend': r_res['TrendDirection']})
 
     report_df = pd.DataFrame(report_data)

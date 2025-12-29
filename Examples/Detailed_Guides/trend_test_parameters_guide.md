@@ -1,6 +1,6 @@
 # A Comprehensive Guide to `trend_test` Parameters
 
-The `trend_test` function is the workhorse for non-seasonal trend analysis in the `MannKenSen` package. It has a rich set of parameters that allow you to fine-tune the analysis to your specific needs. This guide provides a detailed explanation of each parameter, including its purpose, usefulness, and limitations.
+The `trend_test` function is the workhorse for non-seasonal trend analysis in the `MannKS` package. It has a rich set of parameters that allow you to fine-tune the analysis to your specific needs. This guide provides a detailed explanation of each parameter, including its purpose, usefulness, and limitations.
 
 ---
 
@@ -16,7 +16,7 @@ These are the essential parameters you will always need to provide.
 #### `t`
 -   **Type:** `numpy.ndarray`
 -   **Description:** This is the time vector corresponding to your `x` values. The values in `t` must correspond one-to-one with the values in `x`.
--   **Usefulness and Nuances:** The key feature of `MannKenSen` is its ability to handle unequally spaced timestamps. `t` can contain numeric values (e.g., `2001.5`, `2002.75`) or, more commonly, datetime objects. The function automatically handles the conversion of datetimes for calculations.
+-   **Usefulness and Nuances:** The key feature of `MannKS` is its ability to handle unequally spaced timestamps. `t` can contain numeric values (e.g., `2001.5`, `2002.75`) or, more commonly, datetime objects. The function automatically handles the conversion of datetimes for calculations.
 
 #### `alpha`
 -   **Type:** `float`, **Default:** `0.05`

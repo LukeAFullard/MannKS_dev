@@ -16,7 +16,7 @@ Blindly running a statistical test can be dangerous. A "significant trend" might
 ```python
 import pandas as pd
 import numpy as np
-from MannKenSen import inspect_trend_data, prepare_censored_data
+from MannKS import inspect_trend_data, prepare_censored_data
 
 # 1. Create a synthetic dataset
 # We simulate data with a changing detection limit to show the tool's value

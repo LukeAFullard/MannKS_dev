@@ -13,7 +13,7 @@ The following example shows how to perform the seasonality check on both raw and
 ```python
 import numpy as np
 import pandas as pd
-from MannKenSen import check_seasonality
+from MannKS import check_seasonality
 
 # --- 1. Synthetic Data Generation ---
 # Create a dataset with high-frequency (daily) data over several years.

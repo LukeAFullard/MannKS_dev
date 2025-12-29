@@ -3,11 +3,11 @@ import numpy as np
 import pandas as pd
 import pytest
 import warnings
-from MannKenSen.analysis_notes import get_analysis_note, get_sens_slope_analysis_note
-from MannKenSen._stats import _sens_estimator_censored
-from MannKenSen.preprocessing import prepare_censored_data
-from MannKenSen.trend_test import trend_test
-from MannKenSen.seasonal_trend_test import seasonal_trend_test
+from MannKS.analysis_notes import get_analysis_note, get_sens_slope_analysis_note
+from MannKS._stats import _sens_estimator_censored
+from MannKS.preprocessing import prepare_censored_data
+from MannKS.trend_test import trend_test
+from MannKS.seasonal_trend_test import seasonal_trend_test
 
 def test_get_analysis_note_all_na():
     data = pd.DataFrame({'value': [np.nan, np.nan, np.nan], 'censored': [False, False, False]})

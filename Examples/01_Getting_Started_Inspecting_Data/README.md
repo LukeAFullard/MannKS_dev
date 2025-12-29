@@ -7,7 +7,7 @@ In environmental data analysis, datasets are rarely perfect. They often contain:
 *   **Censored data:** Concentrations fall below laboratory detection limits (e.g., `< 0.5 mg/L`).
 *   **Irregular sampling:** Samples might be taken daily in summer but monthly in winter.
 
-Running a trend test blindly on such data can lead to misleading results. The `MannKenSen.inspect_trend_data` function is your "sanity check."
+Running a trend test blindly on such data can lead to misleading results. The `MannKS.inspect_trend_data` function is your "sanity check."
 
 ## The "How": Code Walkthrough
 
@@ -17,7 +17,7 @@ In this example, we generate a synthetic "messy" dataset and inspect it. We use 
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 
 # 1. Generate Synthetic Data
 # We create a 5-year monthly dataset (60 points) with some "messy" real-world features:

@@ -1,6 +1,6 @@
-# MannKenSen: Environment Setup Guide
+# MannKS: Environment Setup Guide
 
-This guide provides detailed instructions for setting up the development environment for the `MannKenSen` project. This project requires both Python and R, as well as several system dependencies. Following these steps in order is crucial for a successful installation.
+This guide provides detailed instructions for setting up the development environment for the `MannKS` project. This project requires both Python and R, as well as several system dependencies. Following these steps in order is crucial for a successful installation.
 
 ## Step 1a: System Dependencies (Linux & macOS)
 
@@ -105,8 +105,8 @@ With the system and R dependencies in place, you can now set up the Python envir
     source venv/bin/activate  # On Windows use `venv\Scripts\activate`
     ```
 
-2.  **Install Python dependencies and the `MannKenSen` package:**
-    The project's development dependencies are defined in `dev-requirements.txt`. Installing this file will also install the `MannKenSen` package in "editable" mode, which means you can modify the source code and run it without reinstalling.
+2.  **Install Python dependencies and the `MannKS` package:**
+    The project's development dependencies are defined in `dev-requirements.txt`. Installing this file will also install the `MannKS` package in "editable" mode, which means you can modify the source code and run it without reinstalling.
     ```bash
     pip install -r dev-requirements.txt
     ```

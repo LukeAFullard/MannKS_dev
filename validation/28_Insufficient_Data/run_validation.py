@@ -6,12 +6,12 @@ import matplotlib.pyplot as plt
 from typing import Dict, List, Tuple
 from datetime import datetime
 
-# Add repo root to path to ensure MannKenSen can be imported
+# Add repo root to path to ensure MannKS can be imported
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
 
-import MannKenSen as mk
+import MannKS as mk
 
 # RPy2 imports
 try:
@@ -270,8 +270,8 @@ class ValidationUtils:
                 for res in self.results:
                     test_id = res.get('test_id', 'Unknown')
                     methods = [
-                        ('MannKenSen (Standard)', 'mk_py'),
-                        ('MannKenSen (LWP Mode)', 'lwp_py'),
+                        ('MannKS (Standard)', 'mk_py'),
+                        ('MannKS (LWP Mode)', 'lwp_py'),
                         ('LWP-TRENDS (R)', 'r'),
                     ]
                     for method_name, prefix in methods:
@@ -372,13 +372,13 @@ def run():
     )
 
     discussion = """
-This test verified the behavior of the `MannKenSen` package when dealing with datasets smaller than the configured `min_size` parameter. In this case, datasets with N=4 were tested against a configured `min_size` of 5.
+This test verified the behavior of the `MannKS` package when dealing with datasets smaller than the configured `min_size` parameter. In this case, datasets with N=4 were tested against a configured `min_size` of 5.
 
 **Expected Behavior:**
 The package is expected to issue a warning alerting the user that the sample size is insufficient, but it should typically attempt a "best effort" calculation rather than crashing, unless N < 2. The reference R script (`LWP-TRENDS`) is known to be fragile with such small datasets.
 
 **Observations:**
-1.  **Warnings Triggered:** As shown in the "Captured Analysis Notes" section below, the `MannKenSen` package correctly identified the issue and appended the note: `'sample size (4) below minimum (5)'` to the results.
+1.  **Warnings Triggered:** As shown in the "Captured Analysis Notes" section below, the `MannKS` package correctly identified the issue and appended the note: `'sample size (4) below minimum (5)'` to the results.
 2.  **Calculation Results:**
     -   The package successfully calculated the slope and p-value despite the small sample size.
     -   **Standard CI (NaN):** The Standard mode correctly returned `NaN` for confidence intervals. This is a robust behavior; with only 4 data points (6 pairwise slopes), calculating a 90% or 95% confidence interval using the direct method often results in indices that are out of bounds. The package caught this and issued a `UserWarning` (visible in logs) instead of crashing.
@@ -386,7 +386,7 @@ The package is expected to issue a warning alerting the user that the sample siz
 3.  **R Script Failure:** The LWP-TRENDS R script failed to produce results (returned `NaN`), confirming that the Python implementation is more robust in terms of execution stability for edge cases.
 
 **Conclusion:**
-The `MannKenSen` package behaves as expected. It provides the user with necessary warnings about data sufficiency and computational limitations (NaN CIs in robust mode) while ensuring the process completes without execution errors.
+The `MannKS` package behaves as expected. It provides the user with necessary warnings about data sufficiency and computational limitations (NaN CIs in robust mode) while ensuring the process completes without execution errors.
 """
 
     utils.create_report(

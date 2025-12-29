@@ -1,6 +1,6 @@
-# MannKenSen Package Audit
+# MannKS Package Audit
 
-This document outlines a comprehensive audit of the `MannKenSen` Python package. The goal of this audit is to identify any potential issues in the codebase, statistical methodology, and overall structure to ensure its reliability as a scientific package.
+This document outlines a comprehensive audit of the `MannKS` Python package. The goal of this audit is to identify any potential issues in the codebase, statistical methodology, and overall structure to ensure its reliability as a scientific package.
 
 ## 1. Statistical Robustness
 

@@ -6,12 +6,12 @@ import matplotlib.pyplot as plt
 from typing import Dict, List, Tuple
 from datetime import datetime
 
-# Add repo root to path to ensure MannKenSen can be imported
+# Add repo root to path to ensure MannKS can be imported
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
 
-import MannKenSen as mk
+import MannKS as mk
 
 # RPy2 imports
 try:
@@ -497,7 +497,7 @@ def run_validation():
         f.write("# Validation Case V-04: Aggregation Methods\n\n")
         f.write("## Case Description\n")
         f.write("This validation case verifies the `agg_method` options for handling multiple observations per time period, "
-                "specifically comparing the standard MannKenSen behavior against the LWP-TRENDS R script "
+                "specifically comparing the standard MannKS behavior against the LWP-TRENDS R script "
                 "which enforces aggregation (e.g., one value per month). To ensure deterministic results, observations "
                 "are distributed throughout the month, avoiding identical timestamps and ambiguous tie-breaking.\n\n")
         f.write("Three scenarios were tested:\n")
@@ -513,10 +513,10 @@ def run_validation():
             for res in utils.results:
                 test_id = res.get('test_id', 'Unknown')
                 methods = [
-                    ('MannKenSen (Standard)', 'mk_py'),
-                    ('MannKenSen (LWP Mode)', 'lwp_py'),
+                    ('MannKS (Standard)', 'mk_py'),
+                    ('MannKS (LWP Mode)', 'lwp_py'),
                     ('LWP-TRENDS (R)', 'r'),
-                    ('MannKenSen (ATS)', 'ats_py'),
+                    ('MannKS (ATS)', 'ats_py'),
                     ('NADA2 (R)', 'nada_r')
                 ]
                 for method_name, prefix in methods:

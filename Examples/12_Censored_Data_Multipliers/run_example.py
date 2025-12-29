@@ -3,7 +3,7 @@ import io
 import contextlib
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import matplotlib.pyplot as plt
 import warnings
 
@@ -14,7 +14,7 @@ warnings.simplefilter("ignore")
 example_code = """
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import matplotlib.pyplot as plt
 import warnings
 

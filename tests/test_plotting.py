@@ -2,9 +2,9 @@
 import pandas as pd
 import pytest
 import os
-from MannKenSen.inspection import inspect_trend_data
-from MannKenSen.plotting import plot_inspection_data
-from MannKenSen.preprocessing import prepare_censored_data
+from MannKS.inspection import inspect_trend_data
+from MannKS.plotting import plot_inspection_data
+from MannKS.preprocessing import prepare_censored_data
 
 
 @pytest.fixture

@@ -10,7 +10,7 @@ This results in 3 pairwise slopes. By design, the median of these three slopes i
 
 ## Analysis
 
-The `sens_slope_method='lwp'` in `mannkensen` emulates the LWP-TRENDS R script's behavior of substituting censored values before calculating pairwise slopes. For left-censored data (`<D`), the substitution is `D * lt_mult`. The R script hardcodes this multiplier to 0.5.
+The `sens_slope_method='lwp'` in `MannKS` emulates the LWP-TRENDS R script's behavior of substituting censored values before calculating pairwise slopes. For left-censored data (`<D`), the substitution is `D * lt_mult`. The R script hardcodes this multiplier to 0.5.
 
 #### Case 1: `lt_mult=0.5` (The LWP-TRENDS Default)
 - The value for `'<10'` becomes `10 * 0.5 = 5`.
@@ -34,12 +34,12 @@ The following table shows the calculated Sen's slope for each run. To get a reli
 
 | Analysis                        | Sen's Slope (per year) |
 |---------------------------------|------------------------|
-| `mannkensen` (`lt_mult=0.5`)      | 7.494870       |
-| `mannkensen` (`lt_mult=0.1`)      | 9.493502      |
+| `MannKS` (`lt_mult=0.5`)      | 7.494870       |
+| `MannKS` (`lt_mult=0.1`)      | 9.493502      |
 | LWP-TRENDS R Script (Internal)  | 7.494870          |
 
 ## Conclusion
-The results confirm that the `lt_mult` parameter in `mannkensen` functions exactly as designed.
+The results confirm that the `lt_mult` parameter in `MannKS` functions exactly as designed.
 
-- By calling the R script's internal slope function, we confirm its core logic is equivalent to a hardcoded `lt_mult=0.5`. Its result now correctly matches the corresponding `mannkensen` run.
-- Changing `lt_mult` in `mannkensen` correctly alters the final Sen's slope, providing the intended flexibility.
+- By calling the R script's internal slope function, we confirm its core logic is equivalent to a hardcoded `lt_mult=0.5`. Its result now correctly matches the corresponding `MannKS` run.
+- Changing `lt_mult` in `MannKS` correctly alters the final Sen's slope, providing the intended flexibility.

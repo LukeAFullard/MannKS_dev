@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from MannKenSen.analysis_notes import (
+from MannKS.analysis_notes import (
     get_analysis_note,
     get_sens_slope_analysis_note
 )

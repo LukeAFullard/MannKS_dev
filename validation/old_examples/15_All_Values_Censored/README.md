@@ -10,7 +10,7 @@ A synthetic dataset of 10 annual samples was generated where every value is the 
 
 The following table compares the key statistical outputs. As expected, no trend could be calculated.
 
-| Metric              | MannKenSen (Standard) | MannKenSen (LWP Mode) | LWP-TRENDS R Script |
+| Metric              | MannKS (Standard) | MannKS (LWP Mode) | LWP-TRENDS R Script |
 |---------------------|-----------------------|-----------------------|---------------------|
 | p-value             | 1.0000   | 1.0000        | nan     |
 | Sen's Slope         | nan | 0.0000    | nan       |
@@ -21,7 +21,7 @@ The following table compares the key statistical outputs. As expected, no trend 
 ## Analysis
 All three methods correctly determined that no trend could be calculated from a dataset composed entirely of identical censored values.
 
--   **MannKenSen (Standard & LWP Mode):** Both functions returned a p-value of `1.0` and a Sen's slope of `0.0`, correctly identifying the complete lack of any trend. The analysis notes properly flag that there is only one unique value, which is the root cause.
+-   **MannKS (Standard & LWP Mode):** Both functions returned a p-value of `1.0` and a Sen's slope of `0.0`, correctly identifying the complete lack of any trend. The analysis notes properly flag that there is only one unique value, which is the root cause.
 -   **LWP-TRENDS R Script:** The R script also produces `NA` (Not Available) for its primary results, as no valid statistical comparison can be made. Our wrapper correctly translates this to `nan`.
 
 This confirms that all systems behave as expected and do not produce misleading results when faced with this edge case.

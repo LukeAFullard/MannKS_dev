@@ -14,7 +14,7 @@ We run a simple trend test and then print out every major field in the result.
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import os
 
 # 1. Generate Synthetic Data

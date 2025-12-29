@@ -3,14 +3,14 @@ import io
 import contextlib
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import matplotlib.pyplot as plt
 
 # --- 1. Define the Example Code as a String ---
 example_code = """
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 
 # --- Part 1: High Frequency Data (Minutes/Seconds) ---
 # Goal: Demonstrate that the package can handle very small time increments

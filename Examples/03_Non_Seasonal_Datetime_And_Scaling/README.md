@@ -20,7 +20,7 @@ We simulate a dataset of monthly water quality samples over 3 years.
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 
 # 1. Generate Real-World Data (Datetime Objects)
 # In the real world, data doesn't always come nicely indexed as "Year 1, Year 2".

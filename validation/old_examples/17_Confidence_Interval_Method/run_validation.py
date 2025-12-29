@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # rpy2 setup
 import rpy2.robjects as ro
@@ -24,7 +24,7 @@ csv_path = os.path.join(os.path.dirname(__file__), 'data.csv')
 data.to_csv(csv_path, index=False)
 
 
-# --- 2. MannKenSen Analysis ---
+# --- 2. MannKS Analysis ---
 plot_path = os.path.join(os.path.dirname(__file__), 'trend_plot.png')
 
 # Run with standard settings (default ci_method='direct')
@@ -82,7 +82,7 @@ A simple synthetic dataset of {n} annual samples was generated with a known posi
 ```python
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # Generate Data
 np.random.seed(42)
@@ -93,10 +93,10 @@ intercept = {intercept}
 noise = np.random.normal(0, 1, n)
 x = slope * np.arange(n) + intercept + noise
 
-# Run MannKenSen with default 'direct' CI method
+# Run MannKS with default 'direct' CI method
 mk_standard = mk.trend_test(x, t, alpha=0.1)
 
-# Run MannKenSen with LWP-compatible 'lwp' CI method
+# Run MannKS with LWP-compatible 'lwp' CI method
 mk_lwp = mk.trend_test(x, t, alpha=0.1, ci_method='lwp')
 
 print(f"Direct CI:  ({{mk_standard.lower_ci:.4f}}, {{mk_standard.upper_ci:.4f}})")
@@ -107,7 +107,7 @@ print(f"LWP CI:     ({{mk_lwp.lower_ci:.4f}}, {{mk_lwp.upper_ci:.4f}})")
 
 The key verification for this case is the comparison of the 90% confidence intervals for the Sen's slope.
 
-| Metric              | MannKenSen (`ci_method='direct'`) | MannKenSen (`ci_method='lwp'`) | LWP-TRENDS R Script |
+| Metric              | MannKS (`ci_method='direct'`) | MannKS (`ci_method='lwp'`) | LWP-TRENDS R Script |
 |---------------------|-----------------------------------|--------------------------------|---------------------|
 | Sen's Slope         | {mk_standard.slope:.6f}           | {mk_lwp.slope:.6f}             | {r_slope:.6f}       |
 | Lower CI (90%)      | {mk_standard.lower_ci:.6f}        | {mk_lwp.lower_ci:.6f}          | {r_lower_ci:.6f}    |
@@ -120,9 +120,9 @@ The results clearly demonstrate the difference between the two confidence interv
 
 The **LWP-TRENDS R Script** calculates the ranks for the confidence interval bounds as floating-point numbers and then uses linear interpolation between the adjacent slopes to find the final CI values.
 
-The **`mannkensen` (LWP Mode)**, with `ci_method='lwp'`, successfully replicates this interpolation behavior, producing confidence intervals that are nearly identical to the R script's output. This confirms the correctness of the LWP-compatibility mode for this specific parameter.
+The **`MannKS` (LWP Mode)**, with `ci_method='lwp'`, successfully replicates this interpolation behavior, producing confidence intervals that are nearly identical to the R script's output. This confirms the correctness of the LWP-compatibility mode for this specific parameter.
 
-The **`mannkensen` (Standard)** mode, using the default `ci_method='direct'`, produces slightly different confidence intervals. This method rounds the calculated ranks to the nearest integer and directly selects the corresponding slopes from the sorted list of all pairwise slopes. This is a common and statistically valid approach that avoids interpolation.
+The **`MannKS` (Standard)** mode, using the default `ci_method='direct'`, produces slightly different confidence intervals. This method rounds the calculated ranks to the nearest integer and directly selects the corresponding slopes from the sorted list of all pairwise slopes. This is a common and statistically valid approach that avoids interpolation.
 
 This validation case confirms that the `ci_method` parameter functions as designed, allowing users to choose between a direct-indexing method and a legacy-compatible interpolation method.
 """

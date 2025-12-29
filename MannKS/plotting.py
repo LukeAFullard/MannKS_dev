@@ -1,5 +1,5 @@
 """
-This script provides plotting utilities for the MannKenSen package.
+This script provides plotting utilities for the MannKS package.
 """
 import numpy as np
 import pandas as pd

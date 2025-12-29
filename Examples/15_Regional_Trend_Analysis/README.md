@@ -23,7 +23,7 @@ We simulate 5 sites in a region.
 ```python
 import numpy as np
 import pandas as pd
-import MannKenSen as mk
+import MannKS as mk
 import matplotlib.pyplot as plt
 
 # 1. Generate Synthetic Data for Multiple Sites

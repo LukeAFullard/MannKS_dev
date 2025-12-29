@@ -1,6 +1,6 @@
 # A Comprehensive Guide to Analysis Notes
 
-The `MannKenSen` package includes a system of "Analysis Notes" to provide data quality warnings. These notes do not stop the analysis, but they alert you to potential issues in your dataset that could affect the reliability and interpretation of the trend results. This guide provides a deep dive into what each note means, its statistical and practical implications, and what actions you can take in response.
+The `MannKS` package includes a system of "Analysis Notes" to provide data quality warnings. These notes do not stop the analysis, but they alert you to potential issues in your dataset that could affect the reliability and interpretation of the trend results. This guide provides a deep dive into what each note means, its statistical and practical implications, and what actions you can take in response.
 
 ---
 
@@ -49,7 +49,7 @@ The `MannKenSen` package includes a system of "Analysis Notes" to provide data q
 
 ### `tied timestamps present without aggregation`
 -   **What it means:** Your time vector `t` contains duplicate values (e.g., multiple measurements were recorded at the exact same time), and you have not chosen an aggregation method.
--   **Usefulness and Implications:** This is a critical warning. The Sen's slope is calculated from the slopes of all pairs of points. If two points have the same timestamp, the slope denominator (`t_j - t_i`) is zero, leading to an infinite slope (`inf`), which breaks the calculation. The `MannKenSen` package removes these pairs, but this can **bias the result**. It effectively ignores some of your data in an unmanaged way.
+-   **Usefulness and Implications:** This is a critical warning. The Sen's slope is calculated from the slopes of all pairs of points. If two points have the same timestamp, the slope denominator (`t_j - t_i`) is zero, leading to an infinite slope (`inf`), which breaks the calculation. The `MannKS` package removes these pairs, but this can **bias the result**. It effectively ignores some of your data in an unmanaged way.
 -   **Limitations and Nuances:** This is especially problematic if the tied values are not identical. If you have `(t1, x1)` and `(t1, x2)`, the package cannot know which value truly represents that time point.
 -   **Recommended Actions:**
     1.  **Aggregate (Tie-Breaking):** Use `agg_method='median'` or `'robust_median'` to combine the duplicate-time observations into a single point. This keeps the timestamps as they are.

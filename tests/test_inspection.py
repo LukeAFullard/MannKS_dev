@@ -1,7 +1,7 @@
 
 import pandas as pd
 import pytest
-from MannKenSen.inspection import inspect_trend_data
+from MannKS.inspection import inspect_trend_data
 
 @pytest.fixture
 def sample_data():

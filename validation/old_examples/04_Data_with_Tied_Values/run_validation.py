@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # rpy2 setup
 import rpy2.robjects as ro
@@ -28,7 +28,7 @@ csv_path = os.path.join(os.path.dirname(__file__), 'data.csv')
 data.to_csv(csv_path, index=False)
 
 
-# --- 2. MannKenSen Analysis ---
+# --- 2. MannKS Analysis ---
 # Generate plot for the report
 plot_path = os.path.join(os.path.dirname(__file__), 'tied_data_plot.png')
 mk_standard = mk.trend_test(x, t, slope_scaling='year', alpha=0.1, plot_path=plot_path)
@@ -84,7 +84,7 @@ A synthetic dataset of {n} annual samples was generated with a positive slope. M
 ```python
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # Generate Data
 np.random.seed(42)
@@ -99,7 +99,7 @@ x[5:10] = x[5]
 x[20:25] = x[20]
 x[35:40] = x[35]
 
-# Run MannKenSen Analyses
+# Run MannKS Analyses
 mk_standard = mk.trend_test(x, t, tau_method='b') # Default is 'b' for ties
 mk_lwp = mk.trend_test(
     x, t,
@@ -116,7 +116,7 @@ print("LWP MK p-value:", mk_lwp.p)
 
 The following table compares the key statistical outputs from the three analysis methods.
 
-| Metric              | MannKenSen (Standard) | MannKenSen (LWP Mode) | LWP-TRENDS R Script |
+| Metric              | MannKS (Standard) | MannKS (LWP Mode) | LWP-TRENDS R Script |
 |---------------------|-----------------------|-----------------------|---------------------|
 | p-value             | {mk_standard.p:.6f}   | {mk_lwp.p:.6f}        | {r_p_value:.6f}     |
 | Sen's Slope         | {mk_standard.slope:.6f} | {mk_lwp.slope:.6f}    | {r_slope:.6f}       |
@@ -126,9 +126,9 @@ The following table compares the key statistical outputs from the three analysis
 ## Analysis
 All three methods correctly identified the significant increasing trend despite the presence of tied values.
 
-The `mannkensen` package's standard method uses the Mann-Kendall Tau-b test, which is specifically designed to correctly handle ties in the variance calculation. The LWP emulation mode uses a different tie-breaking method (`tie_break_method='lwp'`) designed to replicate the R script's behavior.
+The `MannKS` package's standard method uses the Mann-Kendall Tau-b test, which is specifically designed to correctly handle ties in the variance calculation. The LWP emulation mode uses a different tie-breaking method (`tie_break_method='lwp'`) designed to replicate the R script's behavior.
 
-As shown in the table, the results from **MannKenSen (LWP Mode)** and the **LWP-TRENDS R Script** are nearly identical, demonstrating a successful replication of the R script's tie-handling logic. The standard method produces a slightly different but statistically consistent result.
+As shown in the table, the results from **MannKS (LWP Mode)** and the **LWP-TRENDS R Script** are nearly identical, demonstrating a successful replication of the R script's tie-handling logic. The standard method produces a slightly different but statistically consistent result.
 """
 
 readme_path = os.path.join(os.path.dirname(__file__), 'README.md')

@@ -4,14 +4,14 @@
 This validation case verifies the handling of left-censored (`<`) data. The goal is to ensure all methods can detect a positive trend in a dataset where some lower values are censored.
 
 ## Data
-A synthetic dataset of 50 annual samples was generated with a known positive slope. Values below `6.0` were converted to left-censored strings (e.g., `'<6.0'`). The generated plot from the standard `mannkensen` analysis is shown below.
+A synthetic dataset of 50 annual samples was generated with a known positive slope. Values below `6.0` were converted to left-censored strings (e.g., `'<6.0'`). The generated plot from the standard `MannKS` analysis is shown below.
 
 ![Left-Censored Plot](left_censored_plot.png)
 
 ```python
 import pandas as pd
 import numpy as np
-import MannKenSen as mk
+import MannKS as mk
 
 # Generate Data
 np.random.seed(42)
@@ -26,7 +26,7 @@ x = slope * np.arange(n) + intercept + noise
 censor_threshold = 6.0
 x_censored = [f"<6.0" if val < censor_threshold else val for val in x]
 
-# Pre-process and run MannKenSen
+# Pre-process and run MannKS
 processed_data = mk.prepare_censored_data(x_censored)
 mk_results = mk.trend_test(processed_data, t)
 print("p-value:", mk_results.p)
@@ -34,7 +34,7 @@ print("p-value:", mk_results.p)
 
 ## Results Comparison
 
-| Metric              | MannKenSen (Standard) | MannKenSen (LWP Mode) | LWP-TRENDS R Script |
+| Metric              | MannKS (Standard) | MannKS (LWP Mode) | LWP-TRENDS R Script |
 |---------------------|-----------------------|-----------------------|---------------------|
 | p-value             | 0.000000   | 0.000000        | 0.000000     |
 | Sen's Slope         | 0.144178 | 0.123828    | 0.123828       |
@@ -42,6 +42,6 @@ print("p-value:", mk_results.p)
 | Upper CI (90%)      | 0.171224 | 0.158159 | 0.157401    |
 
 ## Analysis
-The `sens_slope_method='lwp'` parameter is key in this test. It instructs `mannkensen` to set ambiguous pairwise slopes involving censored data to 0, mimicking the R script's behavior. This results in the **MannKenSen (LWP Mode)** slope and p-value being very close to the **LWP-TRENDS R Script**.
+The `sens_slope_method='lwp'` parameter is key in this test. It instructs `MannKS` to set ambiguous pairwise slopes involving censored data to 0, mimicking the R script's behavior. This results in the **MannKS (LWP Mode)** slope and p-value being very close to the **LWP-TRENDS R Script**.
 
-The **MannKenSen (Standard)** run uses a more robust default (`sens_slope_method='nan'`), which removes ambiguous slopes from the calculation. This can lead to a slightly different, but statistically sound, result. All methods correctly identified the significant increasing trend.
+The **MannKS (Standard)** run uses a more robust default (`sens_slope_method='nan'`), which removes ambiguous slopes from the calculation. This can lead to a slightly different, but statistically sound, result. All methods correctly identified the significant increasing trend.

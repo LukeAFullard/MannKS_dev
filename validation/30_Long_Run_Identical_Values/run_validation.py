@@ -7,12 +7,12 @@ import matplotlib.pyplot as plt
 from typing import Dict, List, Tuple
 from datetime import datetime
 
-# Add repo root to path to ensure MannKenSen can be imported
+# Add repo root to path to ensure MannKS can be imported
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
 
-import MannKenSen as mk
+import MannKS as mk
 
 # RPy2 imports
 try:
@@ -463,10 +463,10 @@ class ValidationUtils:
                 for res in self.results:
                     test_id = res.get('test_id', 'Unknown')
                     methods = [
-                        ('MannKenSen (Standard)', 'mk_py'),
-                        ('MannKenSen (LWP Mode)', 'lwp_py'),
+                        ('MannKS (Standard)', 'mk_py'),
+                        ('MannKS (LWP Mode)', 'lwp_py'),
                         ('LWP-TRENDS (R)', 'r'),
-                        ('MannKenSen (ATS)', 'ats_py'),
+                        ('MannKS (ATS)', 'ats_py'),
                         ('NADA2 (R)', 'nada_r')
                     ]
                     for method_name, prefix in methods:
@@ -572,14 +572,14 @@ def run():
     **Expected Behavior:**
     *   **Trend:** Likely no trend or non-significant.
     *   **Data Quality Warning:** The system should produce an analysis note warning about "Long run of single value" (e.g., "WARNING: Long run of single value...").
-    *   **Comparison:** We aim to verify if MannKenSen detects this pattern similarly to the LWP-TRENDS R script.
+    *   **Comparison:** We aim to verify if MannKS detects this pattern similarly to the LWP-TRENDS R script.
     """
 
     # Analyze results for conclusion
     conclusion = "**Verification Conclusion:**\n\n"
     warnings_found = res.get('mk_py_warnings', [])
 
-    conclusion += "MannKenSen **performed robustly** by completing the analysis without crashing.\n"
+    conclusion += "MannKS **performed robustly** by completing the analysis without crashing.\n"
 
     if any("Long run of single value" in w for w in warnings_found):
         conclusion += "It **successfully detected** the data quality issue and issued a 'Long run of single value' warning, matching expected behavior.\n"

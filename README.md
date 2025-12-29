@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="assets/logo.png" alt="MannKenSen Logo" width="300"/>
+  <img src="assets/logo.png" alt="MannKS Logo" width="300"/>
 
-  # MannKenSen
+  # MannKS
 
   **Robust Trend Analysis in Python**
 </div>
@@ -10,12 +10,12 @@
 
 ## 👋 Welcome
 
-Welcome to **MannKenSen**, a friendly and powerful Python package designed to help you analyze trends in your data.
+Welcome to **MannKS**, a friendly and powerful Python package designed to help you analyze trends in your data.
 
-Whether you are tracking water quality, climate metrics, or any other time-series data, `MannKenSen` makes it easy to perform statistically rigorous tests—even if your data is "messy."
+Whether you are tracking water quality, climate metrics, or any other time-series data, `MannKS` makes it easy to perform statistically rigorous tests—even if your data is "messy."
 
 We built this tool specifically to handle the real-world challenges data scientists and environmental engineers face every day:
-*   **Irregular sampling?** No problem. existing Python packages like `pyMannKendall` often do not account for unequally sampled time series, leading to inaccurate slope estimates. `MannKenSen` correctly handles this by using the exact time difference between observations.
+*   **Irregular sampling?** No problem. existing Python packages like `pyMannKendall` often do not account for unequally sampled time series, leading to inaccurate slope estimates. `MannKS` correctly handles this by using the exact time difference between observations.
 *   **Missing or "censored" values (like `<5` or `>100`)?** We handle those natively.
 *   **Seasonal patterns?** We can detect and account for them.
 
@@ -58,7 +58,7 @@ You can install the package and its dependencies using `pip`.
 pip install -r requirements.txt
 ```
 
-**2. Install MannKenSen**
+**2. Install MannKS**
 ```bash
 pip install -e .
 ```
@@ -71,7 +71,7 @@ Here is a simple example to get you running in seconds. We will look for a trend
 
 ```python
 import pandas as pd
-from MannKenSen import prepare_censored_data, trend_test
+from MannKS import prepare_censored_data, trend_test
 
 # 1. Prepare your data
 # We have values, some of which are 'censored' (marked with <)
