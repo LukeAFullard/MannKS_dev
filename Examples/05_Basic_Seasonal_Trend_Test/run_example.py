@@ -82,9 +82,17 @@ print(f"Confidence Interval: [{result.lower_ci:.4f}, {result.upper_ci:.4f}]")
 # --- 2. Execute the Code and Capture Output ---
 output_buffer = io.StringIO()
 
-with contextlib.redirect_stdout(output_buffer):
-    local_scope = {}
-    exec(example_code, globals(), local_scope)
+# Change CWD to the script's directory so the plot is saved there
+script_dir = os.path.dirname(os.path.abspath(__file__))
+original_cwd = os.getcwd()
+os.chdir(script_dir)
+
+try:
+    with contextlib.redirect_stdout(output_buffer):
+        local_scope = {}
+        exec(example_code, globals(), local_scope)
+finally:
+    os.chdir(original_cwd)
 
 captured_output = output_buffer.getvalue()
 
@@ -140,7 +148,7 @@ The function generated this plot:
 *   **Black Line**: The overall Sen's Slope trend line. Note how it cuts through the middle of the seasonal wave, capturing the long-term rise.
 """
 
-with open(os.path.join(os.path.dirname(__file__), 'README.md'), 'w') as f:
+with open(os.path.join(script_dir, 'README.md'), 'w') as f:
     f.write(readme_content)
 
 print("Example 5 generated successfully.")
