@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import pandas as pd
 from datetime import timedelta
+import random
 
 # Add parent directory to path to import local packages
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
@@ -24,6 +25,7 @@ def generate_censored_data(n=100, slope=0.1, noise_std=1.0, censor_prob=0.3, n_l
     """
     if seed is not None:
         np.random.seed(seed)
+        random.seed(seed)
 
     t = pd.date_range(start='2000-01-01', periods=n, freq='ME')
     years = (t - t[0]).days / 365.25
@@ -178,80 +180,84 @@ def run_v33():
     r_script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../Example_Files/R/LWPTrends_v2502/LWPTrends_v2502.r'))
 
     n = 60
-    slopes = [0.0, 0.1, -0.1]
-    noises = [0.5, 1.0]
-    censor_probs = [0.2, 0.5] # Low and High censoring
+
+    # Define pools of parameters to sample from
+    slopes_pool = [0.0, 0.05, 0.1, -0.05, -0.1]
+    noises_pool = [0.1, 0.5, 1.0, 2.0]
+    censor_probs_pool = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
 
     results = []
 
-    for slope in slopes:
-        for noise in noises:
-            for c_prob in censor_probs:
-                for i in range(3):
-                    seed = int(abs(slope * 1000) + (noise * 100) + (c_prob * 10) + i)
-                    data = generate_censored_data(n=n, slope=slope, noise_std=noise, censor_prob=c_prob, n_limits=2, seed=seed)
+    # Run 99 tests
+    for i in range(99):
+        seed = 42 + i
+        random.seed(seed)
+        np.random.seed(seed)
 
-                    # Pre-process for Python (prepare_censored_data logic is built into generate,
-                    # but trend_test takes raw vector. Actually trend_test can take 'py_input' list of strings/floats)
-                    # Let's pass the prepared dataframe directly as 'x' is supported if it has columns.
-                    # Or better, pass the 'py_input' list to prepare_censored_data first.
+        slope = random.choice(slopes_pool)
+        noise = random.choice(noises_pool)
+        c_prob = random.choice(censor_probs_pool)
 
-                    # Actually, we have 'value', 'censored', 'cen_type' columns ready.
-                    # We can construct the DataFrame expected by trend_test internal logic?
-                    # No, public API takes array or DataFrame from prepare_censored_data.
-                    # Let's use prepare_censored_data on 'py_input' to be safe and canonical.
+        # Add some jitter to parameters so they aren't always exactly the same
+        noise += random.uniform(-0.05, 0.05)
+        if noise < 0.1: noise = 0.1
 
-                    processed_data = mk.prepare_censored_data(data['py_input'])
+        data = generate_censored_data(n=n, slope=slope, noise_std=noise, censor_prob=c_prob, n_limits=2, seed=seed)
 
-                    mk_res = mk.trend_test(
-                        processed_data,
-                        data['t'],
-                        mk_test_method='lwp',
-                        sens_slope_method='lwp',
-                        ci_method='lwp',
-                        tau_method='b',
-                        slope_scaling='year'
-                    )
+        processed_data = mk.prepare_censored_data(data['py_input'])
 
-                    r_res = run_r_script(data, r_script_path)
+        mk_res = mk.trend_test(
+            processed_data,
+            data['t'],
+            mk_test_method='lwp',
+            sens_slope_method='lwp',
+            ci_method='lwp',
+            tau_method='b',
+            slope_scaling='year'
+        )
 
-                    if r_res:
-                        py_cat = mk_res.classification.lower()
-                        r_cat_str = r_res['category']
-                        r_dir_str = r_res['direction']
-                        if r_cat_str.lower() == "as likely as not":
-                             r_full = f"{r_cat_str} {r_dir_str}"
-                        else:
-                            r_full = f"{r_cat_str} {r_dir_str}"
-                        r_full = r_full.strip().lower()
+        r_res = run_r_script(data, r_script_path)
 
-                        match_class = (py_cat == r_full)
+        if r_res:
+            py_cat = mk_res.classification.lower()
+            r_cat_str = r_res['category']
+            r_dir_str = r_res['direction']
+            if r_cat_str.lower() == "as likely as not":
+                    r_full = f"{r_cat_str} {r_dir_str}"
+            else:
+                r_full = f"{r_cat_str} {r_dir_str}"
+            r_full = r_full.strip().lower()
 
-                        # Numerical comparisons
-                        slope_diff = abs(mk_res.scaled_slope - r_res['slope'])
-                        p_diff = abs(mk_res.p - r_res['p'])
-                        # CIs
-                        lci_diff = abs(mk_res.lower_ci - r_res['lower_ci'])
-                        uci_diff = abs(mk_res.upper_ci - r_res['upper_ci'])
+            match_class = (py_cat == r_full)
 
-                        # Check for NaN matches
-                        if np.isnan(mk_res.scaled_slope) and np.isnan(r_res['slope']): slope_diff = 0.0
-                        if np.isnan(mk_res.p) and np.isnan(r_res['p']): p_diff = 0.0
+            # Numerical comparisons
+            slope_diff = abs(mk_res.scaled_slope - r_res['slope'])
+            p_diff = abs(mk_res.p - r_res['p'])
+            # CIs
+            lci_diff = abs(mk_res.lower_ci - r_res['lower_ci'])
+            uci_diff = abs(mk_res.upper_ci - r_res['upper_ci'])
 
-                        results.append({
-                            'slope_in': slope,
-                            'noise_in': noise,
-                            'censor_pct': c_prob,
-                            'slope_diff': slope_diff,
-                            'p_diff': p_diff,
-                            'lci_diff': lci_diff,
-                            'uci_diff': uci_diff,
-                            'match_class': match_class,
-                            'py_class': py_cat,
-                            'r_class': r_full
-                        })
-                    else:
-                        results.append({'r_class': 'Failed'})
+            # Check for NaN matches
+            if np.isnan(mk_res.scaled_slope) and np.isnan(r_res['slope']): slope_diff = 0.0
+            if np.isnan(mk_res.p) and np.isnan(r_res['p']): p_diff = 0.0
+
+            results.append({
+                'iter': i+1,
+                'slope_in': slope,
+                'noise_in': noise,
+                'censor_pct': c_prob,
+                'slope_diff': slope_diff,
+                'p_diff': p_diff,
+                'lci_diff': lci_diff,
+                'uci_diff': uci_diff,
+                'match_class': match_class,
+                'py_class': py_cat,
+                'r_class': r_full
+            })
+        else:
+            results.append({'iter': i+1, 'r_class': 'Failed'})
+
+        print(f"Finished iteration {i+1}/99")
 
     df_res = pd.DataFrame(results)
 
