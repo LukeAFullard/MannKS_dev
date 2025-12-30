@@ -279,7 +279,11 @@ def plot_trend(data, results, save_path, alpha, seasonal_coloring=False):
     if results.slope_units:
         slope_str += f" ({results.slope_units})"
 
-    stats_text = (f"Trend: {results.trend}\n"
+    # Use classification for the "Trend" line if available (Continuous Confidence mode),
+    # otherwise fall back to the basic trend string.
+    trend_display = getattr(results, 'classification', results.trend)
+
+    stats_text = (f"Trend: {trend_display}\n"
                   f"Tau: {results.Tau:.4f}\n"
                   f"Slope: {slope_str}\n"
                   f"P-value: {results.p:.4f}")
