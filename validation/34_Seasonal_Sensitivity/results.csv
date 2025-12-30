@@ -1,0 +1,9 @@
+slope_in,censor_pct,slope_diff,p_diff,lci_diff,uci_diff,match_class,py_class,r_class
+0.0,0.0,1.734723475976807e-18,0.0,0.005924710417853585,0.015221769323949946,True,as likely as not decreasing,as likely as not decreasing
+0.0,0.0,0.0,0.0,0.024439062252265706,0.0012733471183788009,True,as likely as not decreasing,as likely as not decreasing
+0.0,0.3,0.0,0.0,0.0270794079427399,0.013105372168029969,True,as likely as not increasing,as likely as not increasing
+0.0,0.3,6.938893903907228e-18,5.551115123125783e-17,0.00045991958903550254,0.013227999791197834,True,highly likely increasing,highly likely increasing
+0.2,0.0,2.7755575615628914e-17,3.469446951953614e-18,0.003469789172197278,0.012307861973821027,True,highly likely increasing,highly likely increasing
+0.2,0.0,0.0,1.0858284757442327e-16,0.011919992036274224,0.003519407673430508,True,highly likely increasing,highly likely increasing
+0.2,0.3,1.3933187199000052e-06,7.892991815694472e-17,0.012346361301693767,0.0243569572213585,True,highly likely increasing,highly likely increasing
+0.2,0.3,1.3877787807814457e-17,4.85722573273506e-17,0.0066010621839299455,0.010483596910010273,True,highly likely increasing,highly likely increasing
