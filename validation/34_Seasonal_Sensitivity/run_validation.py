@@ -185,7 +185,8 @@ def run_v34():
             sens_slope_method='lwp',
             ci_method='lwp',
             tau_method='b',
-            slope_scaling='year'
+            slope_scaling='year',
+            alpha=0.1
         )
 
         r_res = run_r_script_seasonal(data, r_script_path)

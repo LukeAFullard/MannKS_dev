@@ -328,6 +328,24 @@ def trend_test(
         tie_break_method=tie_break_method
     )
 
+    # LWP-TRENDS Compatibility Mode:
+    # If ci_method is 'lwp', we recalculate the variance specifically for the
+    # confidence intervals (and Sen's probability) by treating all data as
+    # uncensored. This matches the behavior of the LWP-TRENDS R script, which
+    # effectively ignores censoring when calculating the Sen's slope CIs.
+    var_s_ci = var_s
+    if ci_method == 'lwp':
+        # Create dummy uncensored arrays
+        censored_unc = np.zeros_like(censored_filtered, dtype=bool)
+        cen_type_unc = np.full_like(cen_type_filtered, 'not')
+        # We only need the variance from this call
+        _, var_s_unc, _, _ = _mk_score_and_var_censored(
+            x_filtered, t_filtered, censored_unc, cen_type_unc,
+            tau_method=tau_method, mk_test_method=mk_test_method,
+            tie_break_method=tie_break_method
+        )
+        var_s_ci = var_s_unc
+
     z = _z_score(s, var_s)
     p, h, trend = _p_value(z, alpha)
     C, Cd = _mk_probability(p, s)
@@ -360,8 +378,8 @@ def trend_test(
             slope = np.nanmedian(slopes) if len(slopes) > 0 else np.nan
             if not np.isnan(slope):
                 intercept = np.nanmedian(x_filtered) - np.nanmedian(t_filtered) * slope
-            lower_ci, upper_ci = _confidence_intervals(slopes, var_s, alpha, method=ci_method)
-            sen_prob, sen_prob_max, sen_prob_min = _sen_probability(slopes, var_s)
+            lower_ci, upper_ci = _confidence_intervals(slopes, var_s_ci, alpha, method=ci_method)
+            sen_prob, sen_prob_max, sen_prob_min = _sen_probability(slopes, var_s_ci)
 
     else: # Existing 'lwp' or 'nan' methods
         if np.any(censored_filtered):
@@ -379,8 +397,8 @@ def trend_test(
         if not np.isnan(slope):
             intercept = np.nanmedian(x_filtered) - np.nanmedian(t_filtered) * slope
 
-        lower_ci, upper_ci = _confidence_intervals(slopes, var_s, alpha, method=ci_method)
-        sen_prob, sen_prob_max, sen_prob_min = _sen_probability(slopes, var_s)
+        lower_ci, upper_ci = _confidence_intervals(slopes, var_s_ci, alpha, method=ci_method)
+        sen_prob, sen_prob_max, sen_prob_min = _sen_probability(slopes, var_s_ci)
 
     # --- Slope Scaling ---
     slope_per_second = slope
