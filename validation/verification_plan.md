@@ -181,3 +181,15 @@ This master file will provide a quantitative, high-level overview of the accurac
 **V-31: Data Quality Analysis Notes**
 *   **Objective:** Explicitly trigger and verify each of the data quality warnings from `analysis_notes.py`.
 *   **Data Description:** Several small, targeted datasets will be created to trigger specific warnings (e.g., 'Sen slope based on censored data', 'denominator is zero') to ensure they are produced under the correct conditions.
+
+**V-32: Classification Sensitivity Sweep**
+*   **Objective:** Verify that `MannKS` and the LWP R script produce identical trend classifications across a wide range of slope and noise combinations, specifically targeting transition zones between confidence categories.
+*   **Data Description:** A large set (e.g., 50-100) of synthetic datasets with systematically varied signal-to-noise ratios.
+
+**V-33: Censored Trend Sensitivity Sweep (Non-Seasonal)**
+*   **Objective:** Verify Sen's slope, p-value, confidence intervals, and classification for non-seasonal data with varying mixed censoring levels (mixed detection limits).
+*   **Data Description:** A parameter sweep of synthetic datasets featuring different slopes, noise levels, and censoring intensities (e.g., 20%, 50%) with multiple detection limits.
+
+**V-34: Seasonal Trend Sensitivity Sweep**
+*   **Objective:** Verify Sen's slope, p-value, confidence intervals, and classification for seasonal data, including scenarios with mixed censoring.
+*   **Data Description:** A parameter sweep similar to V-33 but applied to seasonal (e.g., monthly) data patterns.
