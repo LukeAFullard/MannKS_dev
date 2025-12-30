@@ -76,21 +76,24 @@ print(f"n=3, min_size=2 -> Notes: {size_notes}")
 # However, you can use numeric time if you manually specify the `period` (season length).
 print("\\n=== Topic 4: Seasonal Trend Test with Numeric Time ===")
 
-# Create data: 3 seasons per cycle (e.g., Morning, Noon, Evening), 4 cycles.
+# Create data: 3 seasons per cycle (e.g., Morning, Noon, Evening), 8 cycles.
 # Pattern: 10, 20, 30 repeats, plus a trend.
-t_num = np.arange(1, 13)
+# Increasing cycles from 4 to 8 to avoid small-sample warnings for CI calculation.
+n_cycles = 8
+period = 3
+t_num = np.arange(1, (n_cycles * period) + 1)
 pattern = np.array([10, 20, 30])
-trend_signal = np.repeat(np.arange(4), 3) # Adds 0,0,0, 1,1,1, etc.
-x_seas = np.tile(pattern, 4) + trend_signal
+trend_signal = np.repeat(np.arange(n_cycles), period) # Adds 0,0,0, 1,1,1, etc.
+x_seas = np.tile(pattern, n_cycles) + trend_signal
 
-print(f"Numeric Time: {t_num}")
-print(f"Seasonal Data (Period=3): {x_seas}")
+print(f"Numeric Time (Head): {t_num[:6]}...")
+print(f"Seasonal Data (Head): {x_seas[:6]}...")
 
 # We MUST specify `period=3` because `t` is numeric.
 # We also generate a plot here.
 res_seas = mk.seasonal_trend_test(
     x_seas, t_num,
-    period=3,
+    period=period,
     plot_path='numeric_seasonal_plot.png'
 )
 
