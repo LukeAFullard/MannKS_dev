@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import pandas as pd
 import warnings
+import random
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 import MannKS as mk
@@ -20,6 +21,7 @@ except ImportError:
 def generate_seasonal_censored_data(n_years=5, slope=0.1, noise_std=1.0, censor_prob=0.3, seed=None):
     if seed is not None:
         np.random.seed(seed)
+        random.seed(seed)
 
     n = n_years * 12
     t = pd.date_range(start='2000-01-01', periods=n, freq='ME')
@@ -148,69 +150,82 @@ def run_v34():
 
     r_script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../Example_Files/R/LWPTrends_v2502/LWPTrends_v2502.r'))
 
-    slopes = [0.0, 0.2]
-    noises = [0.5]
-    censor_probs = [0.0, 0.3]
+    # Define pools of parameters to sample from
+    slopes_pool = [0.0, 0.05, 0.1, 0.15, 0.2]
+    noises_pool = [0.1, 0.5, 1.0, 1.5]
+    censor_probs_pool = [0.0, 0.1, 0.2, 0.3, 0.4]
 
     results = []
 
-    for slope in slopes:
-        for noise in noises:
-            for c_prob in censor_probs:
-                for i in range(2): # Reduce iterations slightly for speed
-                    seed = int(abs(slope * 1000) + (noise * 100) + (c_prob * 10) + i)
-                    data = generate_seasonal_censored_data(slope=slope, noise_std=noise, censor_prob=c_prob, seed=seed)
+    # Run 99 tests
+    for i in range(99):
+        seed = 42 + i
+        random.seed(seed)
+        np.random.seed(seed)
 
-                    processed_data = mk.prepare_censored_data(data['py_input'])
+        slope = random.choice(slopes_pool)
+        noise = random.choice(noises_pool)
+        c_prob = random.choice(censor_probs_pool)
 
-                    # Run Seasonal Test
-                    # period=12 for monthly
-                    mk_res = mk.seasonal_trend_test(
-                        processed_data,
-                        data['t'],
-                        period=12,
-                        mk_test_method='lwp',
-                        sens_slope_method='lwp',
-                        ci_method='lwp',
-                        tau_method='b',
-                        slope_scaling='year'
-                    )
+        # Jitter noise slightly
+        noise += random.uniform(-0.05, 0.05)
+        if noise < 0.1: noise = 0.1
 
-                    r_res = run_r_script_seasonal(data, r_script_path)
+        data = generate_seasonal_censored_data(slope=slope, noise_std=noise, censor_prob=c_prob, seed=seed)
 
-                    if r_res:
-                        py_cat = mk_res.classification.lower()
-                        r_cat_str = r_res['category']
-                        r_dir_str = r_res['direction']
-                        if r_cat_str.lower() == "as likely as not":
-                             r_full = f"{r_cat_str} {r_dir_str}"
-                        else:
-                            r_full = f"{r_cat_str} {r_dir_str}"
-                        r_full = r_full.strip().lower()
+        processed_data = mk.prepare_censored_data(data['py_input'])
 
-                        match_class = (py_cat == r_full)
+        # Run Seasonal Test
+        # period=12 for monthly
+        mk_res = mk.seasonal_trend_test(
+            processed_data,
+            data['t'],
+            period=12,
+            mk_test_method='lwp',
+            sens_slope_method='lwp',
+            ci_method='lwp',
+            tau_method='b',
+            slope_scaling='year'
+        )
 
-                        slope_diff = abs(mk_res.scaled_slope - r_res['slope'])
-                        p_diff = abs(mk_res.p - r_res['p'])
-                        lci_diff = abs(mk_res.lower_ci - r_res['lower_ci'])
-                        uci_diff = abs(mk_res.upper_ci - r_res['upper_ci'])
+        r_res = run_r_script_seasonal(data, r_script_path)
 
-                        if np.isnan(mk_res.scaled_slope) and np.isnan(r_res['slope']): slope_diff = 0.0
-                        if np.isnan(mk_res.p) and np.isnan(r_res['p']): p_diff = 0.0
+        if r_res:
+            py_cat = mk_res.classification.lower()
+            r_cat_str = r_res['category']
+            r_dir_str = r_res['direction']
+            if r_cat_str.lower() == "as likely as not":
+                    r_full = f"{r_cat_str} {r_dir_str}"
+            else:
+                r_full = f"{r_cat_str} {r_dir_str}"
+            r_full = r_full.strip().lower()
 
-                        results.append({
-                            'slope_in': slope,
-                            'censor_pct': c_prob,
-                            'slope_diff': slope_diff,
-                            'p_diff': p_diff,
-                            'lci_diff': lci_diff,
-                            'uci_diff': uci_diff,
-                            'match_class': match_class,
-                            'py_class': py_cat,
-                            'r_class': r_full
-                        })
-                    else:
-                        results.append({'r_class': 'Failed'})
+            match_class = (py_cat == r_full)
+
+            slope_diff = abs(mk_res.scaled_slope - r_res['slope'])
+            p_diff = abs(mk_res.p - r_res['p'])
+            lci_diff = abs(mk_res.lower_ci - r_res['lower_ci'])
+            uci_diff = abs(mk_res.upper_ci - r_res['upper_ci'])
+
+            if np.isnan(mk_res.scaled_slope) and np.isnan(r_res['slope']): slope_diff = 0.0
+            if np.isnan(mk_res.p) and np.isnan(r_res['p']): p_diff = 0.0
+
+            results.append({
+                'iter': i+1,
+                'slope_in': slope,
+                'censor_pct': c_prob,
+                'slope_diff': slope_diff,
+                'p_diff': p_diff,
+                'lci_diff': lci_diff,
+                'uci_diff': uci_diff,
+                'match_class': match_class,
+                'py_class': py_cat,
+                'r_class': r_full
+            })
+        else:
+            results.append({'iter': i+1, 'r_class': 'Failed'})
+
+        print(f"Finished iteration {i+1}/99")
 
     df_res = pd.DataFrame(results)
 
