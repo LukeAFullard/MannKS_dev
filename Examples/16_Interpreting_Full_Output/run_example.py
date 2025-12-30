@@ -23,7 +23,9 @@ print(pd.DataFrame({'Year': t, 'Value': x}))
 
 # 2. Run Trend Test
 # We run the standard test.
-plot_path = os.path.join(os.path.dirname(__file__), 'trend_plot.png')
+# Use absolute path to save in the same directory as the script
+script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else '.'
+plot_path = os.path.join(script_dir, 'trend_plot.png')
 result = mk.trend_test(x, t, plot_path=plot_path)
 
 # 3. Inspect the Full Output
@@ -62,8 +64,8 @@ with contextlib.redirect_stdout(output_buffer):
 captured_output = output_buffer.getvalue()
 
 # --- 3. Generate the README.md ---
-# Escape backslashes for LaTeX math in markdown string
-readme_content = f"""
+# Use raw string for latex math to avoid syntax warnings about invalid escape sequences
+readme_content = fr"""
 # Example 16: Interpreting the Full Output
 
 ## The "Why": Beyond Just "Increasing"

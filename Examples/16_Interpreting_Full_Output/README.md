@@ -27,7 +27,9 @@ print(pd.DataFrame({'Year': t, 'Value': x}))
 
 # 2. Run Trend Test
 # We run the standard test.
-plot_path = os.path.join(os.path.dirname(__file__), 'trend_plot.png')
+# Use absolute path to save in the same directory as the script
+script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else '.'
+plot_path = os.path.join(script_dir, 'trend_plot.png')
 result = mk.trend_test(x, t, plot_path=plot_path)
 
 # 3. Inspect the Full Output
@@ -103,12 +105,12 @@ print(f"17. slope_units: {result.slope_units}")
     *   $S > 0$: Overall increase.
     *   $S < 0$: Overall decrease.
 6.  **`var_s` (Variance of S)**: How much we expect $S$ to vary if there were truly no trend. This is critical for calculating the Z-score and p-value.
-7.  **`z` (Z-score)**: The standardized test statistic ($S / \sqrt{var\_s}$). It tells you how many standard deviations the score is from zero.
+7.  **`z` (Z-score)**: The standardized test statistic ($S / \\sqrt{var\_s}$). It tells you how many standard deviations the score is from zero.
 8.  **`Tau` (Kendall's Tau)**: A normalized correlation coefficient between -1 and 1.
     *   $1.0$: Perfect monotonic increase.
     *   $-1.0$: Perfect monotonic decrease.
     *   $0.0$: No correlation.
-    *   Unlike $S$, which depends on sample size, $\tau$ is comparable across different datasets.
+    *   Unlike $S$, which depends on sample size, $\\tau$ is comparable across different datasets.
 
 ### Magnitude (Sen's Slope)
 9.  **`slope`**: The median rate of change (Sen's Slope). If your time is in years, this is "units per year".
