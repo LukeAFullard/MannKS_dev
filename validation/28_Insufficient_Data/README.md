@@ -3,22 +3,24 @@
 Validation of V-28: Insufficient Data. Testing datasets with n=4 while min_size=5. Expecting warnings and NaN results.
 
 ## Results
-               Test ID                Method         Slope       P-Value      Lower CI      Upper CI
-V-28_strong_increasing MannKS (Standard)  2.057811e+00  8.942936e-02           NaN           NaN
-V-28_strong_increasing MannKS (LWP Mode)  2.057811e+00  8.942936e-02  1.937829e+00  2.088450e+00
-V-28_strong_increasing        LWP-TRENDS (R) -2.147484e+09 -2.147484e+09 -2.147484e+09 -2.147484e+09
-  V-28_weak_decreasing MannKS (Standard) -5.431011e-01  8.942936e-02           NaN           NaN
-  V-28_weak_decreasing MannKS (LWP Mode) -5.431011e-01  8.942936e-02 -6.793923e-01 -3.079995e-01
-  V-28_weak_decreasing        LWP-TRENDS (R) -2.147484e+09 -2.147484e+09 -2.147484e+09 -2.147484e+09
-           V-28_stable MannKS (Standard) -7.082906e-02  7.340952e-01           NaN           NaN
-           V-28_stable MannKS (LWP Mode) -7.082906e-02  7.340952e-01 -1.174068e-01  1.139696e-01
-           V-28_stable        LWP-TRENDS (R) -2.147484e+09 -2.147484e+09 -2.147484e+09 -2.147484e+09
+| Test ID                | Method            |        Slope |      P-Value |      Lower CI |      Upper CI |
+|:-----------------------|:------------------|-------------:|-------------:|--------------:|--------------:|
+| V-28_strong_increasing | MannKS (Standard) |  2.05781     |  0.0894294   | nan           | nan           |
+| V-28_strong_increasing | MannKS (LWP Mode) |  2.05781     |  0.0894294   |   1.93783     |   2.08845     |
+| V-28_strong_increasing | LWP-TRENDS (R)    | -2.14748e+09 | -2.14748e+09 |  -2.14748e+09 |  -2.14748e+09 |
+| V-28_weak_decreasing   | MannKS (Standard) | -0.543101    |  0.0894294   | nan           | nan           |
+| V-28_weak_decreasing   | MannKS (LWP Mode) | -0.543101    |  0.0894294   |  -0.679392    |  -0.307999    |
+| V-28_weak_decreasing   | LWP-TRENDS (R)    | -2.14748e+09 | -2.14748e+09 |  -2.14748e+09 |  -2.14748e+09 |
+| V-28_stable            | MannKS (Standard) | -0.0708291   |  0.734095    | nan           | nan           |
+| V-28_stable            | MannKS (LWP Mode) | -0.0708291   |  0.734095    |  -0.117407    |   0.11397     |
+| V-28_stable            | LWP-TRENDS (R)    | -2.14748e+09 | -2.14748e+09 |  -2.14748e+09 |  -2.14748e+09 |
 
 ## LWP Accuracy (Python vs R)
-               Test ID  Slope Error  Slope % Error
-V-28_strong_increasing 2.147484e+09   1.073742e+11
-  V-28_weak_decreasing 2.147484e+09  -4.294967e+11
-           V-28_stable 2.147484e+09  -1.000000e+02
+| Test ID                |   Slope Error |   Slope % Error |
+|:-----------------------|--------------:|----------------:|
+| V-28_strong_increasing |   2.14748e+09 |     1.07374e+11 |
+| V-28_weak_decreasing   |   2.14748e+09 |    -4.29497e+11 |
+| V-28_stable            |   2.14748e+09 |  -100           |
 
 ## Discussion
 

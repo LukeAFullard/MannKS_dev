@@ -18,25 +18,27 @@ matching the behavior of the LWP-TRENDS R script.
 ![V27_LWP_Aggregation.png](V27_LWP_Aggregation.png)
 
 ## Results
-               Test ID                Method     Slope      P-Value  Lower CI  Upper CI
-V-27_strong_increasing MannKS (Standard)  2.037419 0.000000e+00  1.987814  2.078877
-V-27_strong_increasing MannKS (LWP Mode)  2.043763 0.000000e+00  1.896587  2.109822
-V-27_strong_increasing        LWP-TRENDS (R)  2.043763 3.943364e-17  1.932420  2.102689
-V-27_strong_increasing      MannKS (ATS)  2.037404 0.000000e+00  2.016428  2.057874
-V-27_strong_increasing             NADA2 (R)  2.038000 2.000000e-03       NaN       NaN
-  V-27_weak_decreasing MannKS (Standard) -0.517081 1.776357e-15 -0.631757 -0.414257
-  V-27_weak_decreasing MannKS (LWP Mode) -0.416533 4.302779e-06 -0.700141 -0.278365
-  V-27_weak_decreasing        LWP-TRENDS (R) -0.416533 4.302779e-06 -0.682307 -0.294860
-  V-27_weak_decreasing      MannKS (ATS) -0.517378 1.776357e-15 -0.563773 -0.463182
-  V-27_weak_decreasing             NADA2 (R) -0.509100 2.000000e-03       NaN       NaN
-           V-27_stable MannKS (Standard) -0.114998 1.576609e-02 -0.221758 -0.021062
-           V-27_stable MannKS (LWP Mode) -0.185320 5.820666e-03 -0.495384 -0.050464
-           V-27_stable        LWP-TRENDS (R) -0.185320 5.820666e-03 -0.462333 -0.088700
-           V-27_stable      MannKS (ATS) -0.115316 1.576609e-02 -0.154215 -0.081039
-           V-27_stable             NADA2 (R) -0.119800 1.400000e-02       NaN       NaN
+| Test ID                | Method            |     Slope |     P-Value |   Lower CI |    Upper CI |
+|:-----------------------|:------------------|----------:|------------:|-----------:|------------:|
+| V-27_strong_increasing | MannKS (Standard) |  2.03742  | 0           |   1.98781  |   2.07888   |
+| V-27_strong_increasing | MannKS (LWP Mode) |  2.04376  | 0           |   1.89659  |   2.10982   |
+| V-27_strong_increasing | LWP-TRENDS (R)    |  2.04376  | 3.94336e-17 |   1.93242  |   2.10269   |
+| V-27_strong_increasing | MannKS (ATS)      |  2.0374   | 0           |   2.02449  |   2.05406   |
+| V-27_strong_increasing | NADA2 (R)         |  2.038    | 0.002       | nan        | nan         |
+| V-27_weak_decreasing   | MannKS (Standard) | -0.517081 | 1.77636e-15 |  -0.631757 |  -0.414257  |
+| V-27_weak_decreasing   | MannKS (LWP Mode) | -0.416533 | 4.30278e-06 |  -0.700141 |  -0.278365  |
+| V-27_weak_decreasing   | LWP-TRENDS (R)    | -0.416533 | 4.30278e-06 |  -0.682307 |  -0.29486   |
+| V-27_weak_decreasing   | MannKS (ATS)      | -0.517378 | 1.77636e-15 |  -0.572936 |  -0.461538  |
+| V-27_weak_decreasing   | NADA2 (R)         | -0.5091   | 0.002       | nan        | nan         |
+| V-27_stable            | MannKS (Standard) | -0.114998 | 0.0157661   |  -0.221758 |  -0.0210621 |
+| V-27_stable            | MannKS (LWP Mode) | -0.18532  | 0.00582067  |  -0.495384 |  -0.050464  |
+| V-27_stable            | LWP-TRENDS (R)    | -0.18532  | 0.00582067  |  -0.462333 |  -0.0887001 |
+| V-27_stable            | MannKS (ATS)      | -0.115316 | 0.0157661   |  -0.145944 |  -0.0784828 |
+| V-27_stable            | NADA2 (R)         | -0.1198   | 0.016       | nan        | nan         |
 
 ## LWP Accuracy (Python vs R)
-               Test ID   Slope Error  Slope % Error
-V-27_strong_increasing -4.440892e-16  -2.220446e-14
-  V-27_weak_decreasing  0.000000e+00  -0.000000e+00
-           V-27_stable -2.775558e-17   1.497709e-14
+| Test ID                |   Slope Error |   Slope % Error |
+|:-----------------------|--------------:|----------------:|
+| V-27_strong_increasing |  -4.44089e-16 |    -2.22045e-14 |
+| V-27_weak_decreasing   |   0           |    -0           |
+| V-27_stable            |  -2.77556e-17 |     1.49771e-14 |

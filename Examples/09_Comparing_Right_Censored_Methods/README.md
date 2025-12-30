@@ -89,7 +89,7 @@ Raw Data:
 [10, 20, 30, 40, 50, 60, 80, '>80', '>80', '>80']
 
 --- Running Test with Method: 'robust' (Default) ---
-Trend: no trend (No Trend)
+Trend: increasing (Highly Likely Increasing)
 S-statistic: 18.0
 p-value: 0.0955
 
