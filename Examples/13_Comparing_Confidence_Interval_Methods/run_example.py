@@ -94,24 +94,22 @@ plt.xlabel("Time")
 plt.ylabel("Value")
 plt.legend()
 plt.grid(True, alpha=0.3)
-plt.savefig('ci_comparison_plot.png')
+
+# Save to script's directory
+import os
+script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else '.'
+plt.savefig(os.path.join(script_dir, 'ci_comparison_plot.png'))
 print("\\nPlot saved to 'ci_comparison_plot.png'")
 """
 
 # --- 2. Execute the Code and Capture Output ---
 output_buffer = io.StringIO()
 
-# Change CWD to the script's directory so the plot is saved there
 script_dir = os.path.dirname(os.path.abspath(__file__))
-original_cwd = os.getcwd()
-os.chdir(script_dir)
 
-try:
-    with contextlib.redirect_stdout(output_buffer):
-        local_scope = {}
-        exec(example_code, globals(), local_scope)
-finally:
-    os.chdir(original_cwd)
+with contextlib.redirect_stdout(output_buffer):
+    local_scope = {}
+    exec(example_code, globals(), local_scope)
 
 captured_output = output_buffer.getvalue()
 

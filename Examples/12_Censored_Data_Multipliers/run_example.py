@@ -96,7 +96,10 @@ for bar in bars:
              f'{height:.4f}',
              ha='center', va='bottom', fontsize=12)
 
-plt.savefig('multiplier_comparison.png')
+# Save to the script's directory
+import os
+script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else '.'
+plt.savefig(os.path.join(script_dir, 'multiplier_comparison.png'))
 print("\\nSaved 'multiplier_comparison.png'.")
 """
 

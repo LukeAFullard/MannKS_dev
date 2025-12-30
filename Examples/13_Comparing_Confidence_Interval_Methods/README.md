@@ -112,7 +112,11 @@ plt.xlabel("Time")
 plt.ylabel("Value")
 plt.legend()
 plt.grid(True, alpha=0.3)
-plt.savefig('ci_comparison_plot.png')
+
+# Save to script's directory
+import os
+script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else '.'
+plt.savefig(os.path.join(script_dir, 'ci_comparison_plot.png'))
 print("\nPlot saved to 'ci_comparison_plot.png'")
 ```
 
