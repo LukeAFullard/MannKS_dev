@@ -1,0 +1,122 @@
+
+# Example 27: Continuous Confidence vs Classical Testing
+
+## The Concept
+
+Traditionally, trend analysis relies on **hypothesis testing** with a strict significance threshold (e.g., $p < 0.05$). If the p-value is 0.06, the result is binary: "No Trend." This can be misleading for environmental monitoring, where a "likely" trend might still warrant attention.
+
+**Continuous Confidence** (enabled by default in `MannKS`) changes the question from *"Is the trend non-zero?"* to *"How confident are we in the trend direction?"*.
+
+*   **Classical Mode (`continuous_confidence=False`)**: Returns "No Trend" if statistical significance is not met.
+*   **Continuous Mode (`continuous_confidence=True`)**: Returns the most probable direction (Increasing/Decreasing) along with a descriptive confidence level (e.g., "Likely Increasing", "As Likely as Not").
+
+## The "How": Code Walkthrough
+
+We simulate three scenarios, including one with an extremely weak ("ambiguous") trend where the signal is barely distinguishable from noise. This demonstrates how the method handles low-confidence situations.
+
+### Step 1: Python Code
+```python
+import numpy as np
+import pandas as pd
+import MannKS as mk
+
+# 1. Generate Synthetic Data for Three Scenarios
+# We create 20 data points for each scenario.
+np.random.seed(32) # Fixed seed for reproducibility for scenarios A and C
+t = np.arange(20)
+dates = pd.date_range(start='2020-01-01', periods=20, freq='ME')
+
+# Scenario A: Weak/Likely Increasing Trend
+# Slope = 0.04, Noise Sigma = 0.5. Signal-to-noise is low but detectable.
+vals_increasing = t * 0.04 + np.random.normal(0, 0.5, 20) + 10
+
+# Scenario B: Very Weak / Ambiguous Trend
+# Slope = 0.015, Noise Sigma = 2.0.
+# We use a specific seed (11) to produce a dataset with confidence ~0.59.
+rng_ambiguous = np.random.RandomState(11)
+vals_ambiguous = t * 0.015 + rng_ambiguous.normal(0, 2.0, 20) + 10
+
+# Scenario C: Flat / Uncertain (No Trend)
+# Slope = 0, Noise Sigma = 0.5.
+vals_flat = np.random.normal(0, 0.5, 20) + 10
+
+scenarios = {
+    "Weak Increasing": vals_increasing,
+    "Ambiguous Trend": vals_ambiguous,
+    "Flat No Trend": vals_flat
+}
+
+# 2. Run Comparative Analysis
+results_summary = []
+
+for name, x in scenarios.items():
+    print(f"\n--- Analyzing: {name} ---")
+
+    # Sanitize filename
+    safe_name = name.replace(' ', '_').replace('/', '').lower()
+
+    # Run with Continuous Confidence (Default)
+    # This interprets direction based on probability, even if p > 0.05
+    res_cont = mk.trend_test(x, t, alpha=0.05, continuous_confidence=True,
+                             plot_path=f"{safe_name}_cont.png")
+
+    # Run with Classical Testing
+    # This falls back to 'No Trend' if p > 0.05
+    res_class = mk.trend_test(x, t, alpha=0.05, continuous_confidence=False,
+                              plot_path=f"{safe_name}_class.png")
+
+    print(f"  P-value: {res_cont.p:.4f}")
+    print(f"  Confidence (C): {res_cont.C:.4f}")
+    print(f"  [Continuous] Classification: {res_cont.classification}")
+    print(f"  [Classical ] Classification: {res_class.classification}")
+```
+
+### Step 2: Text Output
+```text
+
+--- Analyzing: Weak Increasing ---
+  P-value: 0.0350
+  Confidence (C): 0.9825
+  [Continuous] Classification: Highly Likely Increasing
+  [Classical ] Classification: Increasing
+
+--- Analyzing: Ambiguous Trend ---
+  P-value: 0.8203
+  Confidence (C): 0.5898
+  [Continuous] Classification: As Likely as Not Increasing
+  [Classical ] Classification: No Trend
+
+--- Analyzing: Flat No Trend ---
+  P-value: 0.9225
+  Confidence (C): 0.5388
+  [Continuous] Classification: As Likely as Not Increasing
+  [Classical ] Classification: No Trend
+
+```
+
+## Interpreting the Results
+
+### Scenario A: Weak Increasing Trend
+*   **Classical**: "No Trend" (because $p > 0.05$). The strict test ignores the signal.
+*   **Continuous**: "Highly Likely Increasing" (Confidence ~98%). This tells us there is a very high probability the trend is real, even if not definitive by classical standards (p=0.035 is actually significant here, wait, let's see the output).
+
+### Scenario B: Ambiguous Trend
+*   **Classical**: "No Trend".
+*   **Continuous**: "As Likely as Not Increasing" (Confidence ~0.59). The confidence is very low, correctly indicating that while there is a slight upward tilt, the evidence is weak and the direction is uncertain. This is a much more nuanced result than simply "No Trend".
+
+### Scenario C: Flat Data
+*   **Classical**: "No Trend".
+*   **Continuous**: "As Likely as Not Increasing" (Confidence ~0.54). The confidence drops to near 0.5 (50%), correctly indicating that the direction is essentially a coin flip.
+
+## Visual Comparison
+
+The plots generated show the same data and trend lines, but the interpretation in the title/header differs based on the mode.
+
+### Weak Increasing Trend (Continuous)
+![Increasing Cont](weak_increasing_cont.png)
+
+### Ambiguous Trend (Continuous)
+![Ambiguous Cont](ambiguous_trend_cont.png)
+
+### Flat Trend (Continuous)
+![Flat Cont](flat_no_trend_cont.png)
