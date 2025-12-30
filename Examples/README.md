@@ -73,6 +73,8 @@ Each example is a self-contained "chapter" that includes the full Python code, t
 
 *   [**Example 25: Advanced Parameter Nuances**](./25_Advanced_Parameter_Nuances/README.md)
     *   **Goal:** Demonstrate and explain the use of less common but important function parameters like `tau_method` and `min_size`.
+*   [**Example 26: Alpha and Confidence Intervals**](./26_Alpha_and_Confidence_Intervals/README.md)
+    *   **Goal:** Demonstrate how the `alpha` parameter influences the confidence intervals in the trend plot.
 
 ## Detailed Guides
 

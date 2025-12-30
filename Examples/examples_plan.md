@@ -142,3 +142,8 @@ Each example will be self-contained in its own directory within `Examples/` and 
     - Standalone `classify_trend` with a custom map
     - `min_size`
     - `seasonal_trend_test` with a numeric time vector
+
+#### Example 26: Alpha and Confidence Intervals
+- **Goal:** Demonstrate how the `alpha` parameter influences the confidence intervals (CI) in the trend plot.
+- **Functions:** `trend_test(alpha=...)`.
+- **Approach:** Run the same analysis with `alpha=0.05`, `0.20`, and `0.40`, plotting the results to visualize the changing width of the confidence interval.
