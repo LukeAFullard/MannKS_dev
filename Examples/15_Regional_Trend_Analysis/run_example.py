@@ -120,7 +120,11 @@ plt.xlabel("Date")
 plt.ylabel("Value")
 plt.legend()
 plt.grid(True, linestyle='--', alpha=0.7)
-plt.savefig('regional_plot.png')
+
+# Save to script's directory
+import os
+script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else '.'
+plt.savefig(os.path.join(script_dir, 'regional_plot.png'))
 print("\\nSaved 'regional_plot.png'.")
 """
 

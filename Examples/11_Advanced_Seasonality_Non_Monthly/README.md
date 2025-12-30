@@ -58,11 +58,16 @@ print(pd.DataFrame({'Date': t, 'Value': x, 'DayOfWeek': day_of_week}).head(10))
 # It's hard to see weekly patterns in a 3-year line plot.
 # Boxplots grouped by "Day of Week" are perfect for this.
 print("\nGenerating Seasonal Distribution Plot...")
+# Use absolute path to save in the same directory as the script
+import os
+script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else '.'
+dist_plot_path = os.path.join(script_dir, 'distribution_plot.png')
+
 mk.plot_seasonal_distribution(
     x, t,
     period=7,                # 7 days in a week
     season_type='day_of_week', # Tell the package to use day of week
-    plot_path='distribution_plot.png'
+    plot_path=dist_plot_path
 )
 print("Saved 'distribution_plot.png'. Check this plot to confirm higher values on weekends.")
 
@@ -82,12 +87,14 @@ print(f"p-value: {seasonality_result.p_value:.4f}")
 # Since we have a weekly pattern, we must use `seasonal_trend_test`.
 # This will compare Mondays to Mondays, Tuesdays to Tuesdays, etc.
 print("\n--- Running Seasonal Trend Test ---")
+trend_plot_path = os.path.join(script_dir, 'trend_plot.png')
+
 result = mk.seasonal_trend_test(
     x, t,
     period=7,
     season_type='day_of_week',
     slope_scaling='year',
-    plot_path='trend_plot.png'
+    plot_path=trend_plot_path
 )
 
 print(f"Trend: {result.trend}")
