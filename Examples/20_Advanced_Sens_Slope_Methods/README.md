@@ -67,7 +67,9 @@ print(f"Slope: {res_ats.slope:.4f}")
 
 # 3. Visualization
 import matplotlib.pyplot as plt
-plot_path = os.path.join(os.path.dirname(__file__), 'slope_comparison.png')
+# Use absolute path to save in the same directory as the script
+script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else '.'
+plot_path = os.path.join(script_dir, 'slope_comparison.png')
 
 plt.figure(figsize=(10, 6))
 
