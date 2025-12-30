@@ -20,12 +20,13 @@ It successfully issued relevant warnings (3 caught), alerting the user to the da
 ![v29_combined.png](v29_combined.png)
 
 ## Results
-          Test ID                Method         Slope       P-Value      Lower CI      Upper CI
-V-29_all_censored MannKS (Standard)           NaN  1.000000e+00           NaN           NaN
-V-29_all_censored MannKS (LWP Mode)  0.000000e+00  1.000000e+00  0.000000e+00  0.000000e+00
-V-29_all_censored        LWP-TRENDS (R) -2.147484e+09 -2.147484e+09 -2.147484e+09 -2.147484e+09
-V-29_all_censored      MannKS (ATS)  0.000000e+00  1.000000e+00  0.000000e+00  0.000000e+00
-V-29_all_censored             NADA2 (R)  0.000000e+00           NaN           NaN           NaN
+| Test ID           | Method            |         Slope |       P-Value |      Lower CI |      Upper CI |
+|:------------------|:------------------|--------------:|--------------:|--------------:|--------------:|
+| V-29_all_censored | MannKS (Standard) | nan           |   1           | nan           | nan           |
+| V-29_all_censored | MannKS (LWP Mode) |   0           |   1           |   0           |   0           |
+| V-29_all_censored | LWP-TRENDS (R)    |  -2.14748e+09 |  -2.14748e+09 |  -2.14748e+09 |  -2.14748e+09 |
+| V-29_all_censored | MannKS (ATS)      |   0           |   1           |   0           |   0           |
+| V-29_all_censored | NADA2 (R)         |   0           | nan           | nan           | nan           |
 
 ## Warnings
 ### Test: V-29_all_censored
@@ -35,9 +36,11 @@ V-29_all_censored             NADA2 (R)  0.000000e+00           NaN           Na
 - All-NaN slice encountered
 **LWP Mode Warnings:**
 - Denominator near zero in Tau calculation
+- Denominator near zero in Tau calculation
 **ATS Mode Warnings:**
 - Denominator near zero in Tau calculation
 
 ## LWP Accuracy (Python vs R)
-          Test ID  Slope Error  Slope % Error
-V-29_all_censored 2147483648.0         -100.0
+| Test ID           |   Slope Error |   Slope % Error |
+|:------------------|--------------:|----------------:|
+| V-29_all_censored |   2.14748e+09 |            -100 |

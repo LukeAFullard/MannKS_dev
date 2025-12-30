@@ -24,16 +24,18 @@ However, it **did not issue** a specific warning for the long run of identical v
 ![v30_combined.png](v30_combined.png)
 
 ## Results
-      Test ID                Method         Slope       P-Value      Lower CI      Upper CI
-V-30_long_run MannKS (Standard)  0.000000e+00  6.946868e-01  0.000000e+00  0.000000e+00
-V-30_long_run MannKS (LWP Mode)  0.000000e+00  6.946868e-01  0.000000e+00  0.000000e+00
-V-30_long_run        LWP-TRENDS (R) -2.147484e+09 -2.147484e+09 -2.147484e+09 -2.147484e+09
-V-30_long_run      MannKS (ATS)  0.000000e+00  6.946868e-01  0.000000e+00  0.000000e+00
-V-30_long_run             NADA2 (R) -2.405412e-08  6.266181e-01           NaN           NaN
+| Test ID       | Method            |        Slope |      P-Value |      Lower CI |      Upper CI |
+|:--------------|:------------------|-------------:|-------------:|--------------:|--------------:|
+| V-30_long_run | MannKS (Standard) |  0           |  0.694687    |   0           |   0           |
+| V-30_long_run | MannKS (LWP Mode) |  0           |  0.694687    |   0           |   0           |
+| V-30_long_run | LWP-TRENDS (R)    | -2.14748e+09 | -2.14748e+09 |  -2.14748e+09 |  -2.14748e+09 |
+| V-30_long_run | MannKS (ATS)      |  0           |  0.694687    |   0           |   0           |
+| V-30_long_run | NADA2 (R)         | -2.40541e-08 |  0.626618    | nan           | nan           |
 
 ## Warnings
 ### Test: V-30_long_run
 
 ## LWP Accuracy (Python vs R)
-      Test ID  Slope Error  Slope % Error
-V-30_long_run 2147483648.0         -100.0
+| Test ID       |   Slope Error |   Slope % Error |
+|:--------------|--------------:|----------------:|
+| V-30_long_run |   2.14748e+09 |            -100 |

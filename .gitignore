@@ -111,3 +111,4 @@ dmypy.json
 # Pyre type checker
 .pyre/
 \n# Validation artifacts\nvalidation/03_Weekly_Seasonality_Check/validation_data.csv\nvalidation/03_Weekly_Seasonality_Check/weekly_seasonality_plot.png
+Rplots.pdf
