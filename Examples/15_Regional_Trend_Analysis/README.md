@@ -153,7 +153,7 @@ Individual Results:
 0  Site_A  31.0  0.996355  0.463962  increasing
 1  Site_B  31.0  0.996355  0.351809  increasing
 2  Site_C  33.0  0.997896  0.503549  increasing
-3  Site_D   5.0  0.639743  0.064203    no trend
+3  Site_D   5.0  0.639743  0.064203  increasing
 4  Site_E   1.0  0.500000  0.003851    no trend
 
 --- Running Regional Trend Test ---
