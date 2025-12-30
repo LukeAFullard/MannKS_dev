@@ -275,6 +275,9 @@ def trend_test(
         period_freq = period_map[effective_period]
         group_key = t_datetime.dt.to_period(period_freq)
 
+        if data_filtered['censored'].any() and agg_method in ['median', 'lwp_median']:
+            analysis_notes.append(f"'{agg_method}' aggregation used with censored data")
+
         if agg_method == 'lwp':
             data_filtered = _value_for_time_increment(data_filtered, group_key, period_freq)
         else:
