@@ -355,6 +355,27 @@ def seasonal_trend_test(
     slope_data = data_filtered
     var_s_for_ci = var_s
 
+    # LWP-TRENDS Compatibility Mode:
+    # If ci_method is 'lwp', we recalculate the variance specifically for the
+    # confidence intervals by treating all data as uncensored.
+    if ci_method == 'lwp':
+        var_s_ci_accum = 0
+        for i in season_range:
+            season_mask = slope_data['season'] == i
+            season_data = slope_data[season_mask]
+            n = len(season_data)
+            if n > 1:
+                # Treat as uncensored
+                season_censored = np.zeros_like(season_data['censored'], dtype=bool)
+                season_cen_type = np.full_like(season_data['cen_type'], 'not')
+
+                _, var_s_unc, _, _ = _mk_score_and_var_censored(
+                    season_data['value'], season_data['t'], season_censored,
+                    season_cen_type, tau_method=tau_method, mk_test_method=mk_test_method
+                )
+                var_s_ci_accum += var_s_unc
+        var_s_for_ci = var_s_ci_accum
+
     if sens_slope_method == 'ats':
         # Use Stratified ATS: Sum of within-season scores.
         # This correctly handles seasonality without de-seasoning artifacts or global slope issues.

@@ -213,7 +213,9 @@ def run_v33():
             sens_slope_method='lwp',
             ci_method='lwp',
             tau_method='b',
-            slope_scaling='year'
+            slope_scaling='year',
+            alpha=0.1,
+            tie_break_method='lwp'
         )
 
         r_res = run_r_script(data, r_script_path)
