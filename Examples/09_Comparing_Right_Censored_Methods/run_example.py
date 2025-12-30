@@ -64,9 +64,17 @@ print(f"p-value: {result_lwp.p:.4f}")
 # --- 2. Execute the Code and Capture Output ---
 output_buffer = io.StringIO()
 
-with contextlib.redirect_stdout(output_buffer):
-    local_scope = {}
-    exec(example_code, globals(), local_scope)
+# Change CWD to the script's directory so the plot is saved there
+script_dir = os.path.dirname(os.path.abspath(__file__))
+original_cwd = os.getcwd()
+os.chdir(script_dir)
+
+try:
+    with contextlib.redirect_stdout(output_buffer):
+        local_scope = {}
+        exec(example_code, globals(), local_scope)
+finally:
+    os.chdir(original_cwd)
 
 captured_output = output_buffer.getvalue()
 
@@ -115,16 +123,16 @@ We simulate a dataset that hits a ceiling of 80.
 
 ### The Difference in "S"
 
-*   **Robust Method (S = 18.0)**:
+*   **Robust Method (S = {local_scope['result_robust'].s})**:
     *   The test sees the clear increase from 10 to 60.
     *   However, the transition involving censored values (like 80 to `>80`) is treated conservatively. In this implementation, standard rank comparisons for right-censored data can be ambiguous or even negatively ranked against uncensored values if the statistical assumptions (often designed for left-censoring) are not perfectly aligned with right-censored logic.
-    *   **Result**: The trend is barely significant (p=0.0955), effectively treating the "ceiling" data as noise or ambiguity rather than a clear continuation of the trend.
+    *   **Result**: The trend is barely significant (p={local_scope['result_robust'].p:.4f}), effectively treating the "ceiling" data as noise or ambiguity rather than a clear continuation of the trend.
 
-*   **LWP Method (S = 42.0)**:
+*   **LWP Method (S = {local_scope['result_lwp'].s})**:
     *   The method converts all `>80` values to `80.1`.
     *   The trend from 10...60 to 80 to 80.1 is strictly increasing, adding maximum positive score for those pairs.
     *   The three `80.1` values are tied with each other (contributing 0 to the score), which is why S is 42 instead of the theoretical maximum of 45 (for n=10 unique values).
-    *   **Result**: A highly significant increasing trend (p=0.0002), which correctly reflects the physical reality that the concentration was rising and then "maxed out".
+    *   **Result**: A highly significant increasing trend (p={local_scope['result_lwp'].p:.4f}), which correctly reflects the physical reality that the concentration was rising and then "maxed out".
 
 ### Visual Comparison
 
@@ -139,7 +147,7 @@ We simulate a dataset that hits a ceiling of 80.
 *   **Use `'lwp'`** if you are confident that your right-censored values represent a true "exceedance" of the limit (e.g. saturation) and you want the trend test to credit that increase. This is often the preferred choice for handling instrumental upper limits.
 """
 
-with open(os.path.join(os.path.dirname(__file__), 'README.md'), 'w') as f:
+with open(os.path.join(script_dir, 'README.md'), 'w') as f:
     f.write(readme_content)
 
 print("Example 9 generated successfully.")
