@@ -269,13 +269,34 @@ def _z_score(s, var_s):
         return (s - 1) / np.sqrt(var_s)
     return (s + 1) / np.sqrt(var_s) if s < 0 else 0
 
-def _p_value(z, alpha):
+def _p_value(z, alpha, continuous_confidence=False):
+    """
+    Calculates p-value and trend direction.
+
+    Args:
+        z (float): Z-score
+        alpha (float): Significance level
+        continuous_confidence (bool): If True, returns trend direction (increasing/decreasing)
+                                     even if not significant (h=False), unless z=0.
+    """
     p = 2 * (1 - norm.cdf(abs(z)))
     h = abs(z) > norm.ppf(1 - alpha / 2)
-    if not h:
-        trend = 'no trend'
+
+    if continuous_confidence:
+        # In continuous mode, we always report direction unless Z is exactly zero
+        if z < 0:
+            trend = 'decreasing'
+        elif z > 0:
+            trend = 'increasing'
+        else:
+            trend = 'no trend'
     else:
-        trend = 'decreasing' if z < 0 else 'increasing' if z > 0 else 'no trend'
+        # Classical mode: only report direction if significant
+        if not h:
+            trend = 'no trend'
+        else:
+            trend = 'decreasing' if z < 0 else 'increasing' if z > 0 else 'no trend'
+
     return p, h, trend
 
 def _mk_probability(p, s):

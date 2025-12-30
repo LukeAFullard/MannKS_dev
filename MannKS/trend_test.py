@@ -36,6 +36,7 @@ def trend_test(
     ci_method: str = 'direct',
     tie_break_method: str = 'robust',
     category_map: Optional[dict] = None,
+    continuous_confidence: bool = True,
     x_unit: str = "units",
     slope_scaling: Optional[str] = None,
     seasonal_coloring: bool = False
@@ -138,6 +139,10 @@ def trend_test(
                                        a datetime-like time vector `t`.
         seasonal_coloring (bool): If True and 'season' is present in data, points in the plot
                                   are colored by season. Default is False.
+        continuous_confidence (bool): If True (default), trend direction is reported based on
+                                      probability, even if p > alpha. If False, follows classical
+                                      hypothesis testing where non-significant trends are reported
+                                      as 'no trend'.
     Output:
         A namedtuple containing the following fields:
         - trend: The trend of the data ('increasing', 'decreasing', or 'no trend').
@@ -350,7 +355,7 @@ def trend_test(
         var_s_ci = var_s_unc
 
     z = _z_score(s, var_s)
-    p, h, trend = _p_value(z, alpha)
+    p, h, trend = _p_value(z, alpha, continuous_confidence=continuous_confidence)
     C, Cd = _mk_probability(p, s)
 
     # --- Slope Calculation ---
@@ -448,7 +453,12 @@ def trend_test(
 
 
     # Final Classification and Notes
-    classification = classify_trend(results, category_map=category_map)
+    if continuous_confidence:
+        classification = classify_trend(results, category_map=category_map)
+    else:
+        # Classical behavior: Just capitalize the trend direction
+        classification = results.trend.title() if results.trend != 'no trend' else 'No Trend'
+
     final_notes = [note for note in analysis_notes if note != 'ok']
 
     final_results = results._replace(classification=classification, analysis_notes=final_notes)
