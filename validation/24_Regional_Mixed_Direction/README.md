@@ -22,8 +22,8 @@ Verification of regional trend aggregation for sites with conflicting trend dire
 | ---                     | ---              | ---            | ---        | ---      |
 | Aggregate Indeterminate | Sites (M)        | 5              | 5          | ✅        |
 |                         | TAU              | 0.6000         | 0.6000     | ✅        |
-|                         | VarTAU (Uncorr)  | 0.0089         | 0.0089     | ✅        |
-|                         | Corrected VarTAU | 0.0089         | 0.0089     | ✅        |
+|                         | VarTAU (Uncorr)  | 0.0062         | 0.0062     | ✅        |
+|                         | Corrected VarTAU | 0.0062         | 0.0062     | ✅        |
 |                         | Direction (DT)   | Increasing     | Increasing | ✅        |
-|                         | Confidence (CT)  | 0.8554         | 0.8554     | ✅        |
+|                         | Confidence (CT)  | 0.8988         | 0.8988     | ✅        |
 | ---                     | ---              | ---            | ---        | ---      |
