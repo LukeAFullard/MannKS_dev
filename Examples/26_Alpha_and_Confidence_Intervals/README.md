@@ -1,107 +1,113 @@
+
 # Example 26: Alpha and Confidence Intervals
 
+## The "Why": Understanding Significance Levels
 This example demonstrates how the `alpha` parameter influences the **Confidence Intervals (CI)** of the Sen's slope and the final trend classification.
 
-## The Role of Alpha
-The `alpha` parameter sets the significance level for the confidence intervals.
+The `alpha` parameter sets the significance level for the test:
+*   **Confidence Level = 100% * (1 - alpha)**
 *   **Lower `alpha` (e.g., 0.05):** corresponds to a **higher confidence level** (e.g., 95%). This produces a **wider** interval because we want to be more certain that the true slope lies within it.
 *   **Higher `alpha` (e.g., 0.40):** corresponds to a **lower confidence level** (e.g., 60%). This produces a **narrower** interval because we are accepting a higher risk that the true slope is outside the range.
 
-## Synthetic Data
-We generate a dataset with a clear increasing trend and some random noise.
+## The "How": Code Walkthrough
 
+We analyze the same synthetic dataset three times, changing only the `alpha` parameter.
+
+### Step 1: Python Code
 ```python
 import numpy as np
 import pandas as pd
 import MannKS as mk
+import matplotlib.pyplot as plt
 
-# Generate Data
+# 1. Generate Synthetic Data
+# We generate a monthly dataset for 2.5 years (30 observations).
+# The data has a clear increasing trend (~4 units/year) with added random noise.
 np.random.seed(42)
 n = 30
 dates = pd.date_range(start='2020-01-01', periods=n, freq='ME')
+# Linear trend (10 to 20 over 30 months) + Noise
 values = np.linspace(10, 20, n) + np.random.normal(0, 2, n)
+
+print("Data Summary:")
+print(f"Time Range: {dates[0].date()} to {dates[-1].date()}")
+print(f"Value Range: {values.min():.2f} to {values.max():.2f}")
+
+# 2. Run Trend Test with Different Alpha Values
+# The 'alpha' parameter controls the width of the confidence interval (CI).
+# Lower alpha = Higher Confidence Level = Wider Interval
+alphas = [0.05, 0.20, 0.40]
+
+for alpha in alphas:
+    confidence_level = (1 - alpha) * 100
+    print(f"\n--- Analysis with alpha = {alpha} ({confidence_level:.0f}% CI) ---")
+
+    # We specify 'slope_scaling="year"' to see the slope in units/year.
+    plot_filename = f"plot_alpha_{alpha}.png"
+    result = mk.trend_test(
+        x=values,
+        t=dates,
+        alpha=alpha,
+        slope_scaling='year',
+        plot_path=plot_filename
+    )
+
+    # Inspect the Confidence Interval (CI)
+    ci_width = result.upper_ci - result.lower_ci
+    print(f"Trend Classification: {result.classification}")
+    print(f"Sen's Slope: {result.slope:.4f} units/year")
+    print(f"Confidence Interval: [{result.lower_ci:.4f}, {result.upper_ci:.4f}]")
+    print(f"Width of Interval: {ci_width:.4f}")
+
+    # Clean up plot memory
+    plt.close('all')
 ```
 
-## Analysis with alpha = 0.05
-This corresponds to a **95% Confidence Interval**.
+### Step 2: Text Output
+```text
+Data Summary:
+Time Range: 2020-01-31 to 2022-06-30
+Value Range: 10.07 to 20.06
 
-```python
-result = mk.trend_test(
-    x=values,
-    t=dates,
-    alpha=0.05,
-    slope_scaling='year',
-    plot_path='plot_alpha_0.05.png'
-)
-print(result)
+--- Analysis with alpha = 0.05 (95% CI) ---
+Trend Classification: Highly Likely Increasing
+Sen's Slope: 3.3062 units/year
+Confidence Interval: [2.4519, 4.0832]
+Width of Interval: 1.6312
+
+--- Analysis with alpha = 0.2 (80% CI) ---
+Trend Classification: Highly Likely Increasing
+Sen's Slope: 3.3062 units/year
+Confidence Interval: [2.8099, 3.8816]
+Width of Interval: 1.0717
+
+--- Analysis with alpha = 0.4 (60% CI) ---
+Trend Classification: Highly Likely Increasing
+Sen's Slope: 3.3062 units/year
+Confidence Interval: [2.9892, 3.7039]
+Width of Interval: 0.7147
+
 ```
 
-**Output:**
-```
-Mann_Kendall_Test(trend='increasing', h=np.True_, p=np.float64(2.0777186033882344e-06), z=np.float64(4.74571424693142), Tau=np.float64(0.6137931034482759), s=np.float64(267.0), var_s=np.float64(3141.6666666666665), slope=np.float64(3.3061932849808984), intercept=np.float64(-155.42495892708274), lower_ci=np.float64(2.4519195803204368), upper_ci=np.float64(4.0831690185164975), C=0.9999989611406983, Cd=1.0388593016941172e-06, classification='Highly Likely Increasing', analysis_notes=[], sen_probability=np.float64(9.817086049817115e-07), sen_probability_max=np.float64(9.817086049817115e-07), sen_probability_min=np.float64(9.817086049817115e-07), prop_censored=np.float64(0.0), prop_unique=1.0, n_censor_levels=0, slope_per_second=np.float64(1.0476694314462755e-07), lower_ci_per_second=np.float64(7.7696642974131e-08), upper_ci_per_second=np.float64(1.2938781841827318e-07), scaled_slope=np.float64(3.3061932849808984), slope_units='units per year')
-```
+## Interpreting the Results
 
+### 1. Interval Width
+Notice how the width of the confidence interval changes with `alpha`:
+*   **alpha = 0.05 (95% CI):** The interval is the **widest** (Width $\approx$ 1.63). We are 95% sure the true slope is in this wide range.
+*   **alpha = 0.20 (80% CI):** The interval is **intermediate** (Width $\approx$ 1.07).
+*   **alpha = 0.40 (60% CI):** The interval is the **narrowest** (Width $\approx$ 0.71). We are only 60% sure the true slope is in this narrow range.
+
+### 2. Visual Comparison
+The `plot_path` argument automatically generated these plots. Observe the shaded gray region (the confidence interval) in each plot.
+
+#### Alpha = 0.05 (Wide Interval)
 ![Trend Plot alpha=0.05](plot_alpha_0.05.png)
 
-**Interpretation:**
-*   **Slope:** 3.3062 units/year
-*   **Confidence Interval:** [2.4519, 4.0832]
-*   **Width of Interval:** 1.6312
-
-Notice that the interval width for alpha=0.05 is **wider** compared to the others.
-
-## Analysis with alpha = 0.2
-This corresponds to a **80% Confidence Interval**.
-
-```python
-result = mk.trend_test(
-    x=values,
-    t=dates,
-    alpha=0.2,
-    slope_scaling='year',
-    plot_path='plot_alpha_0.2.png'
-)
-print(result)
-```
-
-**Output:**
-```
-Mann_Kendall_Test(trend='increasing', h=np.True_, p=np.float64(2.0777186033882344e-06), z=np.float64(4.74571424693142), Tau=np.float64(0.6137931034482759), s=np.float64(267.0), var_s=np.float64(3141.6666666666665), slope=np.float64(3.3061932849808984), intercept=np.float64(-155.42495892708274), lower_ci=np.float64(2.8098816639004567), upper_ci=np.float64(3.881602397198264), C=0.9999989611406983, Cd=1.0388593016941172e-06, classification='Highly Likely Increasing', analysis_notes=[], sen_probability=np.float64(9.817086049817115e-07), sen_probability_max=np.float64(9.817086049817115e-07), sen_probability_min=np.float64(9.817086049817115e-07), prop_censored=np.float64(0.0), prop_unique=1.0, n_censor_levels=0, slope_per_second=np.float64(1.0476694314462755e-07), lower_ci_per_second=np.float64(8.903977691270745e-08), upper_ci_per_second=np.float64(1.2300055762156388e-07), scaled_slope=np.float64(3.3061932849808984), slope_units='units per year')
-```
-
+#### Alpha = 0.20 (Medium Interval)
 ![Trend Plot alpha=0.2](plot_alpha_0.2.png)
 
-**Interpretation:**
-*   **Slope:** 3.3062 units/year
-*   **Confidence Interval:** [2.8099, 3.8816]
-*   **Width of Interval:** 1.0717
-
-Notice that the interval width for alpha=0.2 is **intermediate** compared to the others.
-
-## Analysis with alpha = 0.4
-This corresponds to a **60% Confidence Interval**.
-
-```python
-result = mk.trend_test(
-    x=values,
-    t=dates,
-    alpha=0.4,
-    slope_scaling='year',
-    plot_path='plot_alpha_0.4.png'
-)
-print(result)
-```
-
-**Output:**
-```
-Mann_Kendall_Test(trend='increasing', h=np.True_, p=np.float64(2.0777186033882344e-06), z=np.float64(4.74571424693142), Tau=np.float64(0.6137931034482759), s=np.float64(267.0), var_s=np.float64(3141.6666666666665), slope=np.float64(3.3061932849808984), intercept=np.float64(-155.42495892708274), lower_ci=np.float64(2.9892007668904217), upper_ci=np.float64(3.7039043255947157), C=0.9999989611406983, Cd=1.0388593016941172e-06, classification='Highly Likely Increasing', analysis_notes=[], sen_probability=np.float64(9.817086049817115e-07), sen_probability_max=np.float64(9.817086049817115e-07), sen_probability_min=np.float64(9.817086049817115e-07), prop_censored=np.float64(0.0), prop_unique=1.0, n_censor_levels=0, slope_per_second=np.float64(1.0476694314462755e-07), lower_ci_per_second=np.float64(9.472205639498636e-08), upper_ci_per_second=np.float64(1.1736964552420703e-07), scaled_slope=np.float64(3.3061932849808984), slope_units='units per year')
-```
-
+#### Alpha = 0.40 (Narrow Interval)
 ![Trend Plot alpha=0.4](plot_alpha_0.4.png)
 
-**Interpretation:**
-*   **Slope:** 3.3062 units/year
-*   **Confidence Interval:** [2.9892, 3.7039]
-*   **Width of Interval:** 0.7147
-
-Notice that the interval width for alpha=0.4 is **narrower** compared to the others.
+## Key Takeaway
+Choosing `alpha` is a trade-off between **precision** (narrow interval) and **certainty** (confidence level). The standard default in most scientific literature is `alpha=0.05` or `alpha=0.10`.
