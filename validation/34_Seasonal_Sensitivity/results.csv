@@ -29,7 +29,7 @@ iter,slope_in,censor_pct,slope_diff,p_diff,lci_diff,uci_diff,match_class,py_clas
 28,0.0,0.1,0.0,0.0,2.2407266449586682e-05,0.00018096973115120513,True,likely increasing,likely increasing
 29,0.0,0.3,1.8718012809587625e-06,1.3183898417423734e-16,0.0,0.0006437102167795583,True,highly likely increasing,highly likely increasing
 30,0.1,0.2,1.3877787807814457e-17,9.168142633102852e-09,8.780161828754462e-05,0.0004471566282519268,True,highly likely increasing,highly likely increasing
-31,0.0,0.2,0.0,0.0,1.0570300801503174e-05,0.00011961598532859996,False,as likely as not no trend,as likely as not indeterminate
+31,0.0,0.2,0.0,0.0,1.0570300801503174e-05,0.00011961598532859996,True,as likely as not indeterminate,as likely as not indeterminate
 32,0.1,0.4,0.0,6.208500906996262e-11,0.00012315759007628518,0.0002534449890718299,True,highly likely increasing,highly likely increasing
 33,0.2,0.2,0.0,8.436919207889025e-17,1.997209311485615e-05,4.082011296366317e-05,True,highly likely increasing,highly likely increasing
 34,0.15,0.3,0.0,1.1102230246251565e-16,2.7755575615628914e-17,2.483122524821191e-07,True,as likely as not increasing,as likely as not increasing
@@ -53,7 +53,7 @@ iter,slope_in,censor_pct,slope_diff,p_diff,lci_diff,uci_diff,match_class,py_clas
 52,0.15,0.0,3.469446951953614e-18,0.0,0.0,5.551115123125783e-17,True,as likely as not increasing,as likely as not increasing
 53,0.2,0.0,0.0,7.795413620170777e-17,0.0,0.0,True,highly likely increasing,highly likely increasing
 54,0.2,0.3,2.5733362383761893e-06,4.7364268523782354e-06,0.001037563313323428,0.0013746020513951962,True,highly likely increasing,highly likely increasing
-55,0.1,0.3,3.469446951953614e-18,0.0,3.740862847392834e-06,1.3877787807814457e-17,False,as likely as not no trend,as likely as not indeterminate
+55,0.1,0.3,3.469446951953614e-18,0.0,3.740862847392834e-06,1.3877787807814457e-17,True,as likely as not indeterminate,as likely as not indeterminate
 56,0.05,0.2,0.0,0.0,1.444438933351222e-06,3.731535117734719e-06,True,as likely as not increasing,as likely as not increasing
 57,0.1,0.2,1.3877787807814457e-17,9.378156886097501e-18,0.00017889276380265995,4.56869101254781e-05,True,highly likely increasing,highly likely increasing
 58,0.15,0.1,0.0,1.1102230246251565e-16,0.0,0.0,True,as likely as not increasing,as likely as not increasing

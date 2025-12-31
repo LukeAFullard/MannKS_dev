@@ -3,7 +3,7 @@
 Verifies metrics for seasonal data with mixed censoring.
 
 Total Tests: 99
-Class Matches: 96 (97.0%)
+Class Matches: 98 (99.0%)
 Max Slope Diff: 0.000014
 Max P-value Diff: 0.005821
 Max Lower CI Diff: 0.004464
