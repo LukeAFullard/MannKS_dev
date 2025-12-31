@@ -12,7 +12,7 @@ from ._stats import (_z_score, _p_value, _sens_estimator_unequal_spacing,
                      _sen_probability)
 from ._ats import ats_slope
 from ._helpers import (_prepare_data, _aggregate_by_group, _value_for_time_increment)
-from .plotting import plot_trend
+from .plotting import plot_trend, plot_residuals
 from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
 from .classification import classify_trend
 
@@ -25,6 +25,7 @@ def trend_test(
     alpha: float = 0.05,
     hicensor: Union[bool, float] = False,
     plot_path: Optional[str] = None,
+    residual_plot_path: Optional[str] = None,
     lt_mult: float = 0.5,
     gt_mult: float = 1.1,
     sens_slope_method: str = 'nan',
@@ -52,6 +53,8 @@ def trend_test(
                          treated as censored at that limit.
         plot_path (str, optional): If provided, a plot of the trend analysis
                                    is saved to this file path.
+        residual_plot_path (str, optional): If provided, a diagnostic plot of the
+                                            residuals is saved to this file path.
         lt_mult (float): The multiplier for left-censored data, **used only
                          for the Sen's slope calculation** (default 0.5).
                          This does not affect the Mann-Kendall test itself.
@@ -465,5 +468,8 @@ def trend_test(
 
     if plot_path:
         plot_trend(data_filtered, final_results, plot_path, alpha, seasonal_coloring=seasonal_coloring)
+
+    if residual_plot_path:
+        plot_residuals(data_filtered, final_results, residual_plot_path)
 
     return final_results

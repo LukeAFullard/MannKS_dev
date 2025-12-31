@@ -15,7 +15,7 @@ from ._stats import (_z_score, _p_value,
 from ._ats import ats_slope, seasonal_ats_slope
 from ._datetime import (_get_season_func, _get_cycle_identifier, _get_time_ranks)
 from ._helpers import (_prepare_data, _aggregate_by_group, _value_for_time_increment)
-from .plotting import plot_trend
+from .plotting import plot_trend, plot_residuals
 from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
 from .classification import classify_trend
 
@@ -31,6 +31,7 @@ def seasonal_trend_test(
     season_type: str = 'month',
     hicensor: Union[bool, float] = False,
     plot_path: Optional[str] = None,
+    residual_plot_path: Optional[str] = None,
     lt_mult: float = 0.5,
     gt_mult: float = 1.1,
     sens_slope_method: str = 'nan',
@@ -56,6 +57,8 @@ def seasonal_trend_test(
                          treated as censored at that limit.
         plot_path (str, optional): If provided, saves a plot of the trend
                                    analysis to this file path.
+        residual_plot_path (str, optional): If provided, a diagnostic plot of the
+                                            residuals is saved to this file path.
         agg_method: method for aggregating multiple data points within a season-year.
             - **Caution**: Using aggregation methods with censored data is not
               statistically robust and may produce biased results. A `UserWarning`
@@ -507,5 +510,8 @@ def seasonal_trend_test(
 
     if plot_path:
         plot_trend(data_filtered, final_results, plot_path, alpha, seasonal_coloring=seasonal_coloring)
+
+    if residual_plot_path:
+        plot_residuals(data_filtered, final_results, residual_plot_path)
 
     return final_results
