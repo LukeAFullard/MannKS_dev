@@ -20,28 +20,30 @@ a complete Year x Month grid. This confirms that the R failure is structural, no
 ![V18_Missing_Seasons_Analysis.png](V18_Missing_Seasons_Analysis.png)
 
 ## Results
-               Test ID                   Method     Slope      P-Value  Lower CI  Upper CI
-V-18_strong_increasing        MannKS (Standard)  2.009240 0.000000e+00  1.945708  2.103445
-V-18_strong_increasing        MannKS (LWP Mode)  2.009240 0.000000e+00  1.945971  2.103323
-V-18_strong_increasing           LWP-TRENDS (R)       NaN          NaN       NaN       NaN
-V-18_strong_increasing LWP-TRENDS (R) [Patched]  2.020100 1.485100e-41  1.977729  2.086202
-V-18_strong_increasing             MannKS (ATS)  2.009473 0.000000e+00  1.984257  2.041560
-V-18_strong_increasing                NADA2 (R)  1.977000 2.000000e-03       NaN       NaN
-  V-18_weak_decreasing        MannKS (Standard) -0.504437 4.082930e-10 -0.658350 -0.354837
-  V-18_weak_decreasing        MannKS (LWP Mode) -0.504437 4.082930e-10 -0.655193 -0.356238
-  V-18_weak_decreasing           LWP-TRENDS (R)       NaN          NaN       NaN       NaN
-  V-18_weak_decreasing LWP-TRENDS (R) [Patched] -0.533662 5.752858e-14 -0.623849 -0.431508
-  V-18_weak_decreasing             MannKS (ATS) -0.504562 4.082930e-10 -0.556524 -0.471659
-  V-18_weak_decreasing                NADA2 (R) -0.565200 2.000000e-03       NaN       NaN
-           V-18_stable        MannKS (Standard) -0.046364 3.506233e-01 -0.114749  0.044936
-           V-18_stable        MannKS (LWP Mode) -0.046364 3.506233e-01 -0.113451  0.044727
-           V-18_stable           LWP-TRENDS (R)       NaN          NaN       NaN       NaN
-           V-18_stable LWP-TRENDS (R) [Patched] -0.037174 3.941828e-01 -0.085014  0.027532
-           V-18_stable             MannKS (ATS) -0.046626 3.506233e-01 -0.070598 -0.022655
-           V-18_stable                NADA2 (R) -0.106200 3.740000e-01       NaN       NaN
+| Test ID                | Method                   |       Slope |       P-Value |    Lower CI |    Upper CI |
+|:-----------------------|:-------------------------|------------:|--------------:|------------:|------------:|
+| V-18_strong_increasing | MannKS (Standard)        |   2.00924   |   0           |   1.94571   |   2.10345   |
+| V-18_strong_increasing | MannKS (LWP Mode)        |   2.00924   |   0           |   1.94597   |   2.10332   |
+| V-18_strong_increasing | LWP-TRENDS (R)           | nan         | nan           | nan         | nan         |
+| V-18_strong_increasing | LWP-TRENDS (R) [Patched] |   2.0201    |   1.4851e-41  |   1.97773   |   2.0862    |
+| V-18_strong_increasing | MannKS (ATS)             |   2.00947   |   0           |   1.98829   |   2.02837   |
+| V-18_strong_increasing | NADA2 (R)                |   1.977     |   0.002       | nan         | nan         |
+| V-18_weak_decreasing   | MannKS (Standard)        |  -0.504437  |   4.08293e-10 |  -0.65835   |  -0.354837  |
+| V-18_weak_decreasing   | MannKS (LWP Mode)        |  -0.504437  |   4.08293e-10 |  -0.655193  |  -0.356238  |
+| V-18_weak_decreasing   | LWP-TRENDS (R)           | nan         | nan           | nan         | nan         |
+| V-18_weak_decreasing   | LWP-TRENDS (R) [Patched] |  -0.533662  |   5.75286e-14 |  -0.623849  |  -0.431508  |
+| V-18_weak_decreasing   | MannKS (ATS)             |  -0.504562  |   4.08293e-10 |  -0.551786  |  -0.447915  |
+| V-18_weak_decreasing   | NADA2 (R)                |  -0.5652    |   0.002       | nan         | nan         |
+| V-18_stable            | MannKS (Standard)        |  -0.0463638 |   0.350623    |  -0.114749  |   0.0449356 |
+| V-18_stable            | MannKS (LWP Mode)        |  -0.0463638 |   0.350623    |  -0.113451  |   0.0447268 |
+| V-18_stable            | LWP-TRENDS (R)           | nan         | nan           | nan         | nan         |
+| V-18_stable            | LWP-TRENDS (R) [Patched] |  -0.0371741 |   0.394183    |  -0.0850145 |   0.0275318 |
+| V-18_stable            | MannKS (ATS)             |  -0.0466262 |   0.350623    |  -0.079453  |  -0.0153051 |
+| V-18_stable            | NADA2 (R)                |  -0.1062    |   0.338       | nan         | nan         |
 
 ## LWP Accuracy (Python vs R)
-               Test ID  Slope Error  Slope % Error
-V-18_strong_increasing          NaN            NaN
-  V-18_weak_decreasing          NaN            NaN
-           V-18_stable          NaN            NaN
+| Test ID                |   Slope Error |   Slope % Error |
+|:-----------------------|--------------:|----------------:|
+| V-18_strong_increasing |           nan |             nan |
+| V-18_weak_decreasing   |           nan |             nan |
+| V-18_stable            |           nan |             nan |
