@@ -46,16 +46,11 @@ print(pd.DataFrame({'Date': t, 'Value': x, 'DayOfWeek': day_of_week}).head(10))
 # It's hard to see weekly patterns in a 3-year line plot.
 # Boxplots grouped by "Day of Week" are perfect for this.
 print("\\nGenerating Seasonal Distribution Plot...")
-# Use absolute path to save in the same directory as the script
-import os
-script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else '.'
-dist_plot_path = os.path.join(script_dir, 'distribution_plot.png')
-
 mk.plot_seasonal_distribution(
     x, t,
     period=7,                # 7 days in a week
     season_type='day_of_week', # Tell the package to use day of week
-    plot_path=dist_plot_path
+    plot_path='distribution_plot.png'
 )
 print("Saved 'distribution_plot.png'. Check this plot to confirm higher values on weekends.")
 
@@ -75,28 +70,35 @@ print(f"p-value: {seasonality_result.p_value:.4f}")
 # Since we have a weekly pattern, we must use `seasonal_trend_test`.
 # This will compare Mondays to Mondays, Tuesdays to Tuesdays, etc.
 print("\\n--- Running Seasonal Trend Test ---")
-trend_plot_path = os.path.join(script_dir, 'trend_plot.png')
 
 result = mk.seasonal_trend_test(
     x, t,
     period=7,
     season_type='day_of_week',
     slope_scaling='year',
-    plot_path=trend_plot_path
+    plot_path='trend_plot.png'
 )
 
 print(f"Trend: {result.trend}")
 print(f"Classification: {result.classification}")
 print(f"p-value: {result.p:.4f}")
 print(f"Sen's Slope: {result.slope:.4f} units/year")
+print(f"Confidence Interval: [{result.lower_ci:.4f}, {result.upper_ci:.4f}]")
 """
 
 # --- 2. Execute the Code and Capture Output ---
 output_buffer = io.StringIO()
 
-with contextlib.redirect_stdout(output_buffer):
-    local_scope = {}
-    exec(example_code, globals(), local_scope)
+script_dir = os.path.dirname(os.path.abspath(__file__))
+original_cwd = os.getcwd()
+os.chdir(script_dir)
+
+try:
+    with contextlib.redirect_stdout(output_buffer):
+        local_scope = {}
+        exec(example_code, globals(), local_scope)
+finally:
+    os.chdir(original_cwd)
 
 captured_output = output_buffer.getvalue()
 
@@ -109,6 +111,7 @@ seasonality_p_value = f"{seasonality_result.p_value:.4f}"
 trend_direction = result.trend.capitalize()
 sens_slope = f"{result.slope:.4f}"
 trend_p_value = f"{result.p:.4f}"
+ci_str = f"[{result.lower_ci:.4f}, {result.upper_ci:.4f}]"
 
 # --- 3. Generate the README.md ---
 readme_content = f"""
@@ -157,6 +160,7 @@ Before running statistics, we visualize the data. The `plot_seasonal_distributio
 ### 3. Seasonal Trend Test
 *   **Trend ({trend_direction})**: The test correctly identifies the downward trend.
 *   **Sen's Slope ({sens_slope} units/year)**: The estimated slope is very close to the true generated trend of -2.0.
+*   **Confidence Interval**: {ci_str}.
 *   **Comparison**: By comparing "Mondays to Mondays" and "Sundays to Sundays", the test removes the noise caused by the weekly jumps, providing a clean estimate of the long-term decline.
 
 ### 4. Trend Plot (`trend_plot.png`)
