@@ -102,7 +102,7 @@ The key takeaway is the **process**. The first check confirms seasonality in the
 
 #### `agg_period`
 -   **Type:** `str`, **Default:** `None`
--   **Description:** The time window for aggregation (e.g., `'year'`, `'month'`).
+-   **Description:** The time window for aggregation (e.g., `'year'`, `'month'`, `'week'`).
 -   **Limitations:** This is **required** if `agg_method` is not `'none'`. It tells the function how to group the data (e.g., "group by month") before calculating the aggregate value (e.g., "median").
 
 #### `hicensor`
