@@ -99,7 +99,7 @@ Trend: increasing (Highly Likely Increasing)
 p-value: 0.0075, Slope: 0.8966
 
 --- Scenario 3: No Trend ---
-Trend: no trend (Likely No trend)
+Trend: decreasing (Likely Decreasing)
 p-value: 0.2763, Slope: -0.1082
 
 ```

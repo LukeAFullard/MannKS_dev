@@ -177,7 +177,7 @@ The `MannKS` package is designed for this reality. You don't need to throw away 
 3.  Trust the non-parametric statistics to handle the ambiguity correctly.
 """
 
-with open(os.path.join(os.path.dirname(__file__), 'README.md'), 'w') as f:
+with open(os.path.join(script_dir, 'README.md'), 'w') as f:
     f.write(readme_content)
 
 print("Example 10 generated successfully.")

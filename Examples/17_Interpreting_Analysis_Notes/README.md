@@ -115,7 +115,7 @@ print(f"\nPlot saved to 'scenarios_plot.png'")
 --- Scenario: Insufficient Data ---
 Time: [2000, 2001, 2002, 2003]
 Values: [1.0, 2.0, 1.5, 2.5]
-Trend: no trend
+Trend: increasing
 Sen's Slope: 0.3750
 Analysis Notes:
   - < 5 Non-censored values
@@ -133,7 +133,7 @@ Analysis Notes:
 Time: [1, 2, 3]
 Values: ['<1', 2, 3]
 (Data processed as censored)
-Trend: no trend
+Trend: increasing
 Sen's Slope: 1.2500
 Analysis Notes:
   - < 3 unique values
