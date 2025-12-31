@@ -127,7 +127,7 @@ Defaults are recommended for most users.
 ### Other Parameters
 
 #### `min_size`
--   **Type:** `int`, **Default:** `10`
+-   **Type:** `int` (optional), **Default:** `10`
 -   **Description:** The minimum sample size required to avoid an "analysis note" warning.
 -   **Usefulness:** This serves as a guideline to prevent over-interpretation of results from very small datasets, which have low statistical power and may not be reliable.
 -   **Limitations:** This is a heuristic, not a hard statistical rule. You can set it to a different value or `None` to disable it if the standards for your field of work differ.

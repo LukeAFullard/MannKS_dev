@@ -2,16 +2,30 @@
 
 The `seasonal_trend_test` function is designed to perform a Mann-Kendall trend test on data with seasonal cycles. It works by calculating the trend test for each season individually and then combining the results for an overall trend. This guide provides a detailed explanation of each parameter, with a focus on those specific to seasonal analysis.
 
-*For parameters not covered in detail here (`hicensor`, `lt_mult`, `gt_mult`, `tau_method`, `ci_method`, `tie_break_method`, etc.), see the [**`trend_test` parameter guide**](./trend_test_parameters_guide.md) for a full explanation.*
-
 ---
 
 ### Core Parameters
 
 These are the essential parameters you will always need to provide.
 
-#### `x`, `t`, `alpha`, `plot_path`
-These core parameters function identically to their counterparts in `trend_test`. `x` holds the data, `t` holds the corresponding time vector, `alpha` sets the significance level, and `plot_path` saves a visualization of the results.
+#### `x`
+-   **Type:** `numpy.ndarray` or `pandas.DataFrame`
+-   **Description:** This is your primary data vector containing the observations.
+-   **Usefulness:** Just like in `trend_test`, this can be numeric or a pre-processed censored DataFrame.
+
+#### `t`
+-   **Type:** `numpy.ndarray`
+-   **Description:** This is the time vector corresponding to your `x` values.
+-   **Usefulness:** For seasonal tests, `t` is critical for defining both the trend period and the season. Datetime objects are strongly recommended for automatic seasonal extraction.
+
+#### `alpha`
+-   **Type:** `float`, **Default:** `0.05`
+-   **Description:** The statistical significance level.
+-   **Usefulness:** Sets the threshold for determining if the overall seasonal trend is significant.
+
+#### `plot_path`
+-   **Type:** `str` (optional), **Default:** `None`
+-   **Description:** If provided, saves a visualization of the trend analysis.
 
 #### `seasonal_coloring`
 -   **Type:** `bool`, **Default:** `False`
@@ -67,20 +81,46 @@ Aggregation in a seasonal context is about ensuring that you have **one represen
 -   **Type:** `str`, **Default:** `'nan'`
 -   **Description:** Controls the method used for calculating the Sen's slope.
 -   **Usefulness:**
-    *   `'nan'`: Standard method. Ambiguous slopes (between two incompatible censored values) are treated as missing.
+    *   `'nan'` (Default): Standard method. Ambiguous slopes (between two incompatible censored values) are treated as missing.
     *   `'ats'`: Uses the **Seasonal Akritas-Theil-Sen** estimator. This calculates the overall slope by finding the value that zeroes the sum of the seasonal Kendall scores. It is the most robust method for seasonal censored data.
     *   `'lwp'`: Sets ambiguous slopes to 0 (legacy behavior).
 -   **Limitations:** `'ats'` is computationally intensive and does not currently support confidence intervals or probability outputs for the *seasonal* test (returns `NaN` for these fields).
 
-#### `hicensor`, `lt_mult`, `gt_mult`, `mk_test_method`
-These parameters function identically to their `trend_test` counterparts but are applied at the **seasonal level**. For example, `hicensor` will be applied independently to the data for each season. This is important because different seasons may have different data characteristics or censoring levels.
+#### `hicensor`
+-   **Type:** `bool` or `float`, **Default:** `False`
+-   **Description:** Activates the "high censor" rule. This is applied **per season**.
+-   **Usefulness:** If detection limits vary by season (e.g., different lab methods in winter vs. summer), this ensures the high-censor rule respects those seasonal differences.
+
+#### `lt_mult` and `gt_mult`
+-   **Type:** `float`, **Defaults:** `lt_mult=0.5`, `gt_mult=1.1`
+-   **Description:** Multipliers used to substitute censored values **only for the Sen's slope calculation**.
+-   **Usefulness:** Identical to `trend_test`, but applied to the seasonal data.
+
+#### `mk_test_method`
+-   **Type:** `str`, **Default:** `'robust'`
+-   **Description:** Controls how the Mann-Kendall test ranks right-censored data (`>`).
+-   **Usefulness:** Identical to `trend_test`.
+
+---
+
+### Advanced Statistical Parameters
+
+#### `tau_method`
+-   **Type:** `str`, **Default:** `'b'`
+-   **Description:** Controls which version of Kendall's Tau is calculated.
+-   **Usefulness:** 'b' (default) adjusts for ties, 'a' does not.
+
+#### `ci_method`
+-   **Type:** `str`, **Default:** `'direct'`
+-   **Description:** Controls the method for calculating the Sen's slope confidence intervals.
+-   **Usefulness:** Identical to `trend_test`.
 
 ---
 
 ### Other Parameters
 
 #### `min_size_per_season`
--   **Type:** `int`, **Default:** `5`
+-   **Type:** `int` (optional), **Default:** `5`
 -   **Description:** The minimum number of observations required for a season to be included in the overall analysis.
 -   **Usefulness and Implications:** This is a crucial quality control check. A trend analysis for "January" based on only two data points is not reliable. This parameter ensures that every season included in the final combined test has a sufficient data record. If a season fails this check (e.g., you only have 4 measurements for "April"), it will be dropped from the analysis, and a warning will be issued.
 -   **Limitations:** This can sometimes lead to a situation where your overall trend is based on a subset of seasons (e.g., only the summer months if winter data is sparse). This is statistically valid, but you must be clear in your interpretation that the result does not represent the excluded seasons.
@@ -94,8 +134,8 @@ These parameters function identically to their `trend_test` counterparts but are
 -   **Type:** `bool`, **Default:** `True`
 -   **Description:** Controls how trend direction is reported.
 -   **Usefulness:**
-    -   `True` (default): The trend classification (e.g., "Probably Increasing") is based on a continuous probability score (`C`), even if the p-value is greater than `alpha`. This provides a more nuanced interpretation (e.g., "weak evidence of an increase") rather than a binary "No Trend".
-    -   `False`: The function behaves like a classical hypothesis test. If `p > alpha`, the result is simply classified as "No Trend".
+    -   `True` (default): The trend classification is based on a continuous probability score (`C`).
+    -   `False`: The function behaves like a classical hypothesis test (significant or "No Trend").
 
 ---
 
