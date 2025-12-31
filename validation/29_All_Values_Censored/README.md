@@ -26,7 +26,7 @@ It successfully issued relevant warnings (3 caught), alerting the user to the da
 | V-29_all_censored | MannKS (LWP Mode) |   0           |   1           |   0           |   0           |
 | V-29_all_censored | LWP-TRENDS (R)    |  -2.14748e+09 |  -2.14748e+09 |  -2.14748e+09 |  -2.14748e+09 |
 | V-29_all_censored | MannKS (ATS)      |   0           |   1           |   0           |   0           |
-| V-29_all_censored | NADA2 (R)         |   0           | nan           | nan           | nan           |
+| V-29_all_censored | NADA2 (R)         | nan           | nan           | nan           | nan           |
 
 ## Warnings
 ### Test: V-29_all_censored
