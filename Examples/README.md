@@ -75,6 +75,8 @@ Each example is a self-contained "chapter" that includes the full Python code, t
     *   **Goal:** Demonstrate and explain the use of less common but important function parameters like `tau_method` and `min_size`.
 *   [**Example 26: Alpha and Confidence Intervals**](./26_Alpha_and_Confidence_Intervals/README.md)
     *   **Goal:** Demonstrate how the `alpha` parameter influences the confidence intervals in the trend plot.
+*   [**Example 27: Continuous Confidence vs Classical Testing**](./27_Continuous_Confidence_Comparison/README.md)
+    *   **Goal:** Compare the default "Continuous Confidence" approach against traditional binary hypothesis testing to show how it provides more nuanced results for weak trends.
 
 ## Detailed Guides
 
