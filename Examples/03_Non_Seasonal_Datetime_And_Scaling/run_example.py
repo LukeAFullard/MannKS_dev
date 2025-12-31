@@ -37,7 +37,7 @@ print("...")
 # When you pass datetime objects to `t`, the math happens in "Unix timestamps" (seconds).
 # This means the raw slope would be in "mg/L per second", which is a tiny, unreadable number (e.g., 0.000000063).
 #
-# To fix this, we use the `slope_scaling` parameter.
+# To address this, we use the `slope_scaling` parameter.
 # Setting slope_scaling='year' automatically multiplies the result to show "mg/L per year".
 # Valid options include: 'year', 'month', 'day', 'hour', 'minute', 'second'.
 print("\\nRunning Trend Test with slope_scaling='year'...")
