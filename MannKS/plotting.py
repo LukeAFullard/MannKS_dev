@@ -313,3 +313,76 @@ def plot_trend(data, results, save_path, alpha, seasonal_coloring=False):
     plt.tight_layout(rect=[0, 0.03, 1, 1])
     plt.savefig(save_path)
     plt.close()
+
+
+def plot_residuals(data, results, save_path):
+    """
+    Generates and saves diagnostic plots for the residuals of the trend analysis.
+    The figure contains two subplots:
+    1. Residuals vs. Time (to check for patterns/autocorrelation)
+    2. Histogram of Residuals (to check distribution)
+
+    The residuals are calculated as:
+    Residual = Observed Value - (Slope * Time + Intercept)
+    where Intercept is defined as median(Observed Value - Slope * Time).
+
+    Input:
+        data (pd.DataFrame): The DataFrame containing the data ('value', 't', 'censored').
+        results (namedtuple): The results from the trend test.
+        save_path (str): The file path to save the plot.
+    """
+    if save_path is None:
+        return
+
+    # Use the unscaled slope (units per second/unit t) for calculation
+    slope = getattr(results, 'slope_per_second', results.slope)
+
+    if pd.isna(slope):
+        print("Cannot plot residuals: Slope is NaN.")
+        return
+
+    t_numeric = data['t'].values
+    values = data['value'].values
+
+    # Calculate residuals according to user specification
+    # Intercept = median(y - slope*t)
+    residuals_raw = values - slope * t_numeric
+    intercept = np.nanmedian(residuals_raw)
+    residuals = residuals_raw - intercept
+
+    # Prepare for plotting
+    is_datetime = 't_original' in data.columns and _is_datetime_like(data['t_original'].values)
+    x_axis = pd.to_datetime(data['t_original']) if is_datetime else data['t']
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+
+    # --- Subplot 1: Residuals vs Time ---
+    non_censored = ~data['censored']
+    censored = data['censored']
+
+    ax1.scatter(x_axis[non_censored], residuals[non_censored],
+                color='blue', alpha=0.7, label='Residuals (Observed)')
+    if censored.any():
+        ax1.scatter(x_axis[censored], residuals[censored],
+                    color='red', marker='x', alpha=0.7, label='Residuals (Censored)')
+
+    ax1.axhline(0, color='black', linestyle='--', linewidth=1)
+    ax1.set_title('Residuals vs. Time')
+    ax1.set_xlabel('Time')
+    ax1.set_ylabel('Residual')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    if is_datetime:
+        plt.setp(ax1.get_xticklabels(), rotation=30, ha='right')
+
+    # --- Subplot 2: Histogram of Residuals ---
+    ax2.hist(residuals, bins='auto', color='green', alpha=0.6, edgecolor='black')
+    ax2.axvline(0, color='black', linestyle='--', linewidth=1)
+    ax2.set_title('Distribution of Residuals')
+    ax2.set_xlabel('Residual')
+    ax2.set_ylabel('Frequency')
+
+    plt.suptitle(f"Residual Diagnostics (Slope: {results.slope:.4g} {getattr(results, 'slope_units', '')})")
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.savefig(save_path)
+    plt.close()
