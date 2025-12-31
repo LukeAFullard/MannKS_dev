@@ -28,6 +28,11 @@ These are the essential parameters you will always need to provide.
 -   **Description:** If you provide a file path (e.g., `"my_trend_plot.png"`), the function will save a plot visualizing the trend analysis.
 -   **Usefulness:** This is extremely useful for diagnostics. A plot can help you visually assess the trend, identify potential outliers, and understand the relationship between the data, the Sen's slope, and the confidence intervals.
 
+#### `seasonal_coloring`
+-   **Type:** `bool`, **Default:** `False`
+-   **Description:** When plotting data, this parameter allows for distinct coloring of data points based on their season.
+-   **Usefulness:** If your dataset contains a `'season'` column (e.g., from `seasonal_trend_test`), setting this to `True` will color-code the points in the output plot by season. This helps in visually inspecting seasonal patterns alongside the overall trend. Note that `trend_test` does not automatically calculate seasons, so this is typically relevant if you are plotting data that has been pre-processed or if you are using `seasonal_trend_test` (which shares this plotting logic).
+
 ---
 
 ### Censored Data Parameters
@@ -81,9 +86,10 @@ These parameters control how the test handles censored data.
 -   **Limitations:** Aggregation, by definition, reduces the amount of data used in the test, which can lower its statistical power. For censored data, `'robust_median'` or `'lwp_robust_median'` are the recommended methods, but be aware that aggregating censored values is a difficult statistical problem and the result should be interpreted with care. See **[Example 9](../09_Aggregation_Tied_Clustered_Data/README.md)**.
 
 #### `agg_period`
--   **Type:** `str`, **Default:** `'year'`
--   **Description:** Defines the time window for aggregation **when using any `lwp*` aggregation method** (`'lwp'`, `'lwp_median'`, `'lwp_robust_median'`).
--   **Usefulness:** This allows you to define the granularity of your analysis whendealing with clustered data. You can analyze trends on an aggregated `'year'`, `'month'`, or `'day'` basis. This requires that your time vector `t` contains datetime objects.
+-   **Type:** `str`, **Default:** `None`
+-   **Description:** The time window for aggregation when using any `lwp*` aggregation method (e.g., `'year'`, `'month'`).
+-   **Usefulness:** This allows you to define the granularity of your analysis when dealing with clustered data. For example, you can analyze trends on an aggregated `'year'` basis.
+-   **Defaults:** Although the default is `None`, if `agg_method` is set to any of the LWP methods (`'lwp'`, `'lwp_median'`, `'lwp_robust_median'`) and `agg_period` is not specified, it will effectively default to `'year'`.
 
 ---
 
@@ -108,6 +114,13 @@ Defaults are recommended for most users.
     *   `'robust'` (Default): Uses a very small epsilon derived from the data's precision (half the minimum difference between unique values). This safely detects ties without accidentally matching very close but distinct floating-point numbers.
     *   `'lwp'`: Uses a larger epsilon (minimum difference / 1000) to replicate the specific behavior of the LWP-TRENDS R script.
 -   **Limitations:** Generally, you should stick to `'robust'`. The `'lwp'` method is only needed if you are trying to reproduce exact numbers from the legacy R script and are facing floating-point discrepancies.
+
+#### `continuous_confidence`
+-   **Type:** `bool`, **Default:** `True`
+-   **Description:** Controls how trend direction is reported.
+-   **Usefulness:**
+    -   `True` (default): The trend classification (e.g., "Probably Increasing") is based on a continuous probability score (`C`), even if the p-value is greater than `alpha`. This provides a more nuanced interpretation (e.g., "weak evidence of an increase") rather than a binary "No Trend".
+    -   `False`: The function behaves like a classical hypothesis test. If `p > alpha`, the result is simply classified as "No Trend", regardless of the Z-score direction. This is a stricter, more traditional approach.
 
 ---
 

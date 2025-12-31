@@ -13,6 +13,11 @@ These are the essential parameters you will always need to provide.
 #### `x`, `t`, `alpha`, `plot_path`
 These core parameters function identically to their counterparts in `trend_test`. `x` holds the data, `t` holds the corresponding time vector, `alpha` sets the significance level, and `plot_path` saves a visualization of the results.
 
+#### `seasonal_coloring`
+-   **Type:** `bool`, **Default:** `False`
+-   **Description:** When plotting data, this parameter allows for distinct coloring of data points based on their season.
+-   **Usefulness:** If set to `True`, the points in the output plot will be color-coded by season (e.g., all January points in blue, July in red). This is extremely helpful for visually inspecting seasonal patterns and spotting if a trend is being driven by a specific season.
+
 ---
 
 ### Seasonality Parameters
@@ -84,6 +89,13 @@ These parameters function identically to their `trend_test` counterparts but are
 -   **Type:** `dict` (optional), **Default:** `None`
 -   **Description:** Allows you to provide your own custom rules for trend classification, applied to the final overall trend result.
 -   **Usefulness:** Same as in `trend_test`, this allows you to align the output with specific reporting requirements. See our **[Trend Classification Guide](./trend_classification_guide.md)**.
+
+#### `continuous_confidence`
+-   **Type:** `bool`, **Default:** `True`
+-   **Description:** Controls how trend direction is reported.
+-   **Usefulness:**
+    -   `True` (default): The trend classification (e.g., "Probably Increasing") is based on a continuous probability score (`C`), even if the p-value is greater than `alpha`. This provides a more nuanced interpretation (e.g., "weak evidence of an increase") rather than a binary "No Trend".
+    -   `False`: The function behaves like a classical hypothesis test. If `p > alpha`, the result is simply classified as "No Trend".
 
 ---
 
