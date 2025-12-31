@@ -66,12 +66,8 @@ Inspection complete. Plot saved to 'inspection_plot.png'.
 -   **Important:** You must manually add your time column (e.g., `'t'`) to this DataFrame before passing it to the function, as `prepare_censored_data` only handles the value vector.
 
 ### `time_col`
--   **Type:** `str`, **Default:** `'t'`
+-   **Type:** `str`
 -   **Description:** The name of the column in `data` that contains the timestamps or numeric time values.
-
-### `value_col`
--   **Type:** `str`, **Default:** `'value'`
--   **Description:** The name of the column in `data` that contains the observed values.
 
 ### `plot`
 -   **Type:** `bool`, **Default:** `False`
@@ -88,24 +84,6 @@ Inspection complete. Plot saved to 'inspection_plot.png'.
 ### `end_year` (optional)
 -   **Type:** `int`
 -   **Description:** The last year of the analysis period. Defaults to the maximum year in the data.
-
-### `prop_year_tol`
--   **Type:** `float`, **Default:** `0.9`
--   **Description:** The proportion of years in the `trend_period` that must have at least one observation for a time increment (e.g., 'monthly') to be considered valid.
-
-### `prop_incr_tol`
--   **Type:** `float`, **Default:** `0.9`
--   **Description:** The proportion of total possible time increments (e.g., total months in the period) that must have data for an increment to be valid.
-
-### `return_summary`
--   **Type:** `bool`, **Default:** `False`
--   **Description:** If `True`, the function returns a namedtuple `(data, summary)` where `summary` is a DataFrame detailing the availability stats for each tested time increment.
-
-### `custom_increments`
--   **Type:** `dict`, **Default:** `None`
--   **Description:** A dictionary to define custom time increments and their frequency per year.
-    -   Example: `{'tri-annual': 3}`.
-    -   Supported keys map to internal logic: `'daily'`, `'weekly'`, `'monthly'`, `'bi-monthly'`, `'quarterly'`, `'bi-annually'`, `'annually'`.
 
 ## Understanding the Output Plots
 

@@ -35,6 +35,14 @@ The `MannKS` package includes a system of "Analysis Notes" to provide data quali
     1.  **Justify a Smaller Sample:** If you proceed, you should have a strong reason for trusting the results from such a small dataset.
     2.  **Adjust the Threshold:** You can change the `min_size` parameter in `trend_test` if your analysis has different requirements. See [Example 26](../26_advanced_parameter_nuances/README.md).
 
+### `insufficient data`
+-   **What it means:** There were fewer than 2 data points available for analysis (either initially or after filtering).
+-   **Implications:** The trend test was aborted and returns default/NaN values.
+
+### `insufficient data post-aggregation`
+-   **What it means:** After aggregating the data (e.g., thinning daily data to yearly), there were fewer than 2 data points remaining.
+-   **Implications:** The aggregation was too aggressive for the amount of data available.
+
 ---
 
 ## Data Structure & Aggregation

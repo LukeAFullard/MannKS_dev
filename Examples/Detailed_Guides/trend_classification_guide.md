@@ -32,20 +32,20 @@ By default, the package uses a classification scheme inspired by the Intergovern
 
 | Confidence (`C`) | Approximate P-value | Trend Category         | Interpretation |
 | :--------------- | :------------------ | :--------------------- | :--- |
-| `C >= 0.95`      | `p <= 0.10`         | **Increasing/Decreasing** | High confidence. The trend is statistically significant. (Note: The default `alpha=0.05` corresponds to `C=0.975`, ensuring this category is met for significant trends). |
-| `0.90 <= C < 0.95` | `0.10 < p <= 0.20` | **Likely Increasing/Decreasing** | Medium-high confidence. The trend is borderline significant. |
-| `0.67 <= C < 0.90` | `0.20 < p <= 0.66` | **Probably Increasing/Decreasing** | Medium-low confidence. Some evidence of a trend, but it is weak. |
-| `0.33 <= C < 0.67` | `0.66 < p`         | **No Clear Trend**         | Ambiguous. We lack enough evidence to determine a trend direction. |
+| `C >= 0.95`      | `p <= 0.10`         | **Highly Likely Increasing/Decreasing** | High confidence. The trend is statistically significant. (Note: The default `alpha=0.05` corresponds to `C=0.975`, ensuring this category is met for significant trends). |
+| `0.90 <= C < 0.95` | `0.10 < p <= 0.20` | **Very Likely Increasing/Decreasing** | Medium-high confidence. The trend is borderline significant. |
+| `0.67 <= C < 0.90` | `0.20 < p <= 0.66` | **Likely Increasing/Decreasing** | Medium-low confidence. Some evidence of a trend, but it is weak. |
+| `0.33 <= C < 0.67` | `0.66 < p`         | **As Likely as Not (No Clear Trend)**  | Ambiguous. We lack enough evidence to determine a trend direction. |
 | `C < 0.33`       | `High p-value`      | **Stable**             | High confidence that there is *no* meaningful trend. |
 
-**Note:** The `alpha` parameter you provide to `trend_test` (default is `0.05`) directly affects the `h` (hypothesis) result, which overrides classification to simply "Increasing/Decreasing" if `h` is True.
+**Note:** The `alpha` parameter you provide to `trend_test` (default is `0.05`) directly affects the `h` (hypothesis) result. If `h` is True (trend is significant at alpha), the classification will simply be "Increasing" or "Decreasing", overriding the nuances above. If `continuous_confidence=True`, the nuanced categories are used when `h` is False or for more detailed reporting.
 
 See **[Example 17: Interpreting the Full Output](./17_Interpreting_Output/README.md)** for a practical demonstration of these categories.
 
 ### Usefulness and Limitations of Classification
 
 -   **Usefulness:** Classification is extremely useful for **summarization**. If you are analyzing hundreds of sites, a table of trend categories gives you an immediate overview. It also provides a standardized vocabulary for reporting results.
--   **Limitations:** A category is a **simplification**. A p-value of `0.049` ("Increasing") and `0.051` ("Likely Increasing") are statistically almost identical, but they fall into different categories. **Never rely only on the category.** Always inspect the p-value and the Sen's slope magnitude to understand the full picture.
+-   **Limitations:** A category is a **simplification**. A p-value of `0.049` ("Increasing") and `0.051` ("Very Likely Increasing") are statistically almost identical, but they fall into different categories. **Never rely only on the category.** Always inspect the p-value and the Sen's slope magnitude to understand the full picture.
 
 ---
 
@@ -56,16 +56,16 @@ You can define your own classification rules using the `category_map` parameter.
 For example, a simpler, stricter classification system could be:
 ```python
 my_map = {
-    "Significant": 0.975, # Approx p <= 0.05
-    "Suggestive": 0.95,   # Approx p <= 0.10
-    "Indeterminate": 0.0, # All other cases (the catch-all)
+    0.975: "Significant", # Approx p <= 0.05
+    0.95: "Suggestive",   # Approx p <= 0.10
+    0.0: "Indeterminate"  # All other cases (the catch-all)
 }
 ```
-You would pass this to the test function: `mks.trend_test(..., category_map=my_map)`
+You would pass this to the test function: `mk.trend_test(..., category_map=my_map)`
 
 **Key Rules for Custom Maps:**
-1.  **Values are Confidence Levels (`C`):** Use the confidence value `C` found in the result object.
+1.  **Values are Confidence Levels (`C`):** Use the confidence value `C` found in the result object (keys are floats).
 2.  **Highest Wins:** The function evaluates your map and assigns the category with the **highest** threshold that `C` exceeds or equals.
-3.  **Catch-All Required:** You **must** include a "zero" threshold (e.g., `"Indeterminate": 0.0`) to act as a fallback for results that don't meet any other criteria. If you omit this, low-confidence results might be unlabeled or cause an error.
+3.  **Catch-All Required:** You **must** include a "zero" threshold (e.g., `0.0: "Indeterminate"`) to act as a fallback for results that don't meet any other criteria. If you omit this, low-confidence results might be unlabeled or cause an error.
 
 See **[Example 19: Standalone Trend Classification](./19_Standalone_Classification/README.md)** for a hands-on guide to creating and using custom maps.
