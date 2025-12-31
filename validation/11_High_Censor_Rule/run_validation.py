@@ -194,7 +194,6 @@ def run_nada_r_script(df):
     frac_years = dates.dt.year + (dates.dt.dayofyear - 1) / 365.25
 
     # Passing large vectors via f-string is risky/slow. Better to use rpy2 conversion.
-    # Fix: use .context()
     with (ro.default_converter + pandas2ri.converter).context():
         r_y = ro.conversion.get_conversion().py2rpy(df_prep['value'])
         r_ycen = ro.conversion.get_conversion().py2rpy(df_prep['censored'])
@@ -345,17 +344,16 @@ def generate_combined_plot(scenarios, filename, main_title):
             # Re-calculate line points
             y_trend = mk_result.slope * t_numeric.values + mk_result.intercept
 
-            # Fix: intercept in mk_result from scaled run might need adjustment if t basis differs?
             # MannKS intercept is y_med - slope * t_med.
-            # If slope is scaled, t_med must match the unit?
-            # Actually, trend_test scales slope but returns intercept based on unscaled t?
-            # Let's trust the result object if we use the same t basis as input.
-            # But wait, we passed datetime. MannKS converts to seconds internally for unscaled.
+            # If slope is scaled, t_med must match the unit.
+            # trend_test scales slope but returns intercept based on unscaled t.
+            # We trust the result object if we use the same t basis as input.
+            # However, since we passed datetime, MannKS converts to seconds internally for unscaled.
             # With `slope_scaling='year'`, it returns scaled slope.
             # The intercept logic: `intercept = y_med - t_med * slope`
-            # If slope is per year, t_med should be in years?
+            # If slope is per year, t_med should be in years.
             # MannKS likely uses seconds for t_med if input was datetime.
-            # So `intercept` might be inconsistent if `slope` is scaled but `t` wasn't converted?
+            # So `intercept` might be inconsistent if `slope` is scaled but `t` wasn't converted.
             # Actually, `trend_test` doesn't automatically rescale `t` for the intercept calculation in the simple way.
             # Let's plot using the `slope` and pivot around median to be safe.
 

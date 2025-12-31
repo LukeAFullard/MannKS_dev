@@ -6,7 +6,7 @@ from MannKS._stats import _mk_score_and_var_censored
 
 def test_mk_score_and_var_censored_float_precision():
     """
-    Test Case 1.1 from Audit.md:
+    Test Case 1.1:
     Tests that the tie-breaking logic in `_mk_score_and_var_censored`
     is robust to floating-point precision issues.
     This test uses data with very small differences that could cause

@@ -286,7 +286,7 @@ def seasonal_trend_test(
 
         # We reuse the cycle/season calculation from the initial block
         # Only recalculate if explicitly needed, but here we can just use the existing columns.
-        # However, to be safe and match previous logic strictly (except for LWP fix),
+        # However, to be safe and match previous logic strictly,
         # we will use the columns we just set.
 
         data_filtered['season_agg'] = data_filtered['season']
