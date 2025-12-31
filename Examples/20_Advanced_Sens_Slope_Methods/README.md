@@ -117,15 +117,15 @@ print(f"\nPlot saved to 'slope_comparison.png'")
 5    8.0     False      not
 
 --- 1. Robust (Nan) Method ---
-Trend: no trend
+Trend: increasing
 Slope: 1.1000
 
 --- 2. LWP Method (Ambiguous=0) ---
-Trend: no trend
+Trend: increasing
 Slope: 1.0000
 
 --- 3. ATS Method ---
-Trend: no trend
+Trend: increasing
 Slope: 1.1146
 
 Plot saved to 'slope_comparison.png'
