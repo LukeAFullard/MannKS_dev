@@ -11,6 +11,9 @@ import MannKS as mk
 def run_v22():
     print("Running V-22: Data Inspection Validation")
 
+    # Set seed for reproducibility
+    np.random.seed(42)
+
     output_dir = os.path.dirname(__file__)
     output_file = os.path.join(output_dir, 'README.md')
     plot_file = os.path.join(output_dir, 'inspection_plot.png')

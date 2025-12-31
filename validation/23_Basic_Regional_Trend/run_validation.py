@@ -265,6 +265,9 @@ def create_markdown_report(title, description, scenarios):
     return md
 
 def run_v23():
+    # Set seed for reproducibility
+    np.random.seed(42)
+
     scenarios = []
 
     # --- Scenario 1: Strong Increasing ---
