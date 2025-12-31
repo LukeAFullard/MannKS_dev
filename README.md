@@ -15,9 +15,9 @@ Welcome to **MannKS** (short for **Mann**-**K**endall **S**en), a friendly and p
 Whether you are tracking water quality, climate metrics, or any other time-series data, `MannKS` makes it easy to perform statistically rigorous tests—even if your data is "messy."
 
 We built this tool specifically to handle the real-world challenges data scientists and environmental engineers face every day:
-*   **Irregular sampling?** No problem. existing Python packages like `pyMannKendall` often do not account for unequally sampled time series, leading to inaccurate slope estimates. `MannKS` correctly handles this by using the exact time difference between observations.
-*   **Missing or "censored" values (like `<5` or `>100`)?** We handle those natively.
-*   **Seasonal patterns?** We can detect and account for them.
+*   **Irregular sampling?** No problem. Unlike many other tools, `MannKS` correctly handles unequally sampled time series using the exact time difference between observations.
+*   **Missing or "censored" values (like `<5` or `>100`)?** We handle those natively with robust statistical methods.
+*   **Seasonal patterns?** We can detect and account for them automatically.
 
 ### 🙏 Inspiration & Credit
 This package was heavily inspired by the excellent work done by **[LandWaterPeople (LWP)](https://landwaterpeople.co.nz/)**. Much of the robust functionality for handling censored data and regional aggregation is based on their R scripts and methodologies. We owe them a debt of gratitude for their contributions to the field.
@@ -31,6 +31,15 @@ The best way to learn is by doing. We have prepared a comprehensive **User Guide
 ### [📚 Click here to open the User Guide](./Examples/README.md)
 
 Each example is a self-contained "mini-chapter" with code you can run and explanations of the results.
+
+### 📖 Detailed Documentation
+For deep dives into specific functions and parameters, check out our detailed guides:
+
+*   **[Trend Test Parameters](./Examples/Detailed_Guides/trend_test_parameters_guide.md)**: Full details on `trend_test`, including `alpha`, `hicensor`, and `slope_scaling`.
+*   **[Seasonal Trend Test Parameters](./Examples/Detailed_Guides/seasonal_trend_test_parameters_guide.md)**: Guide to `seasonal_trend_test`, seasonality types, and aggregation methods.
+*   **[Regional Test Guide](./Examples/Detailed_Guides/regional_test_guide/README.md)**: How to aggregate trends across multiple sites.
+*   **[Analysis Notes Guide](./Examples/Detailed_Guides/analysis_notes_guide.md)**: Understand the data quality warnings (e.g., "Sen slope influenced by censored values").
+*   **[Trend Classification](./Examples/Detailed_Guides/trend_classification_guide.md)**: How we translate p-values into "Likely Increasing", "Stable", etc.
 
 ---
 
