@@ -71,6 +71,8 @@ Slope: 24.57 mg/L per year
 Confidence: 98.47%
 ```
 
+![Trend Analysis Plot](assets/quick_start_trend.png)
+
 ---
 
 ## 🎯 Key Features
