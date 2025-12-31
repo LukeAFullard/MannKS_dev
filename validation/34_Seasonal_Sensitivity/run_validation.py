@@ -74,6 +74,9 @@ def run_r_script_seasonal(data, r_script_path):
     ro.r['source'](r_script_path)
 
     r_data = data.copy()
+    if 'py_input' in r_data.columns:
+        r_data = r_data.drop(columns=['py_input'])
+
     r_data['myDate'] = r_data['t']
     r_data['RawValue'] = r_data['value']
     r_data['Censored'] = r_data['censored']
@@ -195,12 +198,12 @@ def run_v34():
             py_cat = mk_res.classification.lower()
             r_cat_str = r_res['category']
             r_dir_str = r_res['direction']
-            if r_cat_str.lower() == "as likely as not":
-                    r_full = f"{r_cat_str} {r_dir_str}"
-            else:
-                r_full = f"{r_cat_str} {r_dir_str}"
-            r_full = r_full.strip().lower()
 
+            # Construct R full classification string
+            r_full = f"{r_cat_str} {r_dir_str}".strip().lower()
+
+            # With _stats.py updated, "no trend" should now be "indeterminate"
+            # So direct comparison should work for the low confidence cases.
             match_class = (py_cat == r_full)
 
             slope_diff = abs(mk_res.scaled_slope - r_res['slope'])
@@ -226,7 +229,8 @@ def run_v34():
         else:
             results.append({'iter': i+1, 'r_class': 'Failed'})
 
-        print(f"Finished iteration {i+1}/99")
+        if (i+1) % 10 == 0:
+            print(f"Finished iteration {i+1}/99")
 
     df_res = pd.DataFrame(results)
 

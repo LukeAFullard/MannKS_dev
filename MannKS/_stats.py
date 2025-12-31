@@ -289,7 +289,7 @@ def _p_value(z, alpha, continuous_confidence=False):
         elif z > 0:
             trend = 'increasing'
         else:
-            trend = 'no trend'
+            trend = 'indeterminate'
     else:
         # Classical mode: only report direction if significant
         if not h:
