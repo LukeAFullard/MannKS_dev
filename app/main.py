@@ -5,6 +5,7 @@ from modules.data_generator import generate_data_ui
 from modules.settings import render_settings_ui
 from modules.analysis import run_analysis
 from modules.reporting import generate_html_report
+from MannKS.inspection import inspect_trend_data
 
 # Set page config
 st.set_page_config(page_title="MannKenSen Analysis App", layout="wide", page_icon="📈")
@@ -340,8 +341,8 @@ def main():
         st.session_state.history = []
 
     # --- Tabs ---
-    tab_data, tab_settings, tab_run, tab_results = st.tabs([
-        "1. Data", "2. Configure Settings", "3. Run Analysis", "4. Results & Report"
+    tab_data, tab_inspect, tab_settings, tab_run, tab_results = st.tabs([
+        "1. Data", "2. Data Inspection", "3. Configure Settings", "4. Run Analysis", "5. Results & Report"
     ])
 
     # --- 1. Data Tab ---
@@ -358,10 +359,81 @@ def main():
 
         if st.session_state.data is not None:
             st.info(f"Current Data: {len(st.session_state.data)} observations loaded.")
+
+            # Download processed data
+            csv = st.session_state.data.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                "Download Processed CSV",
+                csv,
+                "processed_data.csv",
+                "text/csv",
+                key='download-csv'
+            )
+
             with st.expander("View Data"):
                 st.dataframe(st.session_state.data)
 
-    # --- 2. Settings Tab ---
+    # --- 2. Data Inspection Tab ---
+    with tab_inspect:
+        st.header("Data Inspection")
+        if st.session_state.data is None:
+            st.warning("Please load data first.")
+        else:
+            st.markdown("Assess data availability and suitable time increments.")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                prop_year_tol = st.slider("Min Prop. Years with Data", 0.1, 1.0, 0.8)
+            with col2:
+                prop_incr_tol = st.slider("Min Prop. Increments with Data", 0.1, 1.0, 0.8)
+
+            if st.button("Inspect Data"):
+                try:
+                    # Prepare data for inspection (needs 'value' and 't' columns, 't' must be datetime)
+                    inspect_df = st.session_state.data.copy()
+
+                    # Convert t_original to datetime if it's not already
+                    inspect_df['t'] = pd.to_datetime(inspect_df['t_original'])
+
+                    # Create a temporary file for the plot
+                    import tempfile
+                    import os
+                    tf = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+                    plot_path = tf.name
+                    tf.close()
+
+                    result = inspect_trend_data(
+                        inspect_df,
+                        value_col='value',
+                        time_col='t',
+                        prop_year_tol=prop_year_tol,
+                        prop_incr_tol=prop_incr_tol,
+                        return_summary=True,
+                        plot=True,
+                        plot_path=plot_path
+                    )
+
+                    st.success("Inspection Complete")
+
+                    st.subheader("Data Availability Summary")
+                    st.dataframe(result.summary)
+
+                    best = result.summary.loc[result.summary['data_ok'] == True]
+                    if not best.empty:
+                        best_inc = best.iloc[0]['increment']
+                        st.info(f"Recommended Time Increment: **{best_inc}**")
+                    else:
+                        st.warning("No time increment met the specified tolerances.")
+
+                    st.subheader("Inspection Plots")
+                    st.image(plot_path)
+                    os.remove(plot_path)
+
+                except Exception as e:
+                    st.error(f"Error during inspection: {str(e)}")
+
+
+    # --- 3. Settings Tab ---
     with tab_settings:
         # Returns a dict of settings for all tests
         all_settings = render_settings_ui()

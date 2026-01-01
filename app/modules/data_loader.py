@@ -16,7 +16,7 @@ def read_file(uploaded_file):
         st.error("Unsupported file format. Please upload a CSV or Excel file.")
         return None
 
-def process_input_data(df, value_col, time_col, censored_col=None, censored_flag_col=None):
+def process_input_data(df, value_col, time_col, censored_col=None, censored_flag_col=None, cen_direction='lt', date_format=None):
     """
     Normalizes the input DataFrame into the format required by MannKS.
     Returns a DataFrame with columns: ['t_original', 'value', 'censored', 'cen_type']
@@ -25,7 +25,10 @@ def process_input_data(df, value_col, time_col, censored_col=None, censored_flag
         # 1. Handle Time
         # Try to convert to datetime first
         try:
-            t_original = pd.to_datetime(df[time_col])
+            if date_format:
+                t_original = pd.to_datetime(df[time_col], format=date_format)
+            else:
+                t_original = pd.to_datetime(df[time_col])
         except Exception:
             # If numeric, keep as is
             t_original = df[time_col]
@@ -49,10 +52,10 @@ def process_input_data(df, value_col, time_col, censored_col=None, censored_flag
 
             # Simple heuristic: treat truthy values as censored
             # For robustness, we'll assume standard boolean-like or specific strings
-            is_censored = flags.apply(lambda x: str(x).lower() in ['true', '1', 'yes', 'censored', '<', 'lt'])
+            is_censored = flags.apply(lambda x: str(x).lower() in ['true', '1', 'yes', 'censored', '<', 'lt', '>', 'gt'])
 
-            # Create cen_type (assuming left censoring by default for now, could be improved)
-            cen_type = np.where(is_censored, 'lt', 'not')
+            # Create cen_type based on user selection
+            cen_type = np.where(is_censored, cen_direction, 'not')
 
             processed_values = pd.DataFrame({
                 'value': vals,
@@ -121,8 +124,17 @@ def load_data_ui():
                 if has_flag:
                     censored_flag_col = st.selectbox("Select Censored Flag Column", options=cols)
 
+            # Additional UX for Date Parsing
+            date_format = st.text_input("Date Format (Optional, e.g. %Y-%m-%d)", key="date_fmt")
+            if not date_format:
+                date_format = None
+
+            cen_direction = 'lt' # Default
+            if has_flag:
+                cen_direction = st.radio("Censoring Direction", ['lt', 'gt'], format_func=lambda x: "Left (<)" if x=='lt' else "Right (>)", horizontal=True)
+
             if st.button("Process Data"):
-                processed_df = process_input_data(df, value_col, time_col, censored_col, censored_flag_col)
+                processed_df = process_input_data(df, value_col, time_col, censored_col, censored_flag_col, cen_direction, date_format)
                 if processed_df is not None:
                     st.success("Data processed successfully!")
                     st.write("Preview of processed data for analysis:", processed_df.head())

@@ -97,7 +97,7 @@ def run_analysis(data_df, test_type, settings):
             # It accepts: x, t, period, season_type, plot_path
 
             plot_seasonal_distribution(
-                x_input,
+                x_input['value'],
                 t_input,
                 period=params.get('period', 12),
                 season_type=params.get('season_type', 'month'),
