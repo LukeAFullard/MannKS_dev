@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MannKenSen Analysis Report</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 20px auto; color: #333; background-color: #f9f9f9; }
+        h1 { color: #2c3e50; border-bottom: 3px solid #667eea; padding-bottom: 10px; text-align: center; }
+        h2 { color: #667eea; margin-top: 40px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        .test-block { border: 1px solid #e1e4e8; padding: 25px; border-radius: 8px; margin-bottom: 30px; background: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .stats-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .stats-table th, .stats-table td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        .stats-table th { background-color: #f8f9fa; color: #555; font-weight: 600; width: 40%; }
+        .stats-table tr:hover { background-color: #f1f5f9; }
+        .img-container { text-align: center; margin-top: 25px; padding: 10px; border: 1px solid #eee; border-radius: 4px; background: #fff; }
+        img { max-width: 100%; height: auto; }
+        .error { color: #dc3545; background: #fff5f5; padding: 15px; border-radius: 4px; border-left: 4px solid #dc3545; }
+        .meta { font-size: 0.9em; color: #777; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .settings { font-size: 0.85em; color: #555; background: #f0f4f8; padding: 15px; border-radius: 6px; margin-top: 15px; border: 1px solid #e1e4e8; }
+        .settings-title { font-weight: bold; margin-bottom: 5px; display: block; color: #4a5568; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; color: white; background: #667eea; }
+        .badge-seasonal { background: #10b981; }
+        .badge-trend { background: #3b82f6; }
+        .timestamp { color: #999; }
+    </style>
+</head>
+<body>
+    <h1>MannKenSen Analysis Report</h1>
+    <p style="text-align: center; color: #666;">Generated on: {{ generated_at }}</p>
+
+    {% if not history %}
+    <div class="test-block">
+        <p>No analysis results available.</p>
+    </div>
+    {% endif %}
+
+    {% for res in history %}
+    <div class="test-block">
+        <div class="meta">
+            <span>
+                {% if "Seasonal" in res.test_type %}
+                <span class="badge badge-seasonal">{{ res.test_type }}</span>
+                {% else %}
+                <span class="badge badge-trend">{{ res.test_type }}</span>
+                {% endif %}
+            </span>
+            <span class="timestamp">Run at: {{ res.timestamp }}</span>
+        </div>
+
+        {% if res.error %}
+        <div class="error">
+            <strong>Error:</strong> {{ res.error }}
+        </div>
+        {% elif res.output %}
+        <h3>Analysis Results</h3>
+
+        <table class="stats-table">
+            {% if res.output.trend is defined %}
+            {# Trend / Seasonal Trend Results #}
+            <tr><th>Trend Classification</th><td><strong>{{ res.output.classification }}</strong></td></tr>
+            <tr><th>P-value</th><td>{{ "%.4f"|format(res.output.p) }}</td></tr>
+            <tr><th>Sen's Slope</th><td>{{ "%.4g"|format(res.output.scaled_slope) }} {{ res.output.slope_units }}</td></tr>
+            <tr><th>Kendall's Tau</th><td>{{ "%.4f"|format(res.output.Tau) }}</td></tr>
+            <tr><th>Mann-Kendall Score (S)</th><td>{{ "%.1f"|format(res.output.s) }}</td></tr>
+            <tr><th>Confidence (C)</th><td>{{ "%.4f"|format(res.output.C) }}</td></tr>
+            {% if res.output.analysis_notes %}
+            <tr><th>Analysis Notes</th><td>{{ res.output.analysis_notes|join(', ') }}</td></tr>
+            {% endif %}
+
+            {% elif res.output.is_seasonal is defined %}
+            {# Seasonality Check Results #}
+            <tr><th>Result</th><td><strong>{{ "Seasonal" if res.output.is_seasonal else "Not Seasonal" }}</strong></td></tr>
+            <tr><th>H-Statistic</th><td>{{ "%.4f"|format(res.output.h_statistic) }}</td></tr>
+            <tr><th>P-value</th><td>{{ "%.4f"|format(res.output.p_value) }}</td></tr>
+            {% if res.output.seasons_skipped %}
+            <tr><th>Skipped Seasons</th><td>{{ res.output.seasons_skipped }}</td></tr>
+            {% endif %}
+            {% endif %}
+        </table>
+
+        {% if res.plot_bytes %}
+        <div class="img-container">
+            <img src="data:image/png;base64,{{ res.plot_bytes|b64encode }}" alt="Analysis Plot" />
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <div class='settings'>
+            <span class="settings-title">Configuration:</span>
+            <code>
+            {% for k, v in res.settings.items() %}
+                {{ k }}={{ v }}{% if not loop.last %}, {% endif %}
+            {% endfor %}
+            </code>
+        </div>
+    </div>
+    {% endfor %}
+</body>
+</html>
