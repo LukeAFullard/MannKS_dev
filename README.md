@@ -2,6 +2,7 @@
   <img src="assets/logo.png" alt="MannKS Logo" width="600"/>
 
   # MannKS
+  ### (Mann-Kendall Sen)
 
   **Robust Trend Analysis in Python**
 </div>
@@ -21,7 +22,7 @@ pip install -e .
 
 ## ✨ What is MannKS?
 
-**MannKS** is a Python package for detecting trends in time series data using non-parametric methods. It's specifically designed for environmental monitoring, water quality analysis, and other fields where data is messy, irregular, or contains detection limits.
+**MannKS** (Mann-Kendall Sen) is a Python package for detecting trends in time series data using non-parametric methods. It's specifically designed for environmental monitoring, water quality analysis, and other fields where data is messy, irregular, or contains detection limits.
 
 ### When to Use MannKS
 
