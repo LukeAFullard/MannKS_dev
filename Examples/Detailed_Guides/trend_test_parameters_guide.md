@@ -35,6 +35,24 @@ These are the essential parameters you will always need to provide.
 
 ---
 
+### Autocorrelation & Bootstrap Parameters
+
+These parameters enable the block bootstrap method for handling autocorrelated data.
+
+#### `block_size`
+-   **Type:** `int` or `'auto'`, **Default:** `'auto'`
+-   **Description:** The size of the blocks used for resampling in the Moving Block Bootstrap.
+-   **Usefulness:** Standard Mann-Kendall tests assume that observations are independent. If your data is autocorrelated (e.g., a value at time $t$ is influenced by the value at $t-1$), the standard test can yield a high rate of false positives (Type I error). Block bootstrapping preserves the correlation structure within blocks while reshuffling the blocks themselves to generate a null distribution.
+    *   `'auto'` (Default): Automatically calculates an optimal block size based on the autocorrelation function (ACF) of the data. This is recommended for most users.
+    *   `int`: Manually specifying the block size allows for sensitivity analysis or adhering to specific methodological requirements.
+
+#### `n_bootstrap`
+-   **Type:** `int`, **Default:** `1000`
+-   **Description:** The number of bootstrap resamples to generate.
+-   **Usefulness:** A higher number of bootstraps provides a more precise estimate of the p-value and confidence intervals but increases computation time. The default of 1000 is generally sufficient for p-values around 0.05. For very small p-values (e.g., < 0.001), you may need to increase this to 10,000 or more.
+
+---
+
 ### Censored Data Parameters
 
 These parameters control how the test handles censored data.
