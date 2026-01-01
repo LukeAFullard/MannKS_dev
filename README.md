@@ -34,6 +34,8 @@ Use this package when your data has:
 
 **Don't use** for highly autocorrelated data (test first) or if you need n > 46,340 observations.
 
+**NEW IN V0.2.0**: The `trend_test` and `seasonal_trend_test` functions now support a **Block Bootstrap** method (`bootstrap_method='block'`). This feature provides robust trend testing for data with serial correlation (autocorrelation) by resampling blocks of data rather than individual points, preserving the internal dependency structure. See [Examples/29_Block_Bootstrap_Autocorrelation](./Examples/29_Block_Bootstrap_Autocorrelation/README.md) for a detailed guide.
+
 ---
 
 ## 🚀 Quick Start
