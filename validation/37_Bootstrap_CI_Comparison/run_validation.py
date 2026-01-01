@@ -71,7 +71,9 @@ def run_comparison():
                 # But here we just plot median-centered line for visualization if available
                 # Or just the label
 
-                plt.plot(t, res_analytic.intercept + (res_analytic.slope/31557600) * (t - t.mean()).total_seconds(),
+                # Plot trend line using raw slope (per second) and intercept
+                t_seconds = t.astype(np.int64) / 1e9
+                plt.plot(t, res_analytic.intercept + res_analytic.slope_per_second * t_seconds,
                          'r-', label=f'Analytic Slope (yr): {res_analytic.scaled_slope:.2e}')
 
                 plt.title(f'Comparison: Slope={slope}, Noise={noise}\nAnalytic CI: [{res_analytic.lower_ci:.2e}, {res_analytic.upper_ci:.2e}]\nBootstrap CI: [{res_boot.lower_ci:.2e}, {res_boot.upper_ci:.2e}]')
@@ -116,6 +118,12 @@ def run_comparison():
             if slope == 0.1 and noise == 1.0 and not plot_generated_seasonal:
                 plt.figure(figsize=(10, 6))
                 plt.plot(t, values, 'o', alpha=0.5, label='Data')
+
+                # Plot seasonal trend line
+                t_seconds = t.astype(np.int64) / 1e9
+                plt.plot(t, res_analytic.intercept + res_analytic.slope_per_second * t_seconds,
+                         'r-', label=f'Analytic Slope (yr): {res_analytic.scaled_slope:.2e}')
+
                 plt.title(f'Seasonal Comparison: Slope={slope}, Noise={noise}\nAnalytic CI: [{res_analytic.lower_ci:.2e}, {res_analytic.upper_ci:.2e}]\nBootstrap CI: [{res_boot.lower_ci:.2e}, {res_boot.upper_ci:.2e}]')
                 plt.legend()
                 plt.savefig('validation/37_Bootstrap_CI_Comparison/seasonal_example.png')
