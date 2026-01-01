@@ -2,11 +2,12 @@
 
 ## Executive Summary
 
-This report proposes two enhancements to the MannKS package:
+This report proposes three enhancements to the MannKS package:
 1. **Block Bootstrap for Autocorrelation** - Addresses a fundamental statistical assumption violation
 2. **Rolling Sen's Slope** - Adds temporal analysis capabilities
+3. **Segmented Sen's Slope Regression** - Detects structural breaks and regime shifts
 
-Both features align with the package's focus on real-world environmental data and would fill gaps in current functionality.
+All three features align with the package's focus on real-world environmental data and would fill gaps in current functionality.
 
 ---
 
@@ -1884,7 +1885,8 @@ def segmented_sens_slope(x, t, censored, cen_type,
                          n_breakpoints=1,
                          start_values=None,
                          max_iter=30,
-                         tol=1e-6):
+                         tol=1e-6,
+                         min_segment_size=10):
     """
     Fit segmented regression using Sen's slope for each segment.
     Adapts Muggeo (2003) algorithm for robust Sen's slope estimation.
@@ -1895,6 +1897,7 @@ def segmented_sens_slope(x, t, censored, cen_type,
         start_values: Initial guesses for breakpoint positions
         max_iter: Maximum iterations for convergence
         tol: Convergence tolerance
+        min_segment_size: Minimum points per segment constraint
 
     Returns:
         breakpoints: Estimated breakpoint positions
@@ -1944,16 +1947,39 @@ def segmented_sens_slope(x, t, censored, cen_type,
             # Grid search around current position
             current_bp = breakpoints[bp_idx]
 
-            # Define search range (±10% of time span)
+            # Define search range based on previous/next breakpoints
+            # Initial search width is broad, but constrained by neighbors
+            search_width = (np.max(t) - np.min(t)) * 0.1
+
             if bp_idx > 0:
-                lower = breakpoints[bp_idx - 1] + (t[1] - t[0])  # Just after previous BP
+                current_lower_bound = breakpoints[bp_idx - 1] + (t[1] - t[0])
             else:
-                lower = np.min(t) + (np.max(t) - np.min(t)) * 0.1
+                current_lower_bound = np.min(t) + search_width
 
             if bp_idx < n_breakpoints - 1:
-                upper = breakpoints[bp_idx + 1] - (t[1] - t[0])  # Just before next BP
+                current_upper_bound = breakpoints[bp_idx + 1] - (t[1] - t[0])
             else:
-                upper = np.max(t) - (np.max(t) - np.min(t)) * 0.1
+                current_upper_bound = np.max(t) - search_width
+
+            # --- Robust Boundary Constraints ---
+            # Ensure no segment is smaller than min_segment_size
+            # Calculate time buffer corresponding to N points
+            if min_segment_size >= n:
+                 raise ValueError("min_segment_size larger than data length")
+
+            # Find time spans for first and last N points
+            t_sorted = np.sort(t) # Ensure sorted for quantile-like logic
+            time_buffer_start = t_sorted[min_segment_size] - t_sorted[0]
+            time_buffer_end = t_sorted[-1] - t_sorted[-min_segment_size-1]
+
+            # Apply hard constraints to search bounds
+            lower = max(current_lower_bound, t_sorted[0] + time_buffer_start)
+            upper = min(current_upper_bound, t_sorted[-1] - time_buffer_end)
+
+            if lower >= upper:
+                # If constraints squeeze out all search space, keep current
+                best_bp = current_bp
+                continue
 
             # Grid search for best breakpoint
             test_points = np.linspace(lower, upper, 20)
@@ -2530,21 +2556,32 @@ def plot_segmented_trend(result, x, t, save_path=None, figsize
    - User guide with examples
    - Validation case V-36
 
+### Phase 3: Segmented Regression (3 weeks)
+**Priority: HIGH** - Unique differentiator and high user value
+
+1. Week 1: Core Algorithm
+   - `_segmented.py`: Muggeo's method with Sen's slope
+   - Bootstrap restarting implementation
+   - `min_segment_size` constraint logic
+
+2. Week 2: Statistical Testing
+   - Davies test for breakpoint existence
+   - BIC model selection
+   - Bootstrap confidence intervals for breakpoints
+
+3. Week 3: Integration & Validation
+   - `segmented_trend_test()` main wrapper
+   - Comparison with rolling trends
+   - Validation against `piecewise-regression` (OLS) benchmarks
+
 ---
 
 ## Recommendation
 
-**Implement both features**, but prioritize block bootstrap:
+**Implement all three features**, phased as follows:
 
-1. **Block bootstrap first** because:
-   - Fixes a fundamental issue
-   - Higher impact on result validity
-   - Expected by time-series statisticians
-   - Relatively self-contained
+1. **Block bootstrap first**: Fixes the fundamental validity of the current tests.
+2. **Rolling slopes second**: Provides immediate value for temporal exploration.
+3. **Segmented regression third**: Adds advanced, unique capabilities for detecting structural breaks.
 
-2. **Rolling slopes second** because:
-   - Adds value but doesn't fix core issues
-   - Can be iteratively enhanced
-   - Less critical for basic usage
-
-Total development time: **4-5 weeks** for both features with full testing and documentation.
+Total development time: **7-8 weeks** for all features with full testing and documentation.
