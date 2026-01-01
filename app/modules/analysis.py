@@ -92,19 +92,17 @@ def run_analysis(data_df, test_type, settings):
             # Generate Plot manually
             plot_filename = create_temp_plot_file()
 
-            plot_kwargs = {
-                'x': x_input,
-                't': t_input,
-                'period': params.get('period', 12),
-                'season_type': params.get('season_type', 'month'),
-                'plot_path': plot_filename,
-                'agg_method': params.get('agg_method', 'none')
-            }
-            # Only add agg_period if it exists in settings
-            if 'agg_period' in params:
-                 plot_kwargs['agg_period'] = params['agg_period']
+            # plot_seasonal_distribution does not support agg_method or agg_period
+            # We must pass only the supported arguments.
+            # It accepts: x, t, period, season_type, plot_path
 
-            plot_seasonal_distribution(**plot_kwargs)
+            plot_seasonal_distribution(
+                x_input,
+                t_input,
+                period=params.get('period', 12),
+                season_type=params.get('season_type', 'month'),
+                plot_path=plot_filename
+            )
 
             if os.path.exists(plot_filename):
                 with open(plot_filename, "rb") as f:

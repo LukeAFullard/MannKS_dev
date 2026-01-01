@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import datetime
+import matplotlib.pyplot as plt
 
 def generate_synthetic_data(
     n_points,
@@ -124,7 +125,7 @@ def generate_data_ui():
 
     with col3:
         noise_std = st.number_input("Noise (Std Dev)", value=1.0)
-        gap_fraction = st.slider("Missing Data Fraction", 0.0, 0.9, 0.0)
+        gap_fraction = st.slider("Missing Data Fraction", 0.0, 0.9, 0.0, step=0.05)
 
     st.markdown("#### Seasonality")
     scol1, scol2 = st.columns(2)
@@ -141,13 +142,6 @@ def generate_data_ui():
         censor_threshold = st.number_input("Detection Limit / Threshold", value=5.0)
 
     if st.button("Generate Data"):
-        # Map "None" censor type to internal logic
-        if censor_type == "None":
-            # Pass a threshold that won't trigger (e.g., -inf for Left)
-            # But simpler to just handle in logic.
-            # We'll pass logic check inside the function, but for now lets just pass the input
-            pass
-
         df = generate_synthetic_data(
             n_points, start_date, time_unit, slope, intercept,
             season_period, season_amplitude, noise_std,
@@ -158,8 +152,41 @@ def generate_data_ui():
         st.write(f"Generated {len(df)} points.")
         st.dataframe(df.head())
 
-        # Simple plot preview
-        st.line_chart(df.set_index('t_original')['value'])
+        # Enhanced preview plot using Matplotlib to clearly show gaps
+        fig, ax = plt.subplots(figsize=(10, 4))
+
+        # Handle censored data coloring
+        censored_mask = df['censored']
+        t_vals = df['t_original']
+        y_vals = df['value']
+
+        # Plot non-censored
+        if (~censored_mask).any():
+            ax.scatter(t_vals[~censored_mask], y_vals[~censored_mask],
+                      c='blue', label='Observed', alpha=0.6, s=20)
+
+        # Plot censored
+        if censored_mask.any():
+            ax.scatter(t_vals[censored_mask], y_vals[censored_mask],
+                      c='red', marker='x', label='Censored', s=30)
+
+        # Add line to help visualize trend/seasonality, but make it thin so gaps are obvious
+        # For true visualization of gaps, we should NOT connect non-adjacent points if index is not continuous
+        # But here 't_original' is continuous time, but rows are dropped.
+        # matplotlib plot(x,y) connects points.
+        # To show gaps clearly, we rely on the scatter markers and the fact that
+        # a sparse line will look "jumpy".
+        ax.plot(t_vals, y_vals, c='gray', alpha=0.3, linewidth=1)
+
+        ax.set_title("Data Preview (with Gaps/Censoring)")
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Value")
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+
+        # Use streamlit's pyplot wrapper
+        st.pyplot(fig)
+        plt.close(fig)
 
         return df
 
