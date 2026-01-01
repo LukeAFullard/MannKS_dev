@@ -47,12 +47,16 @@ def render_settings_ui():
                                          key='tt_agg_method',
                                          help="Method to aggregate data before analysis. 'none' is default.")
         with col4:
-            tt_agg_period = st.text_input("Aggregation Period", value="", key='tt_agg_period',
+            tt_agg_period = st.selectbox("Aggregation Period", ["", "year", "month", "quarter", "week", "day", "hour", "minute", "second"], index=0, key='tt_agg_period',
                                           help="e.g. 'year', 'month'. Required if using LWP aggregation methods on datetime data.")
-            if tt_agg_period.strip() == "":
+            if tt_agg_period == "":
                 tt_agg_period = None
 
         st.markdown("---")
+        st.markdown("**Advanced Options**")
+        tt_hicensor = st.checkbox("High Censor Rule (hicensor)", value=False, key='tt_hicensor',
+                                  help="If True, all values below the highest detection limit are treated as censored.")
+
         st.markdown("**Scaling**")
         tt_slope_scaling = st.selectbox("Scale Slope To:", ["None", "year", "month", "day"], key='tt_slope_scaling',
                                         help="Convert the slope unit (e.g. per second) to a human readable unit.")
@@ -67,7 +71,8 @@ def render_settings_ui():
             'tau_method': tt_tau_method,
             'agg_method': tt_agg_method,
             'agg_period': tt_agg_period,
-            'slope_scaling': tt_slope_scaling
+            'slope_scaling': tt_slope_scaling,
+            'hicensor': tt_hicensor
         }
 
     # --- Tab 2: Seasonal Trend Test ---
@@ -99,12 +104,16 @@ def render_settings_ui():
                                          key='st_agg_method')
         with col4:
             # Added Aggregation Period for Seasonal Trend Test
-            st_agg_period = st.text_input("Aggregation Period", value="", key='st_agg_period',
+            st_agg_period = st.selectbox("Aggregation Period", ["", "year", "month", "quarter", "week", "day", "hour", "minute", "second"], index=0, key='st_agg_period',
                                           help="Time unit to aggregate by (e.g. 'month') if using an aggregation method.")
-            if st_agg_period.strip() == "":
+            if st_agg_period == "":
                 st_agg_period = None
 
         st.markdown("---")
+        st.markdown("**Advanced Options**")
+        st_hicensor = st.checkbox("High Censor Rule (hicensor)", value=False, key='st_hicensor',
+                                  help="If True, all values below the highest detection limit are treated as censored.")
+
         st.markdown("**Scaling**")
         st_slope_scaling = st.selectbox("Scale Slope To:", ["None", "year", "month", "day"], key='st_slope_scaling')
         if st_slope_scaling == "None":
@@ -120,7 +129,8 @@ def render_settings_ui():
             'agg_method': st_agg_method,
             'agg_period': st_agg_period,
             'slope_scaling': st_slope_scaling,
-            'tau_method': 'b' # Defaulting to b for simplicity in UI, could add if needed
+            'tau_method': 'b', # Defaulting to b for simplicity in UI, could add if needed
+            'hicensor': st_hicensor
         }
 
     # --- Tab 3: Seasonality Check ---
@@ -141,9 +151,10 @@ def render_settings_ui():
                                      ['none', 'median', 'robust_median', 'middle', 'middle_lwp'],
                                      key='sc_agg_method')
 
-        sc_agg_period = st.text_input("Aggregation Period", value="month", key='sc_agg_period',
+        sc_agg_period = st.selectbox("Aggregation Period", ["", "year", "month", "quarter", "week", "day", "hour", "minute", "second"], index=2, key='sc_agg_period',
                                       help="Time unit to aggregate by (e.g. 'month'). Required if agg_method is not 'none'.")
-        if sc_agg_method != 'none' and sc_agg_period.strip() == "":
+
+        if sc_agg_method != 'none' and sc_agg_period == "":
             st.warning("Aggregation Period is required when Aggregation Method is not 'none'.")
             sc_agg_period = None
         elif sc_agg_method == 'none':

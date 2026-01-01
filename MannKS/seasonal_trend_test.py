@@ -29,6 +29,7 @@ def seasonal_trend_test(
     period: int = 12,
     alpha: float = 0.05,
     agg_method: str = 'none',
+    agg_period: Optional[str] = None,
     season_type: str = 'month',
     hicensor: Union[bool, float] = False,
     plot_path: Optional[str] = None,
