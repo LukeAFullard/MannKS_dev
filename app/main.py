@@ -7,13 +7,23 @@ from app.modules.analysis import run_analysis
 from app.modules.reporting import generate_html_report
 
 # Set page config
-st.set_page_config(page_title="MannKenSen Analysis App", layout="wide")
+st.set_page_config(page_title="MannKenSen Analysis App", layout="wide", page_icon="📈")
+
+LOGO_URL = "https://raw.githubusercontent.com/LukeAFullard/MannKS/main/assets/logo.png"
 
 def main():
-    st.title("MannKenSen Analysis Tool")
-    st.markdown("""
-    Perform robust non-parametric trend analysis on unequally spaced time series with censored data.
-    """)
+    # Sidebar Logo
+    st.sidebar.image(LOGO_URL, use_container_width=True)
+    st.sidebar.markdown("---")
+
+    col1, col2 = st.columns([1, 5])
+    with col1:
+        st.image(LOGO_URL, width=100)
+    with col2:
+        st.title("MannKenSen Analysis Tool")
+        st.markdown("""
+        Perform robust non-parametric trend analysis on unequally spaced time series with censored data.
+        """)
 
     # Initialize Session State
     if 'data' not in st.session_state:
