@@ -48,7 +48,8 @@ def plot_seasonal_distribution(x, t, period=12, season_type='month', plot_path='
     df = pd.DataFrame({'Value': x, 'Season': seasons})
 
     plt.figure(figsize=(10, 6))
-    sns.boxplot(x='Season', y='Value', data=df)
+    # orient='v' is implied by x/y, but explicit setting helps silence some matplotlib warnings
+    sns.boxplot(x='Season', y='Value', data=df, hue='Season', legend=False, orient='v')
     plt.title('Distribution of Values Across Seasons')
     plt.xlabel('Season')
     plt.ylabel('Value')
