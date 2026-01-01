@@ -96,6 +96,8 @@ Confidence: 98.47%
 - **Data Quality Checks**: Automatic warnings for tied values, long runs, insufficient data
 - **Robust Methods**: ATS estimator for heavily censored data
 - **Flexible Testing**: Kendall's Tau-a or Tau-b, custom significance levels
+- **Block Bootstrap** (New in v0.2.0): Robust trend testing for autocorrelated data with automatic ACF-based block size selection
+
 
 ---
 
