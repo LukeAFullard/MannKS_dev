@@ -91,9 +91,18 @@ def render_settings_ui():
 
         st.markdown("---")
         st.markdown("**Aggregation Settings**")
-        st_agg_method = st.selectbox("Aggregation Method",
-                                     ['none', 'median', 'robust_median', 'middle', 'middle_lwp', 'lwp'],
-                                     key='st_agg_method')
+
+        col3, col4 = st.columns(2)
+        with col3:
+            st_agg_method = st.selectbox("Aggregation Method",
+                                         ['none', 'median', 'robust_median', 'middle', 'middle_lwp', 'lwp'],
+                                         key='st_agg_method')
+        with col4:
+            # Added Aggregation Period for Seasonal Trend Test
+            st_agg_period = st.text_input("Aggregation Period", value="", key='st_agg_period',
+                                          help="Time unit to aggregate by (e.g. 'month') if using an aggregation method.")
+            if st_agg_period.strip() == "":
+                st_agg_period = None
 
         st.markdown("---")
         st.markdown("**Scaling**")
@@ -109,6 +118,7 @@ def render_settings_ui():
             'sens_slope_method': st_sens_method,
             'ci_method': st_ci_method,
             'agg_method': st_agg_method,
+            'agg_period': st_agg_period,
             'slope_scaling': st_slope_scaling,
             'tau_method': 'b' # Defaulting to b for simplicity in UI, could add if needed
         }
