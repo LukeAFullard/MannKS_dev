@@ -360,6 +360,7 @@ def seasonal_trend_test(
 
 
     # --- Bootstrap Logic for Seasonality ---
+    block_size_used = None
     if autocorr_method == 'block_bootstrap':
         # Bootstrap approach:
         # 1. Identify unique cycles (e.g. years)
