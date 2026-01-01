@@ -77,6 +77,8 @@ Each example is a self-contained "chapter" that includes the full Python code, t
     *   **Goal:** Demonstrate how the `alpha` parameter influences the confidence intervals in the trend plot.
 *   [**Example 27: Continuous Confidence vs Classical Testing**](./27_Continuous_Confidence_Comparison/README.md)
     *   **Goal:** Compare the default "Continuous Confidence" approach against traditional binary hypothesis testing to show how it provides more nuanced results for weak trends.
+*   [**Example 28: Residual Diagnostics**](./28_Residual_Diagnostics/README.md)
+    *   **Goal:** Learn how to interpret residual diagnostic plots to check assumptions of linearity and homoscedasticity.
 
 ## Detailed Guides
 
