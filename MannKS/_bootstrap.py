@@ -25,6 +25,34 @@ def optimal_block_size(n, acf):
     return max(block_size, 3)  # Minimum block size of 3
 
 
+def _moving_block_bootstrap_indices(n, block_size):
+    """
+    Generate indices for one moving block bootstrap resample.
+
+    Args:
+        n: Length of data
+        block_size: Block length
+
+    Returns:
+        indices: Array of indices for the bootstrap sample
+    """
+    if block_size >= n:
+        return np.arange(n) # Cannot bootstrap if block size is entire series
+
+    n_blocks = int(np.ceil(n / block_size))
+
+    # Random starting positions for blocks
+    # Max start index is n - block_size
+    starts = np.random.randint(0, n - block_size + 1, size=n_blocks)
+
+    # Build bootstrap sample indices
+    indices = []
+    for start in starts:
+        indices.extend(range(start, start + block_size))
+
+    return np.array(indices[:n])
+
+
 def moving_block_bootstrap(x, block_size):
     """
     Generate one moving block bootstrap resample.
@@ -37,22 +65,13 @@ def moving_block_bootstrap(x, block_size):
         x_boot: Bootstrap resample (same length as x)
     """
     n = len(x)
+    indices = _moving_block_bootstrap_indices(n, block_size)
 
-    if block_size >= n:
-        return x # Cannot bootstrap if block size is entire series
+    # Handle list input
+    if isinstance(x, list):
+        return [x[i] for i in indices]
 
-    n_blocks = int(np.ceil(n / block_size))
-
-    # Random starting positions for blocks
-    # Max start index is n - block_size
-    starts = np.random.randint(0, n - block_size + 1, size=n_blocks)
-
-    # Build bootstrap sample
-    x_boot = []
-    for start in starts:
-        x_boot.extend(x[start:start + block_size])
-
-    return np.array(x_boot[:n])
+    return np.array(x)[indices]
 
 
 def block_bootstrap_mann_kendall(x, t, censored, cen_type,
@@ -108,15 +127,18 @@ def block_bootstrap_mann_kendall(x, t, censored, cen_type,
     s_boot_dist = np.zeros(n_bootstrap)
 
     for b in range(n_bootstrap):
-        # Generate bootstrap sample (preserving time order structure within blocks)
-        # Note: We bootstrap the *detrended* series (residuals), then add back NO trend (H0)
-        # or just test on the bootstrapped detrended series directly since H0 is slope=0.
-        x_boot = moving_block_bootstrap(x_detrended, block_size)
+        # Generate bootstrap indices
+        indices = _moving_block_bootstrap_indices(n, block_size)
+
+        # Apply indices to detrended data AND censoring metadata
+        x_boot = x_detrended[indices]
+        censored_boot = censored[indices]
+        cen_type_boot = cen_type[indices]
 
         # Calculate S for bootstrap sample
         # We use the original time vector t because Mann-Kendall depends on rank(t) vs rank(x)
         s_b, _, _, _ = _mk_score_and_var_censored(
-            x_boot, t, censored, cen_type,
+            x_boot, t, censored_boot, cen_type_boot,
             tau_method=tau_method,
             mk_test_method=mk_test_method
         )
@@ -164,15 +186,20 @@ def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
     residuals = x - slope_obs * t_centered
 
     for b in range(n_bootstrap):
-        # Resample residuals in blocks
-        residuals_boot = moving_block_bootstrap(residuals, block_size)
+        # Generate bootstrap indices
+        indices = _moving_block_bootstrap_indices(n, block_size)
+
+        # Resample residuals AND censoring metadata
+        residuals_boot = residuals[indices]
+        censored_boot = censored[indices]
+        cen_type_boot = cen_type[indices]
 
         # Reconstruct data with the *observed* slope
         x_boot = residuals_boot + slope_obs * t_centered
 
         # Calculate slope for bootstrap sample
-        if np.any(censored):
-            slopes_b = _sens_estimator_censored(x_boot, t, cen_type)
+        if np.any(censored_boot):
+            slopes_b = _sens_estimator_censored(x_boot, t, cen_type_boot)
         else:
             slopes_b = _sens_estimator_unequal_spacing(x_boot, t)
 
