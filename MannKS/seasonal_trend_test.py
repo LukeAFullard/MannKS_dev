@@ -423,14 +423,20 @@ def seasonal_trend_test(
 
         # Moving block bootstrap on CYCLES
         # Treat each cycle as a "point" in the block bootstrap
-        from ._bootstrap import moving_block_bootstrap
+        from ._bootstrap import moving_block_bootstrap, optimal_block_size
+        from ._autocorr import estimate_acf
 
         # Default block size for seasonal is 1 (year/cycle) if 'auto', or user specified
         if block_size == 'auto':
-            # Simple heuristic: 1 or 2 cycles?
-            # Ideally estimate ACF of annual averages?
-            # For now, default to 2 cycles to capture inter-annual dependence
-            blk_len = 2
+            # Estimate ACF of annual (cycle) averages to determine optimal block size
+            # We aggregate by cycle to get a single value per year/cycle
+            # This is a robust way to estimate inter-annual dependence
+            cycle_means = data_filtered.groupby('cycle')['value'].mean()
+            if len(cycle_means) > 2:
+                acf_cycle, _ = estimate_acf(cycle_means.values)
+                blk_len = optimal_block_size(len(cycle_means), acf_cycle)
+            else:
+                blk_len = 2 # Default fallback for very short series
         else:
             blk_len = int(block_size)
 

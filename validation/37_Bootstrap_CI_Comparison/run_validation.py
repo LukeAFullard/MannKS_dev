@@ -13,6 +13,22 @@ def generate_linear_trend_data(n, slope, noise_sd, start_date='2000-01-01'):
     values = trend + noise
     return values, t
 
+def generate_ar1_data(n, slope, noise_sd, phi, start_date='2000-01-01'):
+    """Generates synthetic AR(1) data with a linear trend."""
+    np.random.seed(int(slope*100 + noise_sd*10 + phi*1000))
+    t = pd.date_range(start=start_date, periods=n, freq='ME')
+
+    # Generate AR(1) noise
+    noise = np.zeros(n)
+    epsilon = np.random.normal(0, noise_sd, n)
+    noise[0] = epsilon[0]
+    for i in range(1, n):
+        noise[i] = phi * noise[i-1] + epsilon[i]
+
+    trend = np.arange(n) * slope
+    values = trend + noise
+    return values, t
+
 def generate_seasonal_trend_data(n_years, slope, noise_sd, period=12, start_date='2000-01-01'):
     """Generates synthetic seasonal data."""
     n = n_years * period
@@ -28,8 +44,8 @@ def generate_seasonal_trend_data(n_years, slope, noise_sd, period=12, start_date
     return values, t
 
 def run_comparison():
-    # 1. Non-Seasonal Comparison
-    print("Running Non-Seasonal Bootstrap Comparison...")
+    # 1. Non-Seasonal Comparison (Independent)
+    print("Running Non-Seasonal Bootstrap Comparison (Independent)...")
 
     results = []
 
@@ -54,6 +70,7 @@ def run_comparison():
             results.append({
                 'slope_param': slope,
                 'noise_param': noise,
+                'autocorr_phi': 0.0,
                 'analytic_lower': res_analytic.lower_ci,
                 'analytic_upper': res_analytic.upper_ci,
                 'boot_lower': res_boot.lower_ci,
@@ -66,21 +83,57 @@ def run_comparison():
             if slope == 0.1 and noise == 1.0 and not plot_generated:
                 plt.figure(figsize=(10, 6))
                 plt.plot(t, values, 'o', alpha=0.5, label='Data')
-
-                # Note: intercept calculation handles scaling implicitly if slopes are correct
-                # But here we just plot median-centered line for visualization if available
-                # Or just the label
-
-                # Plot trend line using raw slope (per second) and intercept
                 t_seconds = t.astype(np.int64) / 1e9
                 plt.plot(t, res_analytic.intercept + res_analytic.slope_per_second * t_seconds,
                          'r-', label=f'Analytic Slope (yr): {res_analytic.scaled_slope:.2e}')
 
-                plt.title(f'Comparison: Slope={slope}, Noise={noise}\nAnalytic CI: [{res_analytic.lower_ci:.2e}, {res_analytic.upper_ci:.2e}]\nBootstrap CI: [{res_boot.lower_ci:.2e}, {res_boot.upper_ci:.2e}]')
+                plt.title(f'Comparison: Slope={slope}, Noise={noise}, Phi=0.0\nAnalytic CI: [{res_analytic.lower_ci:.2e}, {res_analytic.upper_ci:.2e}]\nBootstrap CI: [{res_boot.lower_ci:.2e}, {res_boot.upper_ci:.2e}]')
                 plt.legend()
                 plt.savefig('validation/37_Bootstrap_CI_Comparison/non_seasonal_example.png')
                 plt.close()
                 plot_generated = True
+
+    # 1b. Non-Seasonal Comparison (Autocorrelated AR(1))
+    print("Running Non-Seasonal Bootstrap Comparison (AR(1))...")
+
+    phis = [0.5, 0.8]
+    plot_generated_ar = False
+
+    for phi in phis:
+        for slope in [0.1]: # Focus on one slope
+             for noise in [1.0]: # Focus on one noise level
+                values, t = generate_ar1_data(n_samples, slope, noise, phi)
+
+                # Analytic Run
+                res_analytic = trend_test(values, t, ci_method='direct', autocorr_method='none', slope_scaling='year')
+
+                # Bootstrap Run
+                res_boot = trend_test(values, t, autocorr_method='block_bootstrap', n_bootstrap=100, slope_scaling='year')
+
+                results.append({
+                    'slope_param': slope,
+                    'noise_param': noise,
+                    'autocorr_phi': phi,
+                    'analytic_lower': res_analytic.lower_ci,
+                    'analytic_upper': res_analytic.upper_ci,
+                    'boot_lower': res_boot.lower_ci,
+                    'boot_upper': res_boot.upper_ci,
+                    'analytic_width': res_analytic.upper_ci - res_analytic.lower_ci,
+                    'boot_width': res_boot.upper_ci - res_boot.lower_ci
+                })
+
+                if phi == 0.8 and not plot_generated_ar:
+                    plt.figure(figsize=(10, 6))
+                    plt.plot(t, values, 'o', alpha=0.5, label='Data (AR(1))')
+                    t_seconds = t.astype(np.int64) / 1e9
+                    plt.plot(t, res_analytic.intercept + res_analytic.slope_per_second * t_seconds,
+                             'r-', label=f'Analytic Slope (yr): {res_analytic.scaled_slope:.2e}')
+
+                    plt.title(f'Comparison: Slope={slope}, Noise={noise}, Phi={phi}\nAnalytic CI: [{res_analytic.lower_ci:.2e}, {res_analytic.upper_ci:.2e}]\nBootstrap CI: [{res_boot.lower_ci:.2e}, {res_boot.upper_ci:.2e}]')
+                    plt.legend()
+                    plt.savefig('validation/37_Bootstrap_CI_Comparison/non_seasonal_ar1_example.png')
+                    plt.close()
+                    plot_generated_ar = True
 
     df_results = pd.DataFrame(results)
     df_results.to_csv('validation/37_Bootstrap_CI_Comparison/non_seasonal_results.csv', index=False)
@@ -141,15 +194,20 @@ This validation case compares the confidence intervals (CIs) generated by the st
 
 **Objective:** Verify that bootstrap CIs are reasonable and consistent with analytic CIs for independent data, while providing a robust alternative.
 
-## 1. Non-Seasonal Trend Test
+## 1. Non-Seasonal Trend Test (Independent Data)
 
-**Example Plot (Slope=0.1, Noise=1.0):**
+**Example Plot (Slope=0.1, Noise=1.0, Phi=0.0):**
 ![Non-Seasonal Example](non_seasonal_example.png)
 
-**Results Summary (First 5 rows):**
-{df_results.head().to_markdown()}
+## 2. Non-Seasonal Trend Test (AR(1) Autocorrelated Data)
 
-## 2. Seasonal Trend Test
+**Example Plot (Slope=0.1, Noise=1.0, Phi=0.8):**
+![Non-Seasonal AR(1) Example](non_seasonal_ar1_example.png)
+
+**Results Summary (First 10 rows):**
+{df_results.head(10).to_markdown()}
+
+## 3. Seasonal Trend Test
 
 **Example Plot (Slope=0.1, Noise=1.0):**
 ![Seasonal Example](seasonal_example.png)
@@ -158,7 +216,7 @@ This validation case compares the confidence intervals (CIs) generated by the st
 {df_seasonal.head().to_markdown()}
 
 ## Conclusion
-The comparison demonstrates the behavior of bootstrap vs analytic confidence intervals across various slope and noise conditions.
+The comparison demonstrates the behavior of bootstrap vs analytic confidence intervals across various slope, noise, and autocorrelation conditions.
 """
     with open('validation/37_Bootstrap_CI_Comparison/README.md', 'w') as f:
         f.write(readme_content)
