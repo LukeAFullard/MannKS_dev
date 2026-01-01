@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/logo.png" alt="MannKS Logo" width="600"/>
+  <img src="https://raw.githubusercontent.com/LukeAFullard/MannKS/main/assets/logo.png" alt="MannKS Logo" width="600"/>
 
   # MannKS
   ### (Mann-Kendall Sen)
@@ -71,7 +71,7 @@ Slope: 24.57 mg/L per year
 Confidence: 98.47%
 ```
 
-![Trend Analysis Plot](assets/quick_start_trend.png)
+![Trend Analysis Plot](https://raw.githubusercontent.com/LukeAFullard/MannKS/main/assets/quick_start_trend.png)
 
 ---
 
