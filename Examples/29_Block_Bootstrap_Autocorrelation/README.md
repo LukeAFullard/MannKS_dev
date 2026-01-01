@@ -204,7 +204,7 @@ Block Size Used: 2 (cycles)
 
 ### Standard (Naive) Test
 ![Standard Plot](plot_std.png)
-*Notice how the red trend line might look convincing, but the data points are clustered above/below the line for long periods? That's autocorrelation.*
+*Notice how the trend line might look convincing, but the data points are clustered above/below the line for long periods? That's autocorrelation.*
 
 ### Bootstrap (Robust) Test
 ![Bootstrap Plot](plot_boot.png)
