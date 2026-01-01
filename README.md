@@ -12,8 +12,7 @@
 ## 📦 Installation
 
 ```bash
-pip install -r requirements.txt
-pip install -e .
+pip install mannks
 ```
 
 **Requirements:** Python 3.7+, NumPy, Pandas, SciPy, Matplotlib
