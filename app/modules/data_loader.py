@@ -23,15 +23,26 @@ def process_input_data(df, value_col, time_col, censored_col=None, censored_flag
     """
     try:
         # 1. Handle Time
-        # Try to convert to datetime first
-        try:
-            if date_format:
-                t_original = pd.to_datetime(df[time_col], format=date_format)
-            else:
-                t_original = pd.to_datetime(df[time_col])
-        except Exception:
-            # If numeric, keep as is
-            t_original = df[time_col]
+        raw_time = df[time_col]
+        t_original = None
+
+        # Logic: If data is numeric and no format specified, PREFER numeric (preserve 2020 as 2020, not 1970).
+        is_numeric = pd.api.types.is_numeric_dtype(raw_time)
+
+        if is_numeric and not date_format:
+            # Check if it *looks* like it should be datetime (e.g. string numbers? No, is_numeric checks actual type)
+            # If user didn't specify format, assume they want the numbers (Year, Day index, etc.)
+            t_original = raw_time
+        else:
+            # Try to convert to datetime
+            try:
+                if date_format:
+                    t_original = pd.to_datetime(raw_time, format=date_format)
+                else:
+                    t_original = pd.to_datetime(raw_time)
+            except Exception:
+                # Fallback to original if parsing fails
+                t_original = raw_time
 
         # 2. Handle Values and Censoring
         if censored_col:

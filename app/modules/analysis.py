@@ -51,38 +51,29 @@ def run_analysis(data_df, test_type, settings):
 
     try:
         if test_type == "Trend Test":
-            plot_filename = create_temp_plot_file()
+            # Use BytesIO for in-memory plotting
+            plot_buffer = BytesIO()
 
             # Run Test
             params = settings.copy()
-            test_res = trend_test(x_input, t_input, plot_path=plot_filename, **params)
+            test_res = trend_test(x_input, t_input, plot_path=plot_buffer, **params)
 
             results['output'] = test_res
-            results['plot_path'] = plot_filename
+            # We don't store a path anymore, but we can store a fake name if needed by something else
+            results['plot_path'] = "memory.png"
+            results['plot_bytes'] = plot_buffer.getvalue()
 
-            # Read plot back into memory
-            if os.path.exists(plot_filename):
-                with open(plot_filename, "rb") as f:
-                    results['plot_bytes'] = f.read()
-                os.remove(plot_filename)
-            else:
-                results['plot_bytes'] = None
 
         elif test_type == "Seasonal Trend Test":
-            plot_filename = create_temp_plot_file()
+            plot_buffer = BytesIO()
 
             params = settings.copy()
-            test_res = seasonal_trend_test(x_input, t_input, plot_path=plot_filename, **params)
+            test_res = seasonal_trend_test(x_input, t_input, plot_path=plot_buffer, **params)
 
             results['output'] = test_res
-            results['plot_path'] = plot_filename
+            results['plot_path'] = "memory.png"
+            results['plot_bytes'] = plot_buffer.getvalue()
 
-            if os.path.exists(plot_filename):
-                with open(plot_filename, "rb") as f:
-                    results['plot_bytes'] = f.read()
-                os.remove(plot_filename)
-            else:
-                results['plot_bytes'] = None
 
         elif test_type == "Seasonality Check":
             params = settings.copy()
@@ -90,7 +81,7 @@ def run_analysis(data_df, test_type, settings):
             results['output'] = test_res
 
             # Generate Plot manually
-            plot_filename = create_temp_plot_file()
+            plot_buffer = BytesIO()
 
             # plot_seasonal_distribution does not support agg_method or agg_period
             # We must pass only the supported arguments.
@@ -101,15 +92,10 @@ def run_analysis(data_df, test_type, settings):
                 t_input,
                 period=params.get('period', 12),
                 season_type=params.get('season_type', 'month'),
-                plot_path=plot_filename
+                plot_path=plot_buffer
             )
 
-            if os.path.exists(plot_filename):
-                with open(plot_filename, "rb") as f:
-                    results['plot_bytes'] = f.read()
-                os.remove(plot_filename)
-            else:
-                results['plot_bytes'] = None
+            results['plot_bytes'] = plot_buffer.getvalue()
 
     except Exception as e:
         results['error'] = str(e)
