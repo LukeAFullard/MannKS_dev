@@ -411,6 +411,9 @@ def trend_test(
         z = norm.ppf(1 - p_safe/2) * np.sign(s)
         h = p < alpha
 
+        # Use empirical variance from bootstrap distribution
+        var_s = np.var(s_boot_dist, ddof=1)
+
         # Determine trend direction string
         if continuous_confidence:
             if z < 0: trend = 'decreasing'
@@ -419,8 +422,6 @@ def trend_test(
         else:
             if not h: trend = 'no trend'
             else: trend = 'decreasing' if z < 0 else 'increasing'
-
-        # We don't recalculate var_s, but note it might be biased
 
     elif autocorr_method == 'yue_wang':
         # Simpler correction: adjust variance by effective sample size

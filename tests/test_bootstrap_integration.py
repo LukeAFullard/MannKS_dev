@@ -92,3 +92,82 @@ def test_seasonal_trend_test_integration_bootstrap():
     assert result.h
     # p-value should be valid
     assert 0 <= result.p <= 1
+
+import numpy as np
+import pytest
+from MannKS.trend_test import trend_test
+from MannKS.seasonal_trend_test import seasonal_trend_test
+import pandas as pd
+
+def test_variance_reporting_bootstrap_trend_test():
+    """
+    Test that var_s is calculated from the bootstrap distribution
+    when autocorr_method='block_bootstrap' in trend_test.
+    """
+    # Create data with autocorrelation
+    np.random.seed(42)
+    n = 100
+    t = np.arange(n)
+    # AR(1) process
+    x = np.zeros(n)
+    for i in range(1, n):
+        x[i] = 0.7 * x[i-1] + np.random.normal(0, 1)
+
+    # Run with bootstrap
+    res_boot = trend_test(x, t, autocorr_method='block_bootstrap', n_bootstrap=200)
+
+    # Run without bootstrap
+    res_std = trend_test(x, t, autocorr_method='none')
+
+    # Variances should be different (bootstrap variance accounts for autocorrelation)
+    # Typically, positive autocorrelation increases variance of S
+    assert res_boot.var_s != res_std.var_s
+
+    # Check that res_boot.var_s is close to variance of a bootstrap distribution
+    # We can't access the internal s_boot_dist easily here without modifying the return type
+    # but we can check if it's plausible.
+    # The analytic variance is for independent data.
+    # For AR(1) with rho=0.7, variance should be inflated by (1+rho)/(1-rho) approx?
+    # Actually, MK variance inflation is complex.
+    # But we know they shouldn't be equal.
+
+    print(f"Standard Var(S): {res_std.var_s}")
+    print(f"Bootstrap Var(S): {res_boot.var_s}")
+
+    # Ensure it's not NaN (unless something went wrong)
+    assert not np.isnan(res_boot.var_s)
+
+
+def test_variance_reporting_bootstrap_seasonal_trend_test():
+    """
+    Test that var_s is calculated from the bootstrap distribution
+    when autocorr_method='block_bootstrap' in seasonal_trend_test.
+    """
+    np.random.seed(42)
+    n_years = 20
+    t = np.arange(n_years * 12)
+    # Seasonal data with inter-annual autocorrelation
+    x = np.zeros(len(t))
+    seasonality = np.tile(np.sin(np.linspace(0, 2*np.pi, 12)), n_years)
+
+    # AR(1) across years
+    cycle_effect = np.zeros(n_years)
+    for i in range(1, n_years):
+        cycle_effect[i] = 0.8 * cycle_effect[i-1] + np.random.normal(0, 1)
+
+    cycle_effect_expanded = np.repeat(cycle_effect, 12)
+    x = seasonality + cycle_effect_expanded + np.random.normal(0, 0.5, len(t))
+
+    # Run with bootstrap
+    # Note: block_size='auto' or 1 for years
+    res_boot = seasonal_trend_test(x, t, period=12, autocorr_method='block_bootstrap', n_bootstrap=100)
+
+    # Run without bootstrap
+    res_std = seasonal_trend_test(x, t, period=12, autocorr_method='none')
+
+    assert res_boot.var_s != res_std.var_s
+
+    print(f"Standard Seasonal Var(S): {res_std.var_s}")
+    print(f"Bootstrap Seasonal Var(S): {res_boot.var_s}")
+
+    assert not np.isnan(res_boot.var_s)
