@@ -3,11 +3,7 @@ from ._stats import _mk_score_and_var_censored, _sens_estimator_unequal_spacing,
 
 def optimal_block_size(n, acf):
     """
-    Calculate optimal block size using a correlation-length heuristic.
-
-    This function estimates the optimal block length for the moving block bootstrap
-    by identifying the "correlation length" of the data (the lag at which
-    autocorrelation becomes negligible).
+    Calculate optimal block size using Politis & White (2004) method.
 
     Args:
         n: Sample size
@@ -116,6 +112,12 @@ def block_bootstrap_mann_kendall(x, t, censored, cen_type,
         mk_test_method=mk_test_method
     )
 
+    # Determine block size
+    if block_size == 'auto':
+        from ._autocorr import estimate_acf
+        acf, _ = estimate_acf(x)
+        block_size = optimal_block_size(n, acf)
+
     # Detrend data under H0 (no trend)
     # We remove the global trend to test the null hypothesis of no trend
     # while preserving the autocorrelation structure.
@@ -132,14 +134,6 @@ def block_bootstrap_mann_kendall(x, t, censored, cen_type,
     # Note: t might be large timestamps, so centering t is good practice
     t_centered = t - np.median(t)
     x_detrended = x - median_slope * t_centered
-
-    # Determine block size
-    # We estimate block size from the RESIDUALS (detrended data) because
-    # the trend itself acts like infinite memory and would inflate the block size.
-    if block_size == 'auto':
-        from ._autocorr import estimate_acf
-        acf, _ = estimate_acf(x_detrended)
-        block_size = optimal_block_size(n, acf)
 
     # Bootstrap distribution
     s_boot_dist = np.zeros(n_bootstrap)
@@ -201,13 +195,9 @@ def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
         slope_obs = 0.0
 
     # Determine block size
-    # Even for pairs bootstrap, we want the block size to reflect the
-    # correlation of the random error component, not the trend.
     if block_size == 'auto':
         from ._autocorr import estimate_acf
-        t_centered = t - np.median(t)
-        residuals = x - slope_obs * t_centered
-        acf, _ = estimate_acf(residuals)
+        acf, _ = estimate_acf(x)
         block_size = optimal_block_size(n, acf)
 
     # Bootstrap distribution
