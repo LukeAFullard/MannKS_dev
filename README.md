@@ -32,9 +32,9 @@ Use this package when your data has:
 - **No normal distribution** (non-parametric methods don't require it)
 - **Small to moderate sample sizes** (n < 5,000 recommended)
 
-**Don't use** for highly autocorrelated data (test first) or if you need n > 46,340 observations.
+**Don't use** if you need n > 46,340 observations.
 
-**NEW IN V0.2.0**: The `trend_test` and `seasonal_trend_test` functions now support a **Block Bootstrap** method (`bootstrap_method='block'`). This feature provides robust trend testing for data with serial correlation (autocorrelation) by resampling blocks of data rather than individual points, preserving the internal dependency structure. See [Examples/29_Block_Bootstrap_Autocorrelation](./Examples/29_Block_Bootstrap_Autocorrelation/README.md) for a detailed guide.
+**NEW IN V0.2.0**: The `trend_test` and `seasonal_trend_test` functions now support a **Block Bootstrap** method (`bootstrap_method='block'`). This feature provides robust trend testing for data with serial correlation (autocorrelation) by resampling blocks of data rather than individual points, preserving the internal dependency structure. See [Statistical Methodology: Bootstrap](./bootstrap.md) for a detailed explanation of the methodology (Detrended Residual Block Bootstrap for P-values, Pairs Block Bootstrap for Confidence Intervals).
 
 ---
 
@@ -98,7 +98,7 @@ Confidence: 98.47%
 - **Data Quality Checks**: Automatic warnings for tied values, long runs, insufficient data
 - **Robust Methods**: ATS estimator for heavily censored data
 - **Flexible Testing**: Kendall's Tau-a or Tau-b, custom significance levels
-- **Block Bootstrap** (New in v0.2.0): Robust trend testing for autocorrelated data with automatic ACF-based block size selection
+- **Block Bootstrap** (New in v0.2.0): Robust trend testing for autocorrelated data with automatic ACF-based block size selection. See [bootstrap.md](./bootstrap.md) for details.
 
 
 ---
@@ -173,6 +173,7 @@ print(f"Regional trend: {regional.DT}, confidence: {regional.CT:.2%}")
 - **[Regional Tests](./Examples/Detailed_Guides/regional_test_guide/README.md)** - Multi-site aggregation
 - **[Analysis Notes](./Examples/Detailed_Guides/analysis_notes_guide.md)** - Interpreting data quality warnings
 - **[Trend Classification](./Examples/Detailed_Guides/trend_classification_guide.md)** - Understanding confidence levels
+- **[Bootstrap Methodology](./bootstrap.md)** - Block bootstrap for autocorrelated data
 
 ### Examples
 The [Examples](./Examples/README.md) folder contains step-by-step tutorials from basic to advanced usage.

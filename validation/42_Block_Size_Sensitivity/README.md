@@ -13,12 +13,12 @@ The table below shows the Rejection Rate and Average Confidence Interval Width f
 
 | Block Size   |   Rejection Rate |   Avg CI Width |
 |:-------------|-----------------:|---------------:|
-| 2            |             0.3  |         0.0205 |
-| 5            |             0.2  |         0.0299 |
-| 10           |             0.14 |         0.0314 |
-| 20           |             0.16 |         0.0306 |
-| 30           |             0.22 |         0.0281 |
-| auto         |             0.08 |         0.0323 |
+| 2            |             0.3  |         0.0247 |
+| 5            |             0.2  |         0.0375 |
+| 10           |             0.14 |         0.0473 |
+| 20           |             0.16 |         0.0739 |
+| 30           |             0.22 |         0.0812 |
+| auto         |             0.08 |         0.0484 |
 
 ## Sensitivity Plot
 ![Block Size Sensitivity](block_size_sensitivity.png)
