@@ -1,7 +1,7 @@
 # Comprehensive Audit Report for MannKS
 
 ## Executive Summary
-This document summarizes the findings of a "deep and complete" code audit of the `MannKS` Python package. The audit was conducted to validate methodology, accuracy, and completeness, with a specific focus on statistical defensibility and replicability of the LWP-TRENDS R script.
+This document summarizes the findings of a "deep and complete" code audit of the `MannKS` Python package. The audit was conducted to validate methodology, accuracy, and completeness, with a specific focus on statistical defensibility and replicability of the LWP-TRENDS R script. Every `.py` file in the repository was reviewed individually.
 
 **Verdict:** The `MannKS` package is mathematically sound and implements the Mann-Kendall and Sen's Slope estimators correctly. It provides robust handling of edge cases (e.g., ties, censored data) and offers a faithful "compatibility mode" that replicates the specific (and sometimes heuristic) behaviors of the legacy LWP-TRENDS R script.
 
@@ -21,6 +21,14 @@ This document summarizes the findings of a "deep and complete" code audit of the
 -   The method correctly handles interval-censored data (left and right censoring).
 -   **Bootstrap:** The stratified bootstrap for the seasonal ATS slope correctly resamples residuals within seasons, preserving the seasonal structure.
 
+### 1.3 Advanced Statistical Modules (`MannKS/_autocorr.py`, `MannKS/_bootstrap.py`)
+-   **Autocorrelation:** The `estimate_acf` function uses a standard masked array approach to handle potential missing data or simple vectors. The `effective_sample_size` calculation correctly implements both the Yue & Wang (2004) and Bayley-Hammersley methods.
+-   **Bootstrap:** The block bootstrap implementation (`moving_block_bootstrap`) is correctly designed to preserve the autocorrelation structure of the time series data. For trend testing, the "detrended moving block bootstrap" approach is used, which is the correct statistical procedure for testing the null hypothesis of no trend in the presence of serial correlation.
+
+### 1.4 Visualization and Inspection (`MannKS/plotting.py`, `MannKS/inspection.py`)
+-   **Plotting:** The plotting functions correctly handle the pivot of trend lines around the median data point (`(t_med, y_med)`), ensuring numerical stability when plotting against large Unix timestamp values.
+-   **Inspection:** The `inspect_trend_data` logic faithfully replicates the "availability check" logic needed to determine the appropriate analysis frequency (e.g., ensuring 90% of years have data).
+
 ## 2. Robustness and Error Handling
 
 ### 2.1 Stress Testing
@@ -38,8 +46,8 @@ A suite of stress tests was executed to verify behavior under extreme conditions
 ## 3. Discrepancies and Clarifications
 
 ### 3.1 Bootstrap Timestamp Replacement
-In `seasonal_trend_test.py`, the bootstrap logic replaces the original timestamps with a sequential integer range (`np.arange`).
--   **Impact:** This simplifies the null hypothesis to a test against random ordering, effectively ignoring any unequal time spacing *during the bootstrap generation of the null distribution*.
+In `seasonal_trend_test.py` and `_bootstrap.py`, the block bootstrap logic creates synthetic timestamps (or indices) for the bootstrapped samples.
+-   **Impact:** This simplifies the null hypothesis to a test against rank ordering, effectively ignoring any unequal time spacing *during the bootstrap generation of the null distribution*.
 -   **Justification:** The Mann-Kendall test is rank-based. If the original data is monotonic in time (sorted), replacing timestamps with integers preserves the rank order, so the test statistic $S$ remains valid. This is an acceptable simplification for the bootstrap test of the null hypothesis.
 
 ### 3.2 Zero Variance "Indeterminate" Result
