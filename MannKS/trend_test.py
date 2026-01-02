@@ -516,7 +516,9 @@ def trend_test(
              from ._bootstrap import block_bootstrap_confidence_intervals
              _, lower_ci, upper_ci, _ = block_bootstrap_confidence_intervals(
                 x_filtered, t_filtered, censored_filtered, cen_type_filtered,
-                block_size=block_size_used, n_bootstrap=n_bootstrap, alpha=alpha
+                block_size=block_size_used, n_bootstrap=n_bootstrap, alpha=alpha,
+                sens_slope_method=sens_slope_method,
+                lt_mult=lt_mult, gt_mult=gt_mult
              )
              # Note: sen_probability logic remains standard approx or needs bootstrap update (omitted for now)
              sen_prob, sen_prob_max, sen_prob_min = _sen_probability(slopes, var_s_ci) # Approximation
