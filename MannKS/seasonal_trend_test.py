@@ -410,7 +410,7 @@ def seasonal_trend_test(
                 if np.any(season_subset['censored']):
                      slopes = _sens_estimator_censored(
                         season_subset['value'].values, season_subset['t'].values, season_subset['cen_type'].values,
-                        method='nan'
+                        method=sens_slope_method, lt_mult=lt_mult, gt_mult=gt_mult
                      )
                 else:
                      slopes = _sens_estimator_unequal_spacing(season_subset['value'].values, season_subset['t'].values)

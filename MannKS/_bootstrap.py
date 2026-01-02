@@ -18,7 +18,8 @@ def optimal_block_size(n, acf):
     """
     # Simple heuristic: block size should be roughly the correlation length
     # Correlation length: first lag where ACF < 0.1
-    corr_length = 1
+    # If correlation never drops (strong long-range dependence), use the max lag checked.
+    corr_length = len(acf)
     for i in range(1, len(acf)):
         if np.abs(acf[i]) < 0.1:
             corr_length = i
@@ -171,7 +172,8 @@ def block_bootstrap_mann_kendall(x, t, censored, cen_type,
 
 def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
                                         block_size='auto', n_bootstrap=1000,
-                                        alpha=0.05):
+                                        alpha=0.05,
+                                        **kwargs):
     """
     Bootstrap confidence intervals for Sen's slope with autocorrelated data.
 
@@ -184,6 +186,10 @@ def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
     This method is preferred over residual bootstrap for censored data because
     it avoids the bias introduced by 'reconstructing' censored values from residuals.
 
+    Args:
+        **kwargs: Additional arguments passed to _sens_estimator_censored
+                  (e.g., method, lt_mult, gt_mult).
+
     Returns:
         slope: Sen's slope
         lower_ci, upper_ci: Bootstrap confidence intervals
@@ -193,7 +199,7 @@ def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
 
     # Calculate observed slope
     if np.any(censored):
-        slopes = _sens_estimator_censored(x, t, cen_type)
+        slopes = _sens_estimator_censored(x, t, cen_type, **kwargs)
     else:
         slopes = _sens_estimator_unequal_spacing(x, t)
     slope_obs = np.nanmedian(slopes)
@@ -234,7 +240,7 @@ def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
 
         # Calculate slope for bootstrap sample
         if np.any(censored_boot):
-            slopes_b = _sens_estimator_censored(x_boot, t_boot, cen_type_boot)
+            slopes_b = _sens_estimator_censored(x_boot, t_boot, cen_type_boot, **kwargs)
         else:
             slopes_b = _sens_estimator_unequal_spacing(x_boot, t_boot)
 
