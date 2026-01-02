@@ -2,7 +2,7 @@
 
 The `MannKS` package implements block bootstrap methods to robustly handle serial correlation (autocorrelation) in time series data. Standard Mann-Kendall tests assume independence; when this assumption is violated, the Type I error rate (false positive rate) can be significantly inflated.
 
-We use two distinct bootstrap strategies for the two main goals of trend analysis: Hypothesis Testing (P-value) and Estimation (Confidence Intervals).
+We use two distinct bootstrap strategies for the two main goals of trend analysis: Hypothesis Testing (P-value) and Estimation (Confidence Intervals). This combination is statistically rigorous as it addresses the specific requirements of each statistical inference task.
 
 ## 1. Hypothesis Testing: Detrended Residual Block Bootstrap
 

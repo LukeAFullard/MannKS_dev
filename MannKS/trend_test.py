@@ -156,6 +156,9 @@ def trend_test(
                       block bootstrap if detected.
             - 'block_bootstrap': Use moving block bootstrap to estimate p-value
                                  and confidence intervals.
+                                 P-values use residual bootstrap (tests H0: no trend).
+                                 CIs use pairs bootstrap (preserves trend structure).
+                                 This combination is statistically rigorous.
             - 'yue_wang': Use Yue & Wang (2004) effective sample size correction
                           for variance.
         block_size (Union[str, int]): Block size for bootstrap. 'auto' calculates
