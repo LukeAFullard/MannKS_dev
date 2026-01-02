@@ -535,10 +535,12 @@ def seasonal_trend_test(
         z = norm.ppf(1 - p_safe/2) * np.sign(s)
         h = p < alpha
 
-        # Var_s is not easily bootstrapped for seasonal, keep analytic or set to NaN?
-        # We need var_s for downstream confidence intervals if not bootstrapping slopes.
-        # Let's calculate the analytic var_s for reference.
-        s_analytic, var_s, denom = 0, 0, 0
+        # Use empirical variance from bootstrap distribution
+        var_s = np.var(s_boot_dist, ddof=1)
+
+        # For reference (and for Tau calc), we still need the analytic components
+        # although var_s will be overwritten by the bootstrap estimate above.
+        s_analytic, var_s_analytic, denom = 0, 0, 0
         tau_weighted_sum = 0
         denom_sum = 0
         for i in season_range:
@@ -550,7 +552,7 @@ def seasonal_trend_test(
                     season_data['value'], season_data['t'], season_data['censored'],
                     season_data['cen_type'], tau_method=tau_method, mk_test_method=mk_test_method
                 )
-                var_s += var_s_season
+                var_s_analytic += var_s_season
                 if d_season > 0:
                     tau_weighted_sum += tau_season * d_season
                     denom_sum += d_season
