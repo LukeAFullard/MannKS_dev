@@ -80,6 +80,18 @@ def block_bootstrap_mann_kendall(x, t, censored, cen_type,
     """
     Block bootstrap Mann-Kendall test for autocorrelated data.
 
+    Uses a Detrended Moving Block Bootstrap approach:
+    1. Estimate and remove the trend (Sen's slope) to obtain residuals.
+    2. Resample residuals in blocks to preserve autocorrelation structure under H0.
+    3. Calculate Mann-Kendall statistics on the bootstrapped residuals.
+
+    Note for Censored Data:
+    Detrending censored data is heuristic (using the numeric value of the limit).
+    While this preserves the 'null' behavior for the test statistic,
+    the absolute values of the detrended series may effectively have randomized
+    censoring limits. This is generally acceptable for the rank-based Mann-Kendall
+    test which tests monotonic trend, but users should be aware of this approximation.
+
     Args:
         x, t, censored, cen_type: Standard inputs
         block_size: 'auto' or integer
@@ -157,6 +169,15 @@ def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
     """
     Bootstrap confidence intervals for Sen's slope with autocorrelated data.
 
+    Uses a 'Pairs Block Bootstrap' approach:
+    1. Resamples blocks of (x, t) pairs to preserve both autocorrelation and
+       the trend-time relationship.
+    2. Calculates Sen's slope for each bootstrapped sample.
+    3. Determines CI from the percentile distribution of slopes.
+
+    This method is preferred over residual bootstrap for censored data because
+    it avoids the bias introduced by 'reconstructing' censored values from residuals.
+
     Returns:
         slope: Sen's slope
         lower_ci, upper_ci: Bootstrap confidence intervals
@@ -182,26 +203,21 @@ def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
     # Bootstrap distribution
     boot_slopes = np.zeros(n_bootstrap)
 
-    t_centered = t - np.median(t)
-    residuals = x - slope_obs * t_centered
-
     for b in range(n_bootstrap):
         # Generate bootstrap indices
         indices = _moving_block_bootstrap_indices(n, block_size)
 
-        # Resample residuals AND censoring metadata
-        residuals_boot = residuals[indices]
+        # Resample PAIRS (x, t) to preserve dependence structure and trend
+        x_boot = x[indices]
+        t_boot = t[indices]
         censored_boot = censored[indices]
         cen_type_boot = cen_type[indices]
 
-        # Reconstruct data with the *observed* slope
-        x_boot = residuals_boot + slope_obs * t_centered
-
         # Calculate slope for bootstrap sample
         if np.any(censored_boot):
-            slopes_b = _sens_estimator_censored(x_boot, t, cen_type_boot)
+            slopes_b = _sens_estimator_censored(x_boot, t_boot, cen_type_boot)
         else:
-            slopes_b = _sens_estimator_unequal_spacing(x_boot, t)
+            slopes_b = _sens_estimator_unequal_spacing(x_boot, t_boot)
 
         boot_slope = np.nanmedian(slopes_b)
         boot_slopes[b] = boot_slope
