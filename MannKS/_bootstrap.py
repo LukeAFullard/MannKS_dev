@@ -48,6 +48,9 @@ def _moving_block_bootstrap_indices(n, block_size):
     Returns:
         indices: Array of indices for the bootstrap sample
     """
+    if block_size < 1:
+        raise ValueError(f"Block size must be at least 1. Got {block_size}.")
+
     if block_size >= n:
         return np.arange(n) # Cannot bootstrap if block size is entire series
 

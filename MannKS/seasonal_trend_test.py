@@ -141,9 +141,13 @@ def seasonal_trend_test(
             - 'block_bootstrap': Use moving block bootstrap to estimate p-value.
                                  Note: For seasonal test, this bootstraps whole cycles (e.g. years)
                                  to preserve seasonality.
+                                 P-values use residual bootstrap (tests H0: no trend).
+                                 CIs use pairs bootstrap (preserves trend structure).
+                                 This combination is statistically rigorous.
         block_size (Union[str, int]): Block size for bootstrap. For seasonal test, this
                                       represents number of CYCLES (e.g. years) per block.
-                                      Default 'auto' uses 1 cycle.
+                                      Default 'auto' estimates optimal number of cycles per block.
+                                      block_size=1 means blocks of 1 complete cycle (e.g., 1 year).
         n_bootstrap (int): Number of bootstrap resamples (default 1000).
 
     Output:
