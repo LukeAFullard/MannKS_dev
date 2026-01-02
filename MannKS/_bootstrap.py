@@ -213,6 +213,15 @@ def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
         censored_boot = censored[indices]
         cen_type_boot = cen_type[indices]
 
+        # Critical Fix: Sort by time for correct censored slope calculation.
+        # The pairwise logic in _sens_estimator_censored assumes j > i implies later > earlier.
+        # Pairs bootstrap can produce unsorted time vectors.
+        sort_idx = np.argsort(t_boot)
+        x_boot = x_boot[sort_idx]
+        t_boot = t_boot[sort_idx]
+        censored_boot = censored_boot[sort_idx]
+        cen_type_boot = cen_type_boot[sort_idx]
+
         # Calculate slope for bootstrap sample
         if np.any(censored_boot):
             slopes_b = _sens_estimator_censored(x_boot, t_boot, cen_type_boot)
