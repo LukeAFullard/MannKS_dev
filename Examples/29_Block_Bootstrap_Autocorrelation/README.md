@@ -165,17 +165,17 @@ Trend: increasing
 p-value: 0.1550
 Significant? False
 Slope: 0.2300 units per year
-Confidence Interval (95%): [-0.0435, 0.4813]
+Confidence Interval (95%): [-0.0598, 0.8128]
 Autocorrelation (ACF1): 0.809
 Block Size Used: 10
 
 --- Test 4: Seasonal Block Bootstrap ---
 Seasonal Trend: increasing
-p-value: 0.5010
+p-value: 0.4400
 Significant? False
 Slope: 0.0267 units per year
-Confidence Interval (95%): [-0.0079, 0.0605]
-Block Size Used: 2 (cycles)
+Confidence Interval (95%): [-0.0339, 0.0828]
+Block Size Used: 3 (cycles)
 
 ```
 
@@ -204,7 +204,7 @@ Block Size Used: 2 (cycles)
 
 ### Standard (Naive) Test
 ![Standard Plot](plot_std.png)
-*Notice how the trend line might look convincing, but the data points are clustered above/below the line for long periods? That's autocorrelation.*
+*Notice how the red trend line might look convincing, but the data points are clustered above/below the line for long periods? That's autocorrelation.*
 
 ### Bootstrap (Robust) Test
 ![Bootstrap Plot](plot_boot.png)
