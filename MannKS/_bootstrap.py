@@ -20,10 +20,17 @@ def optimal_block_size(n, acf):
     # Correlation length: first lag where ACF < 0.1
     # If correlation never drops (strong long-range dependence), use the max lag checked.
     corr_length = len(acf)
+    found = False
     for i in range(1, len(acf)):
         if np.abs(acf[i]) < 0.1:
             corr_length = i
+            found = True
             break
+
+    if not found:
+        # If autocorrelation never drops, use a larger block size (e.g. sqrt(n))
+        # to capture long-range dependence.
+        corr_length = int(np.sqrt(n))
 
     # Use 2 * correlation length, bounded by sqrt(n)
     block_size = min(2 * corr_length, int(np.sqrt(n)))
