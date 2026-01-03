@@ -31,7 +31,8 @@ def rolling_trend_test(
                 - For datetime t: string (e.g., '10Y', '5Y', '365D') or Timedelta-compatible string
                 - For numeric t: integer or float (e.g., 10, 5.5)
         step: Step size for sliding the window.
-              - For datetime t: string (e.g., '1Y', '6M'). Default is window/2.
+              - For datetime t: string (e.g., '1Y', '6M'). Default is window/2 for Timedeltas,
+                but defaults to the full window size (non-overlapping) for DateOffsets (e.g., '1M', '1Y').
               - For numeric t: integer or float. Default is window/2.
         min_size: Minimum number of observations required in a window to calculate a trend.
         alpha: Significance level for the Mann-Kendall test (default 0.05).
@@ -69,6 +70,13 @@ def rolling_trend_test(
           created before the data start.
         - End: Adaptive. The window slides past the end of the data, using available
           points in the tail until the sample size drops below `min_size`.
+
+    Statistical Note:
+        Rolling window analysis involves multiple hypothesis tests on overlapping
+        data segments. The results (p-values, slopes) from adjacent windows are
+        highly autocorrelated and not statistically independent. The results should
+        be interpreted as a descriptive time series of the trend strength/direction,
+        not as a set of independent statistical findings.
     """
     # Input validation
     x_arr = np.asarray(x) if not isinstance(x, pd.DataFrame) else x
