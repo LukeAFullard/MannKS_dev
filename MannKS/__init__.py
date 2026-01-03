@@ -27,3 +27,5 @@ __all__ = [
     'block_bootstrap_mann_kendall',
     'block_bootstrap_confidence_intervals'
 ]
+
+__version__ = "0.2.0"

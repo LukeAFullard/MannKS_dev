@@ -34,7 +34,11 @@ Use this package when your data has:
 
 **Don't use** if you need n > 46,340 observations.
 
-**NEW IN V0.2.0**: The `trend_test` and `seasonal_trend_test` functions now support a **Block Bootstrap** method (`bootstrap_method='block'`). This feature provides robust trend testing for data with serial correlation (autocorrelation) by resampling blocks of data rather than individual points, preserving the internal dependency structure. See [Statistical Methodology: Bootstrap](./bootstrap.md) for a detailed explanation of the methodology (Detrended Residual Block Bootstrap for P-values, Pairs Block Bootstrap for Confidence Intervals).
+**NEW IN V0.2.0**: The `trend_test` and `seasonal_trend_test` functions now support a **Block Bootstrap** method (`autocorr_method='block_bootstrap'`). This feature provides robust trend testing for data with serial correlation (autocorrelation) by resampling blocks of data rather than individual points, preserving the internal dependency structure.
+
+See [Statistical Methodology: Bootstrap](./bootstrap.md) for a detailed explanation of the hybrid methodology:
+*   **Hypothesis Testing (P-values)**: Uses *Detrended Residual Block Bootstrap* to generate a null distribution while preserving autocorrelation.
+*   **Confidence Intervals (Sen's Slope)**: Uses *Pairs Block Bootstrap* to avoid bias when "reconstructing" censored data values from residuals.
 
 ---
 
