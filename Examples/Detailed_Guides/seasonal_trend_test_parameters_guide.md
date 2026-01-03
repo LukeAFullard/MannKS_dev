@@ -60,11 +60,20 @@ These parameters are crucial for defining the seasonal structure of your data. T
 
 These parameters enable the block bootstrap method for handling autocorrelated data within seasons.
 
+#### `autocorr_method`
+-   **Type:** `str`, **Default:** `'none'`
+-   **Description:** Method to handle autocorrelation.
+-   **Usefulness:**
+    *   `'none'` (Default): No correction.
+    *   `'auto'`: Automatically detects significant autocorrelation.
+    *   `'block_bootstrap'`: Explicitly enables the Block Bootstrap method.
+    *   `'yue_wang'`: Uses the effective sample size correction.
+
 #### `block_size`
 -   **Type:** `int` or `'auto'`, **Default:** `'auto'`
--   **Description:** The size of the blocks used for resampling in the Moving Block Bootstrap.
+-   **Description:** The size of the blocks used for resampling.
 -   **Usefulness:** If your seasonal data is autocorrelated over years (e.g., January 2000 is correlated with January 2001), standard tests may be invalid. Block bootstrapping corrects for this.
-    *   `'auto'` (Default): Automatically calculates an optimal block size based on the ACF of the data.
+    *   `'auto'` (Default): Automatically calculates an optimal block size based on the autocorrelation function (ACF).
     *   `int`: Manually specifies the block size.
 
 #### `n_bootstrap`
