@@ -139,7 +139,8 @@ def run_comparison(n_iterations=50):
         try:
             # We use smaller n_bootstrap for speed in validation loop
             mk_res, _ = find_best_segmentation(
-                x=x, t=t, max_breakpoints=2, n_bootstrap=20, alpha=0.05
+                x=x, t=t, max_breakpoints=2, n_bootstrap=20, alpha=0.05,
+                min_segment_size=3
             )
             mk_n = mk_res.n_breakpoints
             mk_bps = mk_res.breakpoints # This might be Timestamp or float depending on input
@@ -207,6 +208,38 @@ def generate_report(df):
     # 3. CI Width Comparison
     avg_pw_width = valid_comparison['mean_pw_ci_width'].mean()
     avg_mk_width = valid_comparison['mean_mk_ci_width'].mean()
+
+    # New: Plot mismatches
+    mismatch_df = df[~df['match_n'] & (df['pw_n'] != -1) & (df['mk_n'] != -1)]
+    if not mismatch_df.empty:
+        # Plot up to 2
+        for i, idx in enumerate(mismatch_df.head(2).index):
+            iter_id = mismatch_df.loc[idx, 'iter']
+            # Re-generate data
+            t, x, true_n, true_bps = generate_random_dataset(seed=42+int(iter_id))
+
+            plt.figure(figsize=(10, 6))
+            plt.scatter(t, x, color='gray', alpha=0.5, label='Data')
+
+            # Plot PW breakpoints
+            pw_bps = eval(mismatch_df.loc[idx, 'pw_bps'])
+            for bp in pw_bps:
+                plt.axvline(bp, color='blue', linestyle='--', label='PW Breakpoint')
+
+            # Plot MK breakpoints
+            mk_bps = eval(mismatch_df.loc[idx, 'mk_bps'])
+            for bp in mk_bps:
+                plt.axvline(bp, color='red', linestyle=':', label='MK Breakpoint')
+
+            plt.title(f"Mismatch (Iter {iter_id}): PW n={mismatch_df.loc[idx, 'pw_n']}, MK n={mismatch_df.loc[idx, 'mk_n']}")
+
+            # Dedupe legend
+            handles, labels = plt.gca().get_legend_handles_labels()
+            by_label = dict(zip(labels, handles))
+            plt.legend(by_label.values(), by_label.keys())
+
+            plt.savefig(os.path.join(OUTPUT_DIR, f'mismatch_plot_{i}.png'))
+            plt.close()
 
     # Plots
     # Scatter plot of BPs

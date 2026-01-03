@@ -8,7 +8,67 @@ from ._segmented import (bootstrap_restart_segmented,
                          _calculate_segment_residuals) # Need this for n=0 SAR calculation if skipped
 from .trend_test import trend_test
 from ._datetime import _to_numeric_time, _is_datetime_like
-from ._helpers import _prepare_data
+
+def _prepare_data(x, t, hicensor=False):
+    """
+    Internal helper to prepare data for segmented analysis.
+    Avoids dependency on _helpers.py if not needed.
+    """
+    is_dt = _is_datetime_like(t)
+    t_num = _to_numeric_time(t)
+
+    if isinstance(x, pd.DataFrame):
+        df = x.copy()
+        if 'value' not in df.columns:
+             # Fallback: assume single column is value
+             if x.shape[1] == 1:
+                 df.columns = ['value']
+                 df['censored'] = False
+                 df['cen_type'] = 'none'
+             else:
+                 # If prepared by prepare_censored_data, it has correct columns
+                 pass
+        if 'censored' not in df.columns:
+             df['censored'] = False
+        if 'cen_type' not in df.columns:
+             df['cen_type'] = 'none'
+    else:
+        df = pd.DataFrame({'value': np.asarray(x)})
+        df['censored'] = False
+        df['cen_type'] = 'none'
+
+    df['t'] = t_num
+    df['t_original'] = np.asarray(t)
+
+    # Handle missing values
+    mask = ~np.isnan(df['value'])
+    df = df[mask].copy()
+
+    # Sort by time
+    df = df.sort_values('t').reset_index(drop=True)
+
+    # HiCensor logic (simplified or full)
+    if hicensor:
+        # Re-implement simplified HiCensor or assume trend_test handles it?
+        # trend_test handles it for segments.
+        # But we need it for global breakpoint optimization?
+        # If we optimize on raw data, we might be wrong if hicensor changes values.
+        # So we should apply it here.
+        if isinstance(hicensor, bool) and hicensor:
+             if 'lt' in df['cen_type'].values:
+                 max_lt = df.loc[df['cen_type'] == 'lt', 'value'].max()
+                 mask_hi = df['value'] < max_lt
+                 df.loc[mask_hi, 'censored'] = True
+                 df.loc[mask_hi, 'cen_type'] = 'lt'
+                 df.loc[mask_hi, 'value'] = max_lt
+        elif isinstance(hicensor, (int, float)):
+             max_lt = hicensor
+             mask_hi = df['value'] < max_lt
+             df.loc[mask_hi, 'censored'] = True
+             df.loc[mask_hi, 'cen_type'] = 'lt'
+             df.loc[mask_hi, 'value'] = max_lt
+
+    return df, is_dt
 
 def segmented_trend_test(
     x: Union[np.ndarray, pd.DataFrame],

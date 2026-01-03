@@ -152,7 +152,7 @@ Model Selection Summary (Censored):
 |   n_breakpoints |       bic |      sar | converged   |
 |----------------:|----------:|---------:|:------------|
 |               0 |  187.447  | 500.695  | True        |
-|               1 |  -41.5101 | 180.098  | True        |
+|               1 |  -39.0384 | 181.962  | True        |
 |               2 | -235.927  |  74.8078 | True        |
 
 Best Model (Censored): 2 Breakpoints
@@ -171,9 +171,9 @@ Model Selection Summary (Uncensored):
 Best Model (Uncensored): 1 Breakpoints
 Plot saved to /app/Examples/27_Segmented_Regression/segmented_plot_uncensored.png
 
-Censored Breakpoint 1: 2009-10-11 17:05:31.061866283 (CI: 2009-09-13 21:20:30.275126934 to 2011-02-05 07:06:36.999595165)
-Uncensored Breakpoint 1: 2010-03-22 11:14:04.444444418 (CI: 2010-03-22 11:14:04.444444418 to 2011-01-02 22:33:30.370370388)
-Uncensored: Probability change occurred in 2010: 95.0%
+Censored Breakpoint 1: 2009-10-22 09:55:56.115532160 (CI: 2009-01-04 23:51:34.547395229 to 2010-09-13 16:29:05.065752506)
+Uncensored Breakpoint 1: 2010-03-21 00:15:48.148148060 (CI: 2009-12-28 23:56:14.814814806 to 2010-12-08 01:45:34.814814806)
+Uncensored: Probability change occurred in 2010: 90.0%
 
 ```
 
