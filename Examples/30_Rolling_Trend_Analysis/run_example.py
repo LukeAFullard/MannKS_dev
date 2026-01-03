@@ -32,11 +32,10 @@ values[trend_start_idx:] += np.linspace(0, 7.5, n - trend_start_idx)
 # Create DataFrame
 df = pd.DataFrame({'Date': dates, 'Value': values})
 
-# --- 2. Rolling Trend Analysis ---
+# --- 2. Rolling Trend Analysis (10 Year Window) ---
 # We use a 10-year window, sliding by 1 year.
-# This helps identify when the trend starts to emerge.
-print("Running rolling trend analysis...")
-rolling_results = mk.rolling_trend_test(
+print("Running rolling trend analysis (10Y)...")
+rolling_results_10y = mk.rolling_trend_test(
     x=df['Value'],
     t=df['Date'],
     window='10Y',
@@ -47,23 +46,52 @@ rolling_results = mk.rolling_trend_test(
 )
 
 # Display first few rows of results
-print("\nRolling Analysis Results (Head):")
-print(rolling_results[['window_center', 'slope', 'C', 'classification']].head())
+print("\nRolling Analysis Results 10Y (Head):")
+print(rolling_results_10y[['window_center', 'slope', 'C', 'classification']].head())
 
-# --- 3. Visualization ---
-print("\nGenerating rolling trend plot...")
-plot_path = os.path.join(output_dir, 'rolling_trend_analysis.png')
+# Visualization 10Y
+print("\nGenerating rolling trend plot (10Y)...")
+plot_path_10y = os.path.join(output_dir, 'rolling_trend_analysis_10y.png')
 mk.plot_rolling_trend(
-    rolling_results,
+    rolling_results_10y,
     data=df,
     time_col='Date',
     value_col='Value',
     highlight_significant=True,
     show_global_trend=True,
-    save_path=plot_path,
+    save_path=plot_path_10y,
     figsize=(12, 10)
 )
-print(f"Plot saved to {plot_path}")
+print(f"Plot saved to {plot_path_10y}")
+
+# --- 3. Rolling Trend Analysis (5 Year Window) ---
+# Shorter window detects changes faster but is noisier
+print("\nRunning rolling trend analysis (5Y)...")
+rolling_results_5y = mk.rolling_trend_test(
+    x=df['Value'],
+    t=df['Date'],
+    window='5Y',
+    step='1Y',
+    min_size=30,
+    slope_scaling='year',
+    continuous_confidence=True
+)
+
+# Visualization 5Y
+print("\nGenerating rolling trend plot (5Y)...")
+plot_path_5y = os.path.join(output_dir, 'rolling_trend_analysis_5y.png')
+mk.plot_rolling_trend(
+    rolling_results_5y,
+    data=df,
+    time_col='Date',
+    value_col='Value',
+    highlight_significant=True,
+    show_global_trend=True,
+    save_path=plot_path_5y,
+    figsize=(12, 10)
+)
+print(f"Plot saved to {plot_path_5y}")
+
 
 # --- 4. Before/After Comparison ---
 # Let's verify the change point around 2005 (when we injected the trend).
@@ -93,7 +121,7 @@ We generated 30 years of synthetic monthly data (1990-2020).
 - **1990-2005:** No trend (random noise).
 - **2005-2020:** Increasing trend.
 
-## Rolling Analysis
+## Rolling Analysis (10-Year Window)
 We applied a **10-year rolling window** sliding by **1 year**.
 
 ### Python Code
@@ -104,8 +132,8 @@ import MannKS as mk
 
 # [Data Generation Code Omitted - See run_example.py]
 
-# Run Rolling Test
-rolling_results = mk.rolling_trend_test(
+# Run Rolling Test (10Y)
+rolling_results_10y = mk.rolling_trend_test(
     x=df['Value'],
     t=df['Date'],
     window='10Y',
@@ -115,21 +143,38 @@ rolling_results = mk.rolling_trend_test(
 
 # Visualize
 mk.plot_rolling_trend(
-    rolling_results,
+    rolling_results_10y,
     data=df,
     time_col='Date',
     value_col='Value',
-    save_path='rolling_trend_analysis.png'
+    save_path='rolling_trend_analysis_10y.png'
 )
 ```
 
-### Results Table (Snippet)
+### Results Table (10Y Snippet)
 The rolling analysis detects the transition. Early windows (purely in the 1990-2005 range) should show no trend, while later windows capture the increase.
 
-{rolling_results[['window_center', 'slope', 'C', 'classification']].to_markdown(index=False)}
+{rolling_results_10y[['window_center', 'slope', 'C', 'classification']].to_markdown(index=False)}
 
-### Visualization
-![Rolling Trend Plot](rolling_trend_analysis.png)
+### Visualization (10Y Window)
+![Rolling Trend Plot 10Y](rolling_trend_analysis_10y.png)
+
+## Rolling Analysis (5-Year Window)
+We also applied a **5-year rolling window** to see how window size affects sensitivity. Shorter windows react faster to changes but may be noisier.
+
+```python
+# Run Rolling Test (5Y)
+rolling_results_5y = mk.rolling_trend_test(
+    x=df['Value'],
+    t=df['Date'],
+    window='5Y',
+    step='1Y',
+    slope_scaling='year'
+)
+```
+
+### Visualization (5Y Window)
+![Rolling Trend Plot 5Y](rolling_trend_analysis_5y.png)
 
 ## Change Point Verification
 We manually compared the periods before and after 2005 using `compare_periods`.
