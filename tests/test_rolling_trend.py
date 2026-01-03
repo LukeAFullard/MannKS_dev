@@ -32,7 +32,7 @@ def test_rolling_trend_basic_datetime():
     t = pd.date_range('2000-01-01', periods=n, freq='ME') # Monthly end
     x = np.arange(n) + np.random.normal(0, 1, n)
 
-    results = rolling_trend_test(x, t, window='5Y', step='1Y', min_size=10, slope_scaling='year')
+    results = rolling_trend_test(x, t, window='5YE', step='1YE', min_size=10, slope_scaling='year')
 
     assert len(results) > 0
     # Slope scaling: x increases by 1 per month (approx 12 per year)
@@ -91,7 +91,7 @@ def test_plot_rolling_trend_execution():
     t = pd.date_range('2000-01-01', periods=n, freq='ME')
     x = np.arange(n) + np.random.normal(0, 1, n)
 
-    results = rolling_trend_test(x, t, window='2Y', step='1Y', min_size=10)
+    results = rolling_trend_test(x, t, window='2YE', step='1YE', min_size=10)
 
     # Should run without raising exception
     try:
@@ -109,3 +109,44 @@ def test_rolling_with_dataframe_input():
     results = rolling_trend_test(df['val'], df['time'], window='30D', step='10D')
     assert len(results) > 0
     assert 'slope' in results.columns
+
+def test_rolling_trend_seasonal():
+    """Test rolling trend with seasonal=True."""
+    # Generate 10 years of monthly data
+    n_years = 10
+    n = n_years * 12
+    t = pd.date_range('2000-01-01', periods=n, freq='ME')
+
+    # Create seasonal pattern: month 1 is low, month 7 is high
+    # Overall increasing trend
+    trend = 0.5 * np.arange(n) # increasing
+    seasonal_component = 10 * np.sin(2 * np.pi * np.arange(n) / 12)
+    noise = np.random.normal(0, 1, n)
+    x = trend + seasonal_component + noise
+
+    # Run rolling seasonal test
+    # Window 5 years, step 1 year
+    results = rolling_trend_test(
+        x, t,
+        window='5YE',
+        step='1YE',
+        seasonal=True,
+        period=12,
+        season_type='month',
+        min_size=24 # Need at least 2 years for valid seasonal test
+    )
+
+    assert len(results) > 0
+    # Check that it ran seasonal logic (we can't explicitly check internal calls easily,
+    # but we can check if results are reasonable).
+    # Since we have a strong positive trend, slopes should be positive.
+    # The seasonal component should be removed by the seasonal test logic.
+    assert (results['slope'] > 0).all()
+    assert 'slope' in results.columns
+
+    # Check that scaling works (defaults to seconds if not set, but we didn't set it)
+    # The slope is small (per second) if not scaled.
+    # 0.5 per month -> approx 6 per year -> approx 2e-7 per second.
+    # Let's check slope_per_second is small positive
+    assert (results['slope_per_second'] > 0).all()
+    assert (results['slope_per_second'] < 1e-5).all()

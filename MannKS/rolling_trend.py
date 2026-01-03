@@ -159,11 +159,22 @@ def rolling_trend_test(
                 'slope_scaling': slope_scaling,
                 'x_unit': x_unit,
                 'continuous_confidence': continuous_confidence,
-                'min_size': None,
                 **kwargs
             }
 
             if seasonal:
+                # seasonal_trend_test uses min_size_per_season, not min_size
+                # We can't pass min_size=None blindly if it's not accepted,
+                # or if it has a different name.
+                # It accepts min_size_per_season.
+                # However, rolling_trend_test filters by total window size 'min_size'.
+                # We should probably pass min_size_per_season if provided in kwargs,
+                # or let it default.
+                # The 'min_size' key in common_kwargs causes TypeError if seasonal_trend_test
+                # doesn't accept it.
+                if 'min_size' in common_kwargs:
+                    del common_kwargs['min_size']
+
                 result = seasonal_trend_test(
                     x=x_window,
                     t=t_window,
@@ -172,6 +183,9 @@ def rolling_trend_test(
                     **common_kwargs
                 )
             else:
+                # trend_test accepts min_size. We set it to None because we already filtered
+                # at the window level.
+                common_kwargs['min_size'] = None
                 result = trend_test(
                     x=x_window,
                     t=t_window,
