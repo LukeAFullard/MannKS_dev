@@ -269,7 +269,13 @@ def _generate_windows(t_series, window_size, step_size, is_datetime):
     return windows
 
 
-def compare_periods(x, t, breakpoint, alpha=0.05, **kwargs):
+def compare_periods(
+    x, t, breakpoint, alpha=0.05,
+    seasonal: bool = False,
+    period: int = 12,
+    season_type: str = 'month',
+    **kwargs
+):
     """
     Compare trends before and after a breakpoint.
 
@@ -278,7 +284,10 @@ def compare_periods(x, t, breakpoint, alpha=0.05, **kwargs):
         t: Time vector
         breakpoint: Time value to split data (value in t where split occurs)
         alpha: Significance level
-        **kwargs: Additional arguments for trend_test
+        seasonal: If True, uses `seasonal_trend_test` instead of `trend_test`.
+        period: The seasonal period (e.g., 12 for monthly data). Used if seasonal=True.
+        season_type: The type of seasonality (e.g., 'month'). Used if seasonal=True.
+        **kwargs: Additional arguments for trend_test or seasonal_trend_test
 
     Returns:
         dict: Dictionary containing:
@@ -307,8 +316,27 @@ def compare_periods(x, t, breakpoint, alpha=0.05, **kwargs):
     if len(t_before) < 3 or len(t_after) < 3:
          warnings.warn("Insufficient data in one or both periods for comparison.")
 
-    result_before = trend_test(x=x_before, t=t_before, alpha=alpha, **kwargs)
-    result_after = trend_test(x=x_after, t=t_after, alpha=alpha, **kwargs)
+    common_kwargs = {'alpha': alpha, **kwargs}
+
+    if seasonal:
+        # Avoid passing trend_test specific args if we were to support them,
+        # but for now we trust kwargs are appropriate or we filter if needed.
+        # seasonal_trend_test specific args:
+        # min_size is not supported in seasonal_trend_test (it uses min_size_per_season)
+        if 'min_size' in common_kwargs:
+             del common_kwargs['min_size']
+
+        result_before = seasonal_trend_test(
+            x=x_before, t=t_before, period=period, season_type=season_type, **common_kwargs
+        )
+        result_after = seasonal_trend_test(
+            x=x_after, t=t_after, period=period, season_type=season_type, **common_kwargs
+        )
+    else:
+        # Ensure seasonal args are not in kwargs passed to trend_test
+        # (Though we captured them in explicit args, so they are not in kwargs)
+        result_before = trend_test(x=x_before, t=t_before, **common_kwargs)
+        result_after = trend_test(x=x_after, t=t_after, **common_kwargs)
 
     slope_diff = result_after.slope - result_before.slope
 
