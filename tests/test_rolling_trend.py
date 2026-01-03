@@ -150,3 +150,17 @@ def test_rolling_trend_seasonal():
     # Let's check slope_per_second is small positive
     assert (results['slope_per_second'] > 0).all()
     assert (results['slope_per_second'] < 1e-5).all()
+
+def test_rolling_trend_edge_case_last_point():
+    """Test that the rolling window includes the last data point even if it aligns with window boundary."""
+    t = np.arange(0, 101, 10) # 0, 10, ..., 100
+    x = t.astype(float)
+
+    # Window=10, Step=10.
+    # We expect 11 windows: starts at 0, 10, ..., 100.
+    # The last window [100, 110) should capture the point at 100.
+    results = rolling_trend_test(x, t, window=10, step=10, min_size=1)
+
+    assert len(results) == 11
+    assert results.iloc[-1]['window_start'] == 100
+    assert results.iloc[-1]['n_obs'] == 1

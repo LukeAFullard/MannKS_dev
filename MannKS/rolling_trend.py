@@ -255,7 +255,7 @@ def _generate_windows(t_series, window_size, step_size, is_datetime):
 
     current = t_min
 
-    while current < t_max:
+    while current <= t_max:
         # Check if window_size is Timedelta or Offset (or float)
         # Addition works for both Timestamp + Timedelta and Timestamp + DateOffset
         win_end = current + window_size
