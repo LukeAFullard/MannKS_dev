@@ -295,7 +295,10 @@ def compare_periods(
             - 'after': Result object for post-breakpoint data
             - 'slope_difference': slope_after - slope_before
             - 'ci_overlap': Boolean, True if confidence intervals overlap
-            - 'significant_change': Boolean, True if CIs do NOT overlap (simple test)
+            - 'significant_change': Boolean, True if CIs do NOT overlap.
+              Note: This is a conservative test. If CIs do not overlap, the difference
+              is statistically significant at alpha. However, overlapping CIs do not
+              necessarily imply no significant difference.
             - 'breakpoint': The breakpoint used
     """
     t_arr = np.asarray(t)
