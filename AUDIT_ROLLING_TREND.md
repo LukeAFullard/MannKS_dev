@@ -1,43 +1,41 @@
-# Audit Report: Rolling Sen's Slope Feature
+# Audit of Rolling Sen's Slope Feature
 
-## Executive Summary
-A comprehensive audit of the new "Rolling Sen's Slope" feature (`rolling_trend_test` and related utilities) was conducted. The audit confirms that the feature is implemented correctly, statistically valid, and integrates well with the existing package architecture. No bugs or critical issues were identified.
+## 1. Overview
+The `rolling_trend.py` module introduces rolling window capabilities for the Mann-Kendall test and Sen's slope estimator. It allows users to analyze how trend statistics (slope, significance, confidence) evolve over time by sliding a window across the dataset.
 
-## 1. Statistical Validity
-*   **Methodology:** The application of the Sen's slope estimator within moving windows is a standard and robust technique for analyzing trend non-stationarity (changes in trend over time).
-*   **Independence Disclaimer:** The implementation correctly includes a warning in the docstring stating that results from overlapping windows are serially correlated (autocorrelated) and should be interpreted as a descriptive time series rather than independent hypothesis tests. This is crucial for statistical integrity.
-*   **Comparison Logic:** The `compare_periods` function implements a conservative test for trend changes by checking for confidence interval overlap. This is a statistically safe approach.
-*   **Seasonal Support:** The integration with `seasonal_trend_test` allows for rolling seasonal trend analysis (e.g., "how has the seasonal trend changed over decades?"), which is a powerful capability.
+## 2. Implementation Audit
 
-## 2. Implementation Quality
-*   **Robustness:**
-    *   The function handles both numeric and datetime-like time vectors correctly.
-    *   It gracefully handles empty windows or windows with insufficient data (`min_size` parameter).
-    *   It is robust to outliers, as confirmed by validation test `V-36e` (Sen's slope remained stable while OLS slope was skewed by an outlier).
-*   **Safety:**
-    *   A safety limit (`10,000` windows) prevents memory exhaustion from misconfigured step sizes.
-    *   `try-except` blocks within the processing loop ensure that a failure in one window (e.g., due to data issues) does not crash the entire analysis.
-*   **Integration:**
-    *   Parameters like `slope_scaling`, `alpha`, and `seasonal` are correctly passed down to the core trend testing functions.
-    *   The returned DataFrame contains all necessary statistical outputs (slope, p-value, confidence intervals, etc.) in a structured format.
+### 2.1 Window Generation
+- **Numeric Data**: The window generation logic for numeric data uses a loop that adds `step_size` to `t_min`. It correctly handles the upper bound check.
+- **Datetime Data**: Uses `pd.Timedelta` or `DateOffset` (via pandas frequencies) for window/step sizes. This is flexible and handles variable length months/years correctly if `DateOffset` is used.
+    - **Note on Offsets**: The code notes that for `DateOffset` steps (e.g. '1YE'), the default step is the full window size (non-overlapping) because offsets can't be divided. This is a reasonable limitation but users should be aware.
 
-## 3. Verification & Testing
-*   **Unit Tests:** The suite in `tests/test_rolling_trend.py` and `tests/test_rolling.py` covers:
-    *   Numeric and datetime inputs.
-    *   Seasonal analysis.
-    *   Minimum size filtering.
-    *   Edge cases (last data point inclusion).
-    *   Plotting execution.
-*   **Validation:** The script `validation/36_Rolling_Trend/validate_rolling.py` confirmed:
-    *   **Accuracy:** Results match manual iterative calculations.
-    *   **Reliability:** The rolling slope accurately tracks the derivative of a synthetic sine wave (Correlation > 0.99).
-    *   **Consistency:** "High Censor" and aggregation rules work as expected within the rolling context.
+### 2.2 Data Selection
+- Uses half-open intervals `[start, end)`. This prevents double-counting points on boundaries if windows are contiguous and non-overlapping.
 
-## 4. Value Proposition
-This feature adds significant value to `MannKenSen` by enabling users to:
-1.  **Detect Trend Reversals:** Identify when a trend changes direction (e.g., shifting from increasing to decreasing).
-2.  **Analyze Intervention Effects:** Use `compare_periods` to statistically evaluate if a trend changed after a specific event (e.g., a policy change).
-3.  **Visualize Dynamics:** The `plot_rolling_trend` function provides a rich visualization of trend evolution, confidence, and significance over time.
+### 2.3 Statistical Validity
+- **Independence**: The rolling window approach inherently produces highly autocorrelated results because adjacent windows share data. The docstring correctly adds a "Statistical Note" warning users about this.
+- **Min Size**: The implementation allows setting a `min_size` for windows. Windows with fewer observations are skipped. This prevents spurious results from small samples.
+- **Methodology**: It reuses the core `trend_test` and `seasonal_trend_test` functions, ensuring that the statistical rigor of the main package (e.g., tie handling, censoring) is preserved within each window.
 
-## 5. Minor Observations
-*   **Plotting Units:** Users analyzing high-frequency datetime data should be encouraged to use the `slope_scaling` parameter (e.g., `slope_scaling='year'`). Without it, the raw slope (units/second) may be extremely small and hard to interpret on plots, though mathematically correct.
+### 2.4 Comparison Feature
+- The `compare_periods` function provides a way to test for a structural break or change in trend before/after a specific point.
+- **Overlap Test**: It uses a conservative CI overlap test to determine "significant change". The docstring correctly notes the limitations of this test (overlapping CIs don't prove no difference).
+
+## 3. Issues and Improvements
+
+### 3.1 Minor Issues
+- **`min_size` in `trend_test`**: The code sets `min_size=None` when calling `trend_test` to avoid redundant warnings, which is correct. However, for `seasonal_trend_test`, it deletes the `min_size` key from `common_kwargs` but doesn't explicitly handle `min_size_per_season`. The audit test showed this works but relies on default behavior or manual passing of `min_size_per_season`.
+- **Performance**: For very large datasets with small steps, the loop is O(N_windows * N_window^2). This is standard for rolling Mann-Kendall but could be slow.
+
+### 3.2 Bug Fixes (Addressed during Audit)
+- No critical bugs found. The implementation handles empty results gracefully.
+
+## 4. Value Add
+- **Time-Varying Trends**: This feature adds significant value by allowing users to detect *when* a trend started or changed direction, rather than just getting a global summary.
+- **Structural Breaks**: The `compare_periods` function is a useful utility for impact assessment (e.g., "did the trend change after the intervention?").
+
+## 5. Conclusion
+The feature is implemented correctly and uses sound logic. It reuses existing robust components. The API is consistent with the rest of the package.
+
+**Recommendation**: The feature is ready for inclusion.
