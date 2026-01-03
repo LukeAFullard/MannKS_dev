@@ -38,6 +38,7 @@ def _calculate_segment_residuals(x, t, censored, cen_type, breakpoints, **kwargs
     lt_mult = kwargs.get('lt_mult', 0.5)
     gt_mult = kwargs.get('gt_mult', 1.1)
     sens_slope_method = kwargs.get('sens_slope_method', 'nan')
+    min_segment_size = kwargs.get('min_segment_size', 3) # Default safety lower bound
 
     for seg_start, seg_end in segments:
         # Use a slightly more robust mask to handle floating point edges
@@ -54,7 +55,7 @@ def _calculate_segment_residuals(x, t, censored, cen_type, breakpoints, **kwargs
         else:
              mask = (t >= seg_start) & (t < seg_end)
 
-        if np.sum(mask) < 3:
+        if np.sum(mask) < min_segment_size:
             # Penalize segments with too few points to discourage them
             total_residual += np.inf
             continue
@@ -147,17 +148,19 @@ def segmented_sens_slope(x, t, censored, cen_type,
 
             # Enforce min_segment_size (time buffer)
             t_sorted = np.sort(t)
-            # Rough approximation of time needed for N points
             if min_segment_size < len(t):
-                 # Find time span of min_segment_size points
-                 # We need at least min_segment_size points in the segments adjacent to this breakpoint.
-                 # This is tricky without exact indices.
-                 # Let's use the average time spacing * min_segment_size as a buffer
-                 avg_spacing = (t_max_global - t_min_global) / n
-                 min_span = avg_spacing * min_segment_size
+                 # Ensure at least min_segment_size points on either side
+                 # If we split at BP, left segment is [min, BP).
+                 # To have N points, BP must be > t_sorted[N-1].
+                 # Let's say BP >= t_sorted[min_segment_size].
+                 valid_min = t_sorted[min_segment_size]
 
-                 lower_bound += min_span
-                 upper_bound -= min_span
+                 # Right segment is [BP, max].
+                 # To have N points, BP must be <= t_sorted[n - min_segment_size].
+                 valid_max = t_sorted[-min_segment_size]
+
+                 lower_bound = max(lower_bound, valid_min)
+                 upper_bound = min(upper_bound, valid_max)
 
             if lower_bound >= upper_bound:
                 continue # Constrained too tightly, skip update
@@ -173,7 +176,7 @@ def segmented_sens_slope(x, t, censored, cen_type,
             # Calculating it ensures we don't worsen the solution.
             test_breakpoints_curr = breakpoints.copy()
             test_breakpoints_curr[bp_idx] = current_bp
-            best_local_resid = _calculate_segment_residuals(x, t, censored, cen_type, test_breakpoints_curr, **kwargs)
+            best_local_resid = _calculate_segment_residuals(x, t, censored, cen_type, test_breakpoints_curr, min_segment_size=min_segment_size, **kwargs)
 
             search_lower = lower_bound
             search_upper = upper_bound
@@ -186,7 +189,7 @@ def segmented_sens_slope(x, t, censored, cen_type,
                 for test_bp in search_grid:
                     test_breakpoints = breakpoints.copy()
                     test_breakpoints[bp_idx] = test_bp
-                    resid = _calculate_segment_residuals(x, t, censored, cen_type, test_breakpoints, **kwargs)
+                    resid = _calculate_segment_residuals(x, t, censored, cen_type, test_breakpoints, min_segment_size=min_segment_size, **kwargs)
 
                     if resid < best_local_resid:
                         best_local_resid = resid
@@ -255,7 +258,7 @@ def bootstrap_restart_segmented(x, t, censored, cen_type,
                                         **kwargs)
 
         # Evaluate found breakpoints on ORIGINAL data
-        resid = _calculate_segment_residuals(x, t, censored, cen_type, bp, **kwargs)
+        resid = _calculate_segment_residuals(x, t, censored, cen_type, bp, min_segment_size=min_segment_size, **kwargs)
 
         if resid < best_residual:
             best_residual = resid
