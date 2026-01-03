@@ -606,3 +606,124 @@ def plot_rolling_trend(rolling_results, data=None, time_col=None, value_col=None
         plt.show()
 
     plt.close()
+
+def plot_segmented_trend(result, x_data, t_data, save_path=None):
+    """
+    Visualizes the segmented trend analysis results, including confidence intervals.
+
+    Args:
+        result: The namedtuple returned by segmented_trend_test.
+        x_data: Original data values.
+        t_data: Original time values.
+        save_path: Path to save the plot.
+    """
+    if save_path is None:
+        return
+
+    from ._segmented import _create_segments
+    from ._datetime import _to_numeric_time
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Prepare data for plotting
+    t_numeric = _to_numeric_time(t_data)
+    is_datetime = result.is_datetime
+
+    x_axis = pd.to_datetime(t_data) if is_datetime else t_data
+
+    # Plot raw data
+    ax.scatter(x_axis, x_data, color='gray', alpha=0.5, label='Observations')
+
+    # Re-create segments to get boundaries
+    if is_datetime:
+        bp_numeric = _to_numeric_time(result.breakpoints)
+    else:
+        bp_numeric = result.breakpoints
+
+    segments = _create_segments(t_numeric, bp_numeric)
+
+    # Iterate through segments dataframe in result
+    for i, (start, end) in enumerate(segments):
+        if i >= len(result.segments):
+            break
+
+        row = result.segments.iloc[i]
+
+        # Calculate trend line
+        slope = getattr(row, 'slope_per_second', row.slope)
+        intercept = row.intercept
+
+        if pd.isna(slope) or pd.isna(intercept):
+            continue
+
+        # Define x-range for segment (extend slightly to meet breakpoint if continuous?
+        # But this is discontinuous Sen's slope, so better to respect bounds)
+        x_seg_numeric = np.array([start, end])
+        y_seg = slope * x_seg_numeric + intercept
+
+        if is_datetime:
+            x_seg_plot = pd.to_datetime(x_seg_numeric, unit='s')
+        else:
+            x_seg_plot = x_seg_numeric
+
+        ax.plot(x_seg_plot, y_seg, linewidth=2, label=f'Segment {i+1}')
+
+        # Plot Slope CIs (if available)
+        if hasattr(row, 'lower_ci_per_second') and pd.notna(row.lower_ci_per_second):
+            # Calculate CI band
+            # We pivot around the median of the segment data?
+            # Or simpler: y_lower = lower_slope * t + intercept_lower?
+            # trend_test results contain intercept. But CI lines have their own intercepts.
+            # trend_test computes: intercept_lower = ymed - lower_slope * tmed
+            # But we don't have ymed/tmed here easily without re-extracting data.
+            # However, we can approximate the band width using the slope error relative to the fitted line?
+            # Actually, `trend_test` calculates CIs on the *slope*.
+            # To plot the band, we need the pivot point (t_center, y_center).
+            # We can re-calculate the pivot point for the segment data.
+
+            mask = (t_numeric >= start) & (t_numeric < end)
+            if np.sum(mask) > 0:
+                t_seg = t_numeric[mask]
+                x_seg = x_data[mask] if isinstance(x_data, np.ndarray) else x_data.iloc[mask]
+
+                # Check for censoring to be safe?
+                # If x_data has strings, we can't compute median.
+                # But x_data passed to plot should be numeric values (from df['value']).
+                if np.issubdtype(np.asarray(x_seg).dtype, np.number):
+                    t_center = np.median(t_seg)
+                    x_center = np.nanmedian(x_seg)
+
+                    slope_lower = row.lower_ci_per_second
+                    slope_upper = row.upper_ci_per_second
+
+                    # CI lines passing through (t_center, x_center)
+                    y_lower = x_center + slope_lower * (x_seg_numeric - t_center)
+                    y_upper = x_center + slope_upper * (x_seg_numeric - t_center)
+
+                    ax.fill_between(x_seg_plot, y_lower, y_upper, alpha=0.2, label=f'95% CI (Seg {i+1})')
+
+
+    # Plot Breakpoints and their CIs
+    for i, bp in enumerate(result.breakpoints):
+        ax.axvline(bp, color='black', linestyle='--', label='Breakpoint')
+
+        # Plot Breakpoint CI if available
+        if hasattr(result, 'breakpoint_cis') and i < len(result.breakpoint_cis):
+            ci_low, ci_high = result.breakpoint_cis[i]
+            # Add shaded region
+            ax.axvspan(ci_low, ci_high, color='orange', alpha=0.3, label='Breakpoint 95% CI')
+
+    ax.set_title('Segmented Trend Analysis')
+    ax.set_xlabel('Time')
+    ax.set_ylabel('Value')
+
+    # Deduplicate legend labels
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    ax.legend(by_label.values(), by_label.keys())
+
+    if hasattr(save_path, 'write'):
+        plt.savefig(save_path, format='png')
+    else:
+        plt.savefig(save_path)
+    plt.close()

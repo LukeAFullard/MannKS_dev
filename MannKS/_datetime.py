@@ -7,6 +7,35 @@ def _is_datetime_like(x):
     return np.issubdtype(x.dtype, np.datetime64) or \
            (x.dtype == 'O' and len(x) > 0 and hasattr(x[0], 'year'))
 
+def _to_numeric_time(t):
+    """
+    Converts a time vector to numeric (Unix timestamp) if it is datetime-like.
+    Returns float array.
+    """
+    t_arr = np.asarray(t)
+    if _is_datetime_like(t_arr):
+        # Handle numpy datetime64
+        if np.issubdtype(t_arr.dtype, np.datetime64):
+            return t_arr.astype('datetime64[s]').astype(float)
+        # Handle pandas Series or Index
+        if isinstance(t, (pd.Series, pd.Index)):
+             return t.astype('int64').to_numpy() / 1e9 # ns to s
+        # Handle object array of datetimes
+        try:
+             return np.array([x.timestamp() for x in t_arr], dtype=float)
+        except AttributeError:
+             pass # Fall through to default
+
+    # Try forcing float conversion (handles int/float inputs)
+    try:
+        return t_arr.astype(float)
+    except (ValueError, TypeError):
+        # Fallback: try pandas conversion then numeric
+        try:
+            return pd.to_datetime(t_arr).astype('int64').to_numpy() / 1e9
+        except Exception:
+             raise ValueError("Could not convert time vector `t` to numeric values.")
+
 def _get_season_func(season_type, period):
     """
     Returns a function to extract seasonal data based on the season_type,
