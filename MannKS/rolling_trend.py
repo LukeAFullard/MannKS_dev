@@ -58,6 +58,13 @@ def rolling_trend_test(
             - Cd: Directional confidence.
             - tau: Kendall's Tau.
             - s: Mann-Kendall score.
+
+    Note on Edge Handling:
+        The function uses an asymmetric approach to window generation:
+        - Start: Truncated. The first window begins strictly at t[0]. No partial windows are
+          created before the data start.
+        - End: Adaptive. The window slides past the end of the data, using available
+          points in the tail until the sample size drops below `min_size`.
     """
     # Input validation
     x_arr = np.asarray(x) if not isinstance(x, pd.DataFrame) else x

@@ -88,8 +88,8 @@ print(f"Significant Change? {comparison['significant_change']}")
 
 ## Edge Handling
 
-Users often notice that rolling trend plots start and end "inside" the full data range. This is expected behavior for moving window analyses.
+Users often notice that rolling trend plots start and end "inside" the full data range. This is expected behavior for moving window analyses. The implementation uses an **Asymmetric** approach to balance data coverage with statistical rigor:
 
-*   **Leading Edge (Start):** The first window begins at the very start of your data. However, the result is typically plotted at the *center* of that window. For a 10-year window, the first data point is at Year 0, but the first plotted trend point is at Year 5.
-*   **Trailing Edge (End):** As the window slides past the end of your data, it contains fewer and fewer future points. The `min_size` parameter acts as a cutoff here. Once the "tail" of the window contains fewer than `min_size` data points, calculation stops.
-*   **No Imputation:** The method strictly uses existing data. It does not attempt to extrapolate trends into the past or future to fill these visual gaps, ensuring that every plotted point represents a calculation based on real, observed data.
+*   **Leading Edge (Start - Truncated):** The first window begins strictly at the start of your data. We do *not* create partial windows before this point. For a 10-year window, the first plotted point (window center) appears at Year 5. This ensures the initial trends are based on a full window of data.
+*   **Trailing Edge (End - Adaptive):** As the window slides past the end of your data, it is allowed to "shrink" (become partial). The calculation continues using whatever data remains in the tail of the window, until the sample size drops below `min_size`. This allows you to see the most recent trend possible, even if the full forward window isn't complete.
+*   **No Imputation:** The method strictly uses existing data. It does not attempt to extrapolate trends into the past or future to fill visual gaps.
