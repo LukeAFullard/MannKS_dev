@@ -8,7 +8,7 @@ We generated 30 years of synthetic monthly data (1990-2020).
 - **1990-2005:** No trend (random noise).
 - **2005-2020:** Increasing trend.
 
-## Rolling Analysis
+## Rolling Analysis (10-Year Window)
 We applied a **10-year rolling window** sliding by **1 year**.
 
 ### Python Code
@@ -19,8 +19,8 @@ import MannKS as mk
 
 # [Data Generation Code Omitted - See run_example.py]
 
-# Run Rolling Test
-rolling_results = mk.rolling_trend_test(
+# Run Rolling Test (10Y)
+rolling_results_10y = mk.rolling_trend_test(
     x=df['Value'],
     t=df['Date'],
     window='10Y',
@@ -30,15 +30,15 @@ rolling_results = mk.rolling_trend_test(
 
 # Visualize
 mk.plot_rolling_trend(
-    rolling_results,
+    rolling_results_10y,
     data=df,
     time_col='Date',
     value_col='Value',
-    save_path='rolling_trend_analysis.png'
+    save_path='rolling_trend_analysis_10y.png'
 )
 ```
 
-### Results Table (Snippet)
+### Results Table (10Y Snippet)
 The rolling analysis detects the transition. Early windows (purely in the 1990-2005 range) should show no trend, while later windows capture the increase.
 
 | window_center       |      slope |        C | classification              |
@@ -72,8 +72,25 @@ The rolling analysis detects the transition. Early windows (purely in the 1990-2
 | 2020-12-30 12:00:00 | 0.0218824  | 0.565047 | As Likely as Not Increasing |
 | 2021-12-31 00:00:00 | 0.157077   | 0.638004 | As Likely as Not Increasing |
 
-### Visualization
-![Rolling Trend Plot](rolling_trend_analysis.png)
+### Visualization (10Y Window)
+![Rolling Trend Plot 10Y](rolling_trend_analysis_10y.png)
+
+## Rolling Analysis (5-Year Window)
+We also applied a **5-year rolling window** to see how window size affects sensitivity. Shorter windows react faster to changes but may be noisier.
+
+```python
+# Run Rolling Test (5Y)
+rolling_results_5y = mk.rolling_trend_test(
+    x=df['Value'],
+    t=df['Date'],
+    window='5Y',
+    step='1Y',
+    slope_scaling='year'
+)
+```
+
+### Visualization (5Y Window)
+![Rolling Trend Plot 5Y](rolling_trend_analysis_5y.png)
 
 ## Change Point Verification
 We manually compared the periods before and after 2005 using `compare_periods`.
