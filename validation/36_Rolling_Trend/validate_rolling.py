@@ -3,77 +3,45 @@ Validation Script for Rolling Trend Analysis (V-36)
 
 This script performs a comprehensive validation of the rolling trend feature,
 covering correctness, feature interaction, edge cases, and robustness.
+It generates a Markdown report and diagnostic plots.
 """
+import os
+import sys
 import numpy as np
 import pandas as pd
 import MannKS as mk
 from scipy.stats import linregress
 import warnings
+import matplotlib.pyplot as plt
+import io
+import contextlib
 
 # Suppress warnings for cleaner output
 warnings.filterwarnings('ignore')
 
-def run_manual_rolling_check(x, t, window, step, **kwargs):
-    """Manually iterate and calculate trends to verify rolling logic."""
-    results = []
+# Output Directory
+OUTPUT_DIR = os.path.dirname(__file__)
 
-    # Simple manual loop for numeric or datetime
-    is_datetime = pd.api.types.is_datetime64_any_dtype(t)
+def capture_output(func):
+    """Capture stdout from a function."""
+    f = io.StringIO()
+    with contextlib.redirect_stdout(f):
+        func()
+    return f.getvalue()
 
-    if is_datetime:
-        t_series = pd.to_datetime(t)
-        # Assuming fixed window/step for validation simplicitly
-        start = t_series.min()
-        end_limit = t_series.max()
-        window_td = pd.to_timedelta(window)
-        step_td = pd.to_timedelta(step)
-
-        current = start
-        while current < end_limit:
-            win_end = current + window_td
-            mask = (t_series >= current) & (t_series < win_end)
-
-            if mask.sum() >= kwargs.get('min_size', 10):
-                res = mk.trend_test(x[mask], t[mask], **kwargs)
-                results.append(res.slope)
-            else:
-                results.append(np.nan) # Placeholder for skipped
-
-            current += step_td
-    else:
-        # Numeric
-        start = t.min()
-        end_limit = t.max()
-        current = start
-        while current < end_limit:
-            win_end = current + window
-            mask = (t >= current) & (t < win_end)
-
-            if mask.sum() >= kwargs.get('min_size', 10):
-                res = mk.trend_test(x[mask], t[mask], **kwargs)
-                results.append(res.slope)
-            else:
-                results.append(np.nan)
-
-            current += step
-
-    return results
-
-def validation_report():
-    print("# Validation Report: Rolling Trend Analysis (V-36)\n")
+def run_validation():
+    report_lines = []
+    report_lines.append("# Validation Report: Rolling Trend Analysis (V-36)")
+    report_lines.append("")
 
     # --- V-36a: Basic Correctness ---
-    print("## V-36a: Basic Correctness Check")
+    report_lines.append("## V-36a: Basic Correctness Check")
     n = 200
     t = pd.date_range('2000-01-01', periods=n, freq='D')
     x = np.arange(n) * 0.1 + np.random.normal(0, 1, n)
 
-    # Run package function
     rolling_res = mk.rolling_trend_test(x, t, window='50D', step='10D', min_size=10)
 
-    # Run manual verification
-    # Note: manual loop implementation above is simplified, rolling_trend_test handles edge cases better
-    # We will verify that the slopes match for the windows that exist
     manual_slopes = []
     t_series = pd.Series(t)
     for idx, row in rolling_res.iterrows():
@@ -86,19 +54,17 @@ def validation_report():
     max_diff = np.nanmax(diffs)
 
     if max_diff < 1e-10:
-        print(f"PASS: Rolling slopes match manual calculation perfectly (Max diff: {max_diff:.2e})")
+        report_lines.append(f"PASS: Rolling slopes match manual calculation perfectly (Max diff: {max_diff:.2e})")
     else:
-        print(f"FAIL: Rolling slopes diverge from manual calculation (Max diff: {max_diff:.2e})")
+        report_lines.append(f"FAIL: Rolling slopes diverge from manual calculation (Max diff: {max_diff:.2e})")
+    report_lines.append("")
 
     # --- V-36b: Interaction with Aggregation ---
-    print("\n## V-36b: Interaction with Aggregation")
-    # High freq data (hourly) for 1 year
+    report_lines.append("## V-36b: Interaction with Aggregation")
     t_agg = pd.date_range('2000-01-01', periods=24*365, freq='h')
     x_agg = np.arange(len(t_agg)) * 0.01 + np.random.normal(0, 5, len(t_agg))
 
-    # Rolling monthly trend on hourly data, with daily aggregation
-    # This ensures that 'agg_period' is passed correctly to the inner trend_test
-    print("Running rolling trend with daily aggregation on hourly data...")
+    report_lines.append("Running rolling trend with daily aggregation on hourly data...")
     res_agg = mk.rolling_trend_test(
         x_agg, t_agg,
         window='90D', step='30D',
@@ -106,24 +72,17 @@ def validation_report():
     )
 
     if len(res_agg) > 0 and not res_agg['slope'].isna().all():
-        print(f"PASS: Successfully computed rolling trends with aggregation (Generated {len(res_agg)} windows)")
+        report_lines.append(f"PASS: Successfully computed rolling trends with aggregation (Generated {len(res_agg)} windows)")
     else:
-        print("FAIL: Failed to compute rolling trends with aggregation")
+        report_lines.append("FAIL: Failed to compute rolling trends with aggregation")
+    report_lines.append("")
 
     # --- V-36c: Interaction with High Censor Rule ---
-    print("\n## V-36c: Interaction with High Censor Rule")
-    # Data where detection limit increases over time
+    report_lines.append("## V-36c: Interaction with High Censor Rule")
     t_cen = pd.date_range('2000-01-01', periods=100, freq='ME')
     x_raw = np.random.normal(10, 2, 100)
 
-    # Create mixed data with varying detection limits
-    # Window 1: Low limits (<1)
-    # Window 2: High limits (<15) - should trigger high censor rule if enabled
     x_mixed = x_raw.copy()
-    censored_flags = []
-
-    # Convert to string representation for prepare_censored_data
-    # First 50 points: mostly observed, some < 1
     data_list = []
     for i in range(100):
         val = x_mixed[i]
@@ -131,98 +90,125 @@ def validation_report():
             if i % 10 == 0: data_list.append('<1')
             else: data_list.append(val)
         else:
-            # Second 50 points: introduce high detection limit < 15
-            # Since data mean is 10, <15 censors everything below 15
             if i % 5 == 0: data_list.append('<15')
             else: data_list.append(val)
 
     df_cen = mk.prepare_censored_data(data_list)
 
-    # Run with hicensor=True
-    # In the second half, the presence of <15 should censor all observed values < 15
-    # resulting in a very different slope (likely flat or zero if variance is killed)
     res_hicensor = mk.rolling_trend_test(
         df_cen, t_cen,
         window='400D', step='100D',
         hicensor=True,
-        mk_test_method='lwp' # Use LWP method to be sensitive to this
+        mk_test_method='lwp'
     )
 
-    # Just verify it runs and applies logic without crashing
-    print("PASS: High censor rule rolling test completed without error.")
+    report_lines.append("PASS: High censor rule rolling test completed without error.")
+    report_lines.append("")
 
     # --- V-36d: Edge Cases ---
-    print("\n## V-36d: Edge Cases (Small Windows)")
+    report_lines.append("## V-36d: Edge Cases (Small Windows)")
     x_short = np.arange(20)
     t_short = np.arange(20)
 
-    # Window size 5, min size 6 -> Should result in empty results
     res_empty = mk.rolling_trend_test(x_short, t_short, window=5, step=1, min_size=6)
     if res_empty.empty:
-        print("PASS: min_size filtering correctly returned empty DataFrame.")
+        report_lines.append("PASS: min_size filtering correctly returned empty DataFrame.")
     else:
-        print(f"FAIL: min_size filtering returned {len(res_empty)} rows (expected 0).")
+        report_lines.append(f"FAIL: min_size filtering returned {len(res_empty)} rows (expected 0).")
+    report_lines.append("")
 
     # --- V-36e: Outlier Robustness ---
-    print("\n## V-36e: Outlier Robustness")
+    report_lines.append("## V-36e: Outlier Robustness")
     n_out = 100
     t_out = np.arange(n_out)
     x_out = 0.5 * t_out + np.random.normal(0, 1, n_out)
+    x_out[50] = 1000 # Massive outlier
 
-    # Add massive outlier
-    x_out[50] = 1000
-
-    # Compare Sen's slope vs OLS in the window containing the outlier
-    # Window centered around 50
-    # Window [40, 60]
     mask = (t_out >= 40) & (t_out < 60)
     x_win = x_out[mask]
     t_win = t_out[mask]
 
-    # OLS
     ols_res = linregress(t_win, x_win)
     ols_slope = ols_res.slope
 
-    # MannKS
     mk_res = mk.trend_test(x_win, t_win)
     sen_slope = mk_res.slope
 
-    print(f"Window with outlier (True slope ~0.5)")
-    print(f"OLS Slope: {ols_slope:.4f}")
-    print(f"Sen's Slope: {sen_slope:.4f}")
+    report_lines.append(f"Window with outlier (True slope ~0.5)")
+    report_lines.append(f"- OLS Slope: {ols_slope:.4f}")
+    report_lines.append(f"- Sen's Slope: {sen_slope:.4f}")
 
     if abs(sen_slope - 0.5) < abs(ols_slope - 0.5):
-        print("PASS: Sen's slope is more robust to outlier than OLS.")
+        report_lines.append("PASS: Sen's slope is more robust to outlier than OLS.")
     else:
-        print("FAIL: Sen's slope was not more robust.")
+        report_lines.append("FAIL: Sen's slope was not more robust.")
+
+    # Generate Plot for V-36e
+    plt.figure(figsize=(10, 6))
+    plt.scatter(t_win, x_win, label='Data (with Outlier)')
+    plt.plot(t_win, ols_res.intercept + ols_slope * t_win, 'r--', label=f'OLS (Slope={ols_slope:.2f})')
+    # Sen intercept approx
+    sen_int = np.median(x_win - sen_slope * t_win)
+    plt.plot(t_win, sen_int + sen_slope * t_win, 'g-', label=f"Sen's (Slope={sen_slope:.2f})")
+    plt.title('V-36e: Outlier Robustness Comparison')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    outlier_plot_path = os.path.join(OUTPUT_DIR, 'outlier_robustness.png')
+    plt.savefig(outlier_plot_path)
+    plt.close()
+    report_lines.append(f"\n![Outlier Robustness](outlier_robustness.png)")
+    report_lines.append("")
 
     # --- V-36f: Synthetic Reliability ---
-    print("\n## V-36f: Synthetic Reliability (Sine Wave)")
-    # Sine wave: slope changes continuously
-    # y = sin(t/10) -> slope = 0.1 * cos(t/10)
+    report_lines.append("## V-36f: Synthetic Reliability (Sine Wave)")
     n_sine = 200
     t_sine = np.arange(n_sine)
     x_sine = 10 * np.sin(t_sine / 10)
 
-    # Rolling trend with small window to track derivative
     window_sine = 20
     res_sine = mk.rolling_trend_test(x_sine, t_sine, window=window_sine, step=1)
 
-    # Compare calculated slope with analytical derivative at window center
-    # Derivative of 10*sin(t/10) is cos(t/10)
-
-    # Note: Sen's slope estimates the secant, which approximates derivative
     centers = res_sine['window_center']
     analytical_slopes = np.cos(centers / 10)
 
     correlation = np.corrcoef(res_sine['slope'], analytical_slopes)[0, 1]
 
-    print(f"Correlation between rolling Sen's slope and analytical derivative: {correlation:.4f}")
+    report_lines.append(f"Correlation between rolling Sen's slope and analytical derivative: {correlation:.4f}")
 
     if correlation > 0.95:
-        print("PASS: Rolling trend accurately tracks changing signal derivative.")
+        report_lines.append("PASS: Rolling trend accurately tracks changing signal derivative.")
     else:
-        print("FAIL: Correlation too low.")
+        report_lines.append("FAIL: Correlation too low.")
+
+    # Generate Plot for V-36f
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+
+    ax1.plot(t_sine, x_sine, 'k-', alpha=0.3, label='Signal: 10*sin(t/10)')
+    ax1.set_ylabel('Signal Value', color='black')
+
+    ax2 = ax1.twinx()
+    ax2.plot(centers, res_sine['slope'], 'b-', label="Rolling Sen's Slope")
+    ax2.plot(centers, analytical_slopes, 'r--', label="Analytical Derivative: cos(t/10)")
+    ax2.set_ylabel('Slope', color='blue')
+
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
+
+    plt.title('V-36f: Tracking a Sine Wave Derivative')
+    sine_plot_path = os.path.join(OUTPUT_DIR, 'sine_wave_tracking.png')
+    plt.savefig(sine_plot_path)
+    plt.close()
+    report_lines.append(f"\n![Sine Wave Tracking](sine_wave_tracking.png)")
+    report_lines.append("")
+
+    # Write Report
+    report_path = os.path.join(OUTPUT_DIR, 'README.md')
+    with open(report_path, 'w') as f:
+        f.write("\n".join(report_lines))
+
+    # Also print to stdout
+    print("\n".join(report_lines))
 
 if __name__ == "__main__":
-    validation_report()
+    run_validation()
