@@ -3,7 +3,7 @@
 ## Executive Summary
 
 This report proposes three enhancements to the MannKS package:
-1. **Block Bootstrap for Autocorrelation** - Addresses a fundamental statistical assumption violation
+1. **Block Bootstrap for Autocorrelation** - **[COMPLETED]** Addresses a fundamental statistical assumption violation
 2. **Rolling Sen's Slope** - Adds temporal analysis capabilities
 3. **Segmented Sen's Slope Regression** - Detects structural breaks and regime shifts
 
@@ -2580,7 +2580,7 @@ def plot_segmented_trend(result, x, t, save_path=None, figsize
 
 **Implement all three features**, phased as follows:
 
-1. **Block bootstrap first**: Fixes the fundamental validity of the current tests.
+1. **Block bootstrap first**: **[COMPLETED]** Fixes the fundamental validity of the current tests.
 2. **Rolling slopes second**: Provides immediate value for temporal exploration.
 3. **Segmented regression third**: Adds advanced, unique capabilities for detecting structural breaks.
 
