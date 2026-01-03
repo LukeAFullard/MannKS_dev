@@ -150,3 +150,62 @@ def test_rolling_trend_seasonal():
     # Let's check slope_per_second is small positive
     assert (results['slope_per_second'] > 0).all()
     assert (results['slope_per_second'] < 1e-5).all()
+
+def test_rolling_trend_edge_case_last_point():
+    """Test that the rolling window includes the last data point even if it aligns with window boundary."""
+    t = np.arange(0, 101, 10) # 0, 10, ..., 100
+    x = t.astype(float)
+
+    # Window=10, Step=10.
+    # We expect 11 windows: starts at 0, 10, ..., 100.
+    # The last window [100, 110) should capture the point at 100.
+    results = rolling_trend_test(x, t, window=10, step=10, min_size=1)
+
+    assert len(results) == 11
+    assert results.iloc[-1]['window_start'] == 100
+    assert results.iloc[-1]['n_obs'] == 1
+
+def test_compare_periods_seasonal():
+    """Test compare_periods with seasonal data."""
+    # Generate 10 years of monthly data (120 points)
+    n = 120
+    t = pd.date_range('2000-01-01', periods=n, freq='ME')
+
+    # First 5 years (60 points): Stable seasonality, no trend
+    # Last 5 years (60 points): Increasing trend
+
+    seasonal_pattern = 10 * np.sin(2 * np.pi * np.arange(n) / 12)
+    noise = np.random.normal(0, 1, n)
+
+    trend = np.concatenate([
+        np.zeros(60),
+        0.5 * np.arange(60) # Slope 0.5 per month
+    ])
+
+    x = trend + seasonal_pattern + noise
+
+    breakpoint = pd.Timestamp('2005-01-01')
+
+    comparison = compare_periods(
+        x, t, breakpoint,
+        seasonal=True, period=12, season_type='month',
+        slope_scaling='year'
+    )
+
+    assert 'before' in comparison
+    assert 'after' in comparison
+
+    # Before: No trend
+    assert comparison['before'].h == False
+    # Slope 0
+    assert abs(comparison['before'].slope) < 2.0 # Allow noise margin
+
+    # After: Increasing trend
+    # Slope 0.5 per month -> 6.0 per year
+    assert comparison['after'].trend == 'increasing'
+    assert comparison['after'].slope > 4.0
+    assert comparison['after'].slope < 8.0
+
+    # Significant change
+    assert comparison['significant_change'] == True
+    assert comparison['slope_difference'] > 3.0
