@@ -85,3 +85,11 @@ print(f"Significant Change? {comparison['significant_change']}")
 1.  **Window Size:** Choose a window large enough to be statistically meaningful (usually $\ge$ 10 points) but small enough to capture the changes you are interested in. For annual environmental data, 10-15 year windows are common.
 2.  **Continuous Confidence:** For rolling plots, tracking the continuous confidence (`C`) or the classification is often more informative than looking for binary p-value significance, which can jump erratically near the threshold.
 3.  **Data Gaps:** The function handles missing data by checking `min_size`. Windows with insufficient data are skipped.
+
+## Edge Handling
+
+Users often notice that rolling trend plots start and end "inside" the full data range. This is expected behavior for moving window analyses.
+
+*   **Leading Edge (Start):** The first window begins at the very start of your data. However, the result is typically plotted at the *center* of that window. For a 10-year window, the first data point is at Year 0, but the first plotted trend point is at Year 5.
+*   **Trailing Edge (End):** As the window slides past the end of your data, it contains fewer and fewer future points. The `min_size` parameter acts as a cutoff here. Once the "tail" of the window contains fewer than `min_size` data points, calculation stops.
+*   **No Imputation:** The method strictly uses existing data. It does not attempt to extrapolate trends into the past or future to fill these visual gaps, ensuring that every plotted point represents a calculation based on real, observed data.
