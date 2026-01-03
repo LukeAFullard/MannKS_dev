@@ -58,6 +58,10 @@ def rolling_trend_test(
             - Cd: Directional confidence.
             - tau: Kendall's Tau.
             - s: Mann-Kendall score.
+            - intercept: The intercept of the trend line.
+            - slope_per_second: Unscaled Sen's slope (e.g., units/second for datetime).
+            - lower_ci_per_second: Unscaled lower CI.
+            - upper_ci_per_second: Unscaled upper CI.
 
     Note on Edge Handling:
         The function uses an asymmetric approach to window generation:
@@ -103,20 +107,11 @@ def rolling_trend_test(
         else:
             # Default step: half window
             # Division is tricky with DateOffsets.
-            # If window is offset, we can't easily divide. Default to window (no overlap) or handle specially?
-            # Or convert to approximate timedelta for step?
             if isinstance(window_val, pd.Timedelta):
                 step_val = window_val / 2
             else:
                 # Fallback for Offsets: Just use the offset itself as step (non-overlapping)
-                # Or try to construct a half-offset? Not standard.
-                # Let's default to window size (no overlap) if we can't divide,
-                # OR try to parse roughly.
-                # Actually, a safer default for variable offsets is simply 1 of the base unit if possible?
-                # No, let's just default to the window itself if we can't divide.
-                # Wait, common usage is 10Y window, 1Y step. If step is None, what's sensible?
-                # Maybe 1/10th? Or just the window.
-                # Let's try to assume step is same as window if we can't divide.
+                # Or use the window itself
                 step_val = window_val
 
     else:
@@ -186,9 +181,6 @@ def rolling_trend_test(
             # Calculate window center
             if is_datetime:
                 # Midpoint calculation
-                # If using offsets, win_end - win_start results in a Timedelta usually (if date subtraction)
-                # Timestamp - Timestamp = Timedelta
-                # So this should work even if created via Offset
                 win_center = win_start + (win_end - win_start) / 2
             else:
                 win_center = (win_start + win_end) / 2
@@ -207,7 +199,11 @@ def rolling_trend_test(
                 'C': result.C,
                 'Cd': result.Cd,
                 'tau': result.Tau,
-                's': result.s
+                's': result.s,
+                'intercept': result.intercept,
+                'slope_per_second': result.slope_per_second,
+                'lower_ci_per_second': result.lower_ci_per_second,
+                'upper_ci_per_second': result.upper_ci_per_second,
             })
 
         except Exception as e:
@@ -218,7 +214,8 @@ def rolling_trend_test(
         return pd.DataFrame(columns=[
             'window_start', 'window_end', 'window_center', 'n_obs',
             'slope', 'lower_ci', 'upper_ci', 'p_value', 'h',
-            'classification', 'C', 'Cd', 'tau', 's'
+            'classification', 'C', 'Cd', 'tau', 's',
+            'intercept', 'slope_per_second', 'lower_ci_per_second', 'upper_ci_per_second'
         ])
 
     return pd.DataFrame(results)

@@ -443,69 +443,83 @@ def plot_rolling_trend(rolling_results, data=None, time_col=None, value_col=None
                    alpha=0.3, s=20, color='gray', label='Data')
 
     # Plot each window's trend line
-    # For performance, maybe downsample if too many windows?
+    # Only if we have the necessary columns
+    has_intercept = 'intercept' in rolling_results.columns
+    has_unscaled = 'slope_per_second' in rolling_results.columns
+
     for idx, row in rolling_results.iterrows():
-        x_line = [row['window_start'], row['window_end']]
+        # Skip failed windows (NaN slope)
+        if pd.isna(row['slope']):
+            continue
 
-        # Calculate y values for trend line
-        t_mid = row['window_center']
+        if has_intercept and has_unscaled and pd.notna(row['intercept']):
+            # Robust plotting with intercept and unscaled slope
+            # If datetime, convert bounds to timestamps for calculation
+            t_start = row['window_start']
+            t_end = row['window_end']
 
-        # We need to compute numeric values for calculation
-        if is_datetime:
-            t_mid_num = pd.to_datetime(t_mid).timestamp()
-            t_start_num = pd.to_datetime(row['window_start']).timestamp()
-            t_end_num = pd.to_datetime(row['window_end']).timestamp()
-            # If slope was scaled (e.g. per year), we need to unscale it to per-second
-            # OR just assume slope is per unit of x-axis.
-            # Note: rolling_trend_test returns the SCALED slope if slope_scaling was used.
-            # But here x-axis diffs are in seconds (if timestamp()).
-            # This is tricky.
-            # The 'rolling_trend_test' output doesn't currently store the unscaled 'slope_per_second'.
-            # It stores 'slope' which might be scaled.
+            if is_datetime:
+                # Convert to numeric timestamp for y = mx + c
+                ts_start = pd.to_datetime(t_start).timestamp()
+                ts_end = pd.to_datetime(t_end).timestamp()
+                x_num = np.array([ts_start, ts_end])
+            else:
+                x_num = np.array([t_start, t_end])
 
-            # To fix this properly, rolling_trend_test should ideally return unscaled slopes too,
-            # or we need to know the scaling factor.
-            # For visualization purpose, if we don't have the unscaled slope, we might plot incorrect lines.
+            # Calculate y values
+            # slope_per_second is unscaled (e.g. units/sec or units/unit_t)
+            slope_raw = row['slope_per_second']
+            y_vals = slope_raw * x_num + row['intercept']
 
-            # WORKAROUND: We will plot relative change based on the stored slope, assuming
-            # the user wants to see the magnitude.
-            # But wait, if slope is "per year", and we multiply by seconds diff, it will be huge.
-            # We must normalize.
-            # Let's assume standard behavior: if slope is scaled, we cannot easily replot the line
-            # without the scaling factor.
+            # Plot segment
+            # For x-axis, if datetime, convert back to datetime for matplotlib
+            if is_datetime:
+                x_plot_seg = [t_start, t_end]
+            else:
+                x_plot_seg = [t_start, t_end]
 
-            # However, for the purpose of this plot, we mainly want to show direction and relative fit.
-            # Let's rely on the visual scatter of slopes in Panel 2 for magnitude.
-            # In Panel 1, let's just plot the line segments if we can guess the unit or if it's unscaled.
+            # Use significant color or gray?
+            # If significant, maybe red line? Or just dark gray.
+            color = 'red' if (highlight_significant and row.get('h', False)) else 'black'
+            alpha_line = 0.5 if (highlight_significant and row.get('h', False)) else 0.2
+            width = 2 if (highlight_significant and row.get('h', False)) else 1
 
-            # If we assume slope is per year (31536000s) approximately:
-            # But we don't know if it is.
-
-            # Let's just center the line at 0 for y_mid for visualization
-            # or try to anchor it to data mean?
-            # We don't have the window intercept or data mean in the results dataframe.
-
-            # To make Panel 1 useful, we really need the intercept or the data mean.
-            # 'rolling_trend_test' doesn't return intercept.
-            # I will skip plotting lines in Panel 1 for now and just plot data if available.
-            pass
-        else:
-             pass
-
-    # Since we can't accurately reconstruct lines without intercept or unscaled slope,
-    # let's modify Panel 1 to just show data and global trend.
-    # Alternatively, we could update rolling_trend_test to return intercept.
-    # But for now, let's stick to the requested implementation scope.
+            ax1.plot(x_plot_seg, y_vals, color=color, alpha=alpha_line, linewidth=width)
 
     if show_global_trend and global_result:
         # Here we have global slope and intercept usually.
         # But trend_test returns 'intercept'.
         if hasattr(global_result, 'intercept') and pd.notna(global_result.intercept):
-            # We can plot global line
-            pass
+            # We need t_min/t_max from data or results
+            if data is not None and time_col:
+                t_min = data[time_col].min()
+                t_max = data[time_col].max()
+            else:
+                t_min = rolling_results['window_start'].min()
+                t_max = rolling_results['window_end'].max()
+
+            # Unscaled slope
+            g_slope = getattr(global_result, 'slope_per_second', global_result.slope)
+
+            if is_datetime:
+                ts_min = pd.to_datetime(t_min).timestamp()
+                ts_max = pd.to_datetime(t_max).timestamp()
+                x_num_g = np.array([ts_min, ts_max])
+            else:
+                x_num_g = np.array([t_min, t_max])
+
+            y_g = g_slope * x_num_g + global_result.intercept
+
+            if is_datetime:
+                x_g = [t_min, t_max]
+            else:
+                x_g = [t_min, t_max]
+
+            ax1.plot(x_g, y_g, color='blue', linestyle='--', linewidth=2, label='Global Trend')
+
 
     ax1.set_ylabel('Value')
-    ax1.set_title('Original Data')
+    ax1.set_title('Original Data with Rolling Trend Lines')
     if data is not None:
         ax1.legend()
     ax1.grid(True, alpha=0.3)
