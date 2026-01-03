@@ -8,10 +8,10 @@ from ._datetime import _is_datetime_like
 
 # Robust import for to_offset
 try:
-    from pandas.tseries.frequencies import to_offset
+    from pandas.tseries.offsets import to_offset
 except ImportError:
     try:
-        from pandas.tseries.offsets import to_offset
+        from pandas.tseries.frequencies import to_offset
     except ImportError:
         to_offset = None # Will fail at runtime if needed
 
@@ -261,18 +261,34 @@ def _generate_windows(t_series, window_size, step_size, is_datetime):
     t_min = t_series.min()
     t_max = t_series.max()
 
-    current = t_min
+    if not is_datetime:
+         # Reduce floating point accumulation error for numeric data
+         # Calculate number of steps
+         try:
+            n_steps = int((t_max - t_min) / step_size) + 2 # Add buffer
+         except:
+            n_steps = 10000 # Safety
 
-    while current <= t_max:
-        # Check if window_size is Timedelta or Offset (or float)
-        # Addition works for both Timestamp + Timedelta and Timestamp + DateOffset
-        win_end = current + window_size
+         for i in range(n_steps):
+            current = t_min + i * step_size
+            if current > t_max:
+                break
+            win_end = current + window_size
+            windows.append((current, win_end))
 
-        windows.append((current, win_end))
-        current += step_size
+            if len(windows) > 10000:
+                raise ValueError("Too many windows generated. Check window/step sizes.")
+    else:
+        # Datetime uses Timedelta/Offset which is robust to accumulation usually
+        # because it operates on calendar logic or fixed integers (nanoseconds)
+        current = t_min
+        while current <= t_max:
+            win_end = current + window_size
+            windows.append((current, win_end))
+            current += step_size
 
-        if len(windows) > 10000:
-            raise ValueError("Too many windows generated. Check window/step sizes.")
+            if len(windows) > 10000:
+                raise ValueError("Too many windows generated. Check window/step sizes.")
 
     return windows
 
