@@ -6,6 +6,15 @@ from .trend_test import trend_test
 from .seasonal_trend_test import seasonal_trend_test
 from ._datetime import _is_datetime_like
 
+# Robust import for to_offset
+try:
+    from pandas.tseries.frequencies import to_offset
+except ImportError:
+    try:
+        from pandas.tseries.offsets import to_offset
+    except ImportError:
+        to_offset = None # Will fail at runtime if needed
+
 def rolling_trend_test(
     x: Union[np.ndarray, pd.DataFrame],
     t: np.ndarray,
@@ -28,11 +37,16 @@ def rolling_trend_test(
         x: Data vector (array or DataFrame column)
         t: Time vector (array of timestamps or numeric)
         window: Window size.
-                - For datetime t: string (e.g., '10Y', '5Y', '365D') or Timedelta-compatible string
+                - For datetime t: string (e.g., '365D', '10YE') or Timedelta-compatible string.
+                  Note: Anchored offsets (e.g., 'YE', 'ME') snap to the next anchor point,
+                  which may result in variable window durations (e.g., '1YE' from Jan 31
+                  goes to Dec 31 of the same year). For fixed duration, use 'D' (days).
                 - For numeric t: integer or float (e.g., 10, 5.5)
         step: Step size for sliding the window.
-              - For datetime t: string (e.g., '1Y', '6M'). Default is window/2 for Timedeltas,
-                but defaults to the full window size (non-overlapping) for DateOffsets (e.g., '1M', '1Y').
+              - For datetime t: string (e.g., '1Y', '6M').
+                Default for Timedeltas (e.g. '365D') is window/2.
+                Default for DateOffsets (e.g. '1YE') is the full window size (non-overlapping)
+                because offsets cannot be divided.
               - For numeric t: integer or float. Default is window/2.
         min_size: Minimum number of observations required in a window to calculate a trend.
         alpha: Significance level for the Mann-Kendall test (default 0.05).
@@ -94,13 +108,16 @@ def rolling_trend_test(
     if is_datetime:
         t_series = pd.to_datetime(t_arr)
 
+        if to_offset is None:
+             raise ImportError("Could not import to_offset from pandas. Please ensure pandas is installed correctly.")
+
         # Try parsing as Timedelta first (fixed duration)
         try:
             window_val = pd.Timedelta(window)
         except ValueError:
             # Try parsing as DateOffset (variable duration like 'Y', 'M')
             try:
-                window_val = pd.tseries.frequencies.to_offset(window)
+                window_val = to_offset(window)
             except (ValueError, TypeError):
                 raise ValueError(f"Invalid window '{window}' for datetime data. Use a pandas frequency string (e.g., '365D', '10YE').")
 
@@ -109,7 +126,7 @@ def rolling_trend_test(
                 step_val = pd.Timedelta(step)
             except ValueError:
                 try:
-                    step_val = pd.tseries.frequencies.to_offset(step)
+                    step_val = to_offset(step)
                 except (ValueError, TypeError):
                     raise ValueError(f"Invalid step '{step}' for datetime data.")
         else:
@@ -119,7 +136,6 @@ def rolling_trend_test(
                 step_val = window_val / 2
             else:
                 # Fallback for Offsets: Just use the offset itself as step (non-overlapping)
-                # Or use the window itself
                 step_val = window_val
 
     else:
@@ -172,14 +188,6 @@ def rolling_trend_test(
 
             if seasonal:
                 # seasonal_trend_test uses min_size_per_season, not min_size
-                # We can't pass min_size=None blindly if it's not accepted,
-                # or if it has a different name.
-                # It accepts min_size_per_season.
-                # However, rolling_trend_test filters by total window size 'min_size'.
-                # We should probably pass min_size_per_season if provided in kwargs,
-                # or let it default.
-                # The 'min_size' key in common_kwargs causes TypeError if seasonal_trend_test
-                # doesn't accept it.
                 if 'min_size' in common_kwargs:
                     del common_kwargs['min_size']
 
@@ -317,15 +325,11 @@ def compare_periods(
     t_after = t_arr[~mask_before]
 
     if len(t_before) < 3 or len(t_after) < 3:
-         warnings.warn("Insufficient data in one or both periods for comparison.")
+         warnings.warn("Insufficient data in one or both periods for comparison.", UserWarning)
 
     common_kwargs = {'alpha': alpha, **kwargs}
 
     if seasonal:
-        # Avoid passing trend_test specific args if we were to support them,
-        # but for now we trust kwargs are appropriate or we filter if needed.
-        # seasonal_trend_test specific args:
-        # min_size is not supported in seasonal_trend_test (it uses min_size_per_season)
         if 'min_size' in common_kwargs:
              del common_kwargs['min_size']
 
@@ -336,15 +340,12 @@ def compare_periods(
             x=x_after, t=t_after, period=period, season_type=season_type, **common_kwargs
         )
     else:
-        # Ensure seasonal args are not in kwargs passed to trend_test
-        # (Though we captured them in explicit args, so they are not in kwargs)
         result_before = trend_test(x=x_before, t=t_before, **common_kwargs)
         result_after = trend_test(x=x_after, t=t_after, **common_kwargs)
 
     slope_diff = result_after.slope - result_before.slope
 
     # Simple overlap test
-    # If any CI is NaN, we cannot determine significance
     if np.isnan(result_before.lower_ci) or np.isnan(result_after.lower_ci):
         ci_overlap = np.nan
         significant_change = False
