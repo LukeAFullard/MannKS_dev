@@ -92,8 +92,8 @@ def segmented_trend_test(
     # We use this proxy.
 
     # 3. Generate Bootstrap Distribution (For CIs and Probabilities)
-    # Only if n_breakpoints > 0
-    if n_breakpoints > 0:
+    # Only if n_breakpoints > 0 and n_bootstrap > 0
+    if n_breakpoints > 0 and n_bootstrap > 0:
         boot_breakpoints_numeric = get_breakpoint_bootstrap_distribution(
             x_val, t_numeric, censored, cen_type, breakpoints,
             n_bootstrap=n_bootstrap,
@@ -134,26 +134,33 @@ def segmented_trend_test(
     boot_breakpoints_final = np.array([])
 
     if n_breakpoints > 0:
-        # Calculate CIs on numeric breakpoints
-        ci_lower = np.percentile(boot_breakpoints_numeric, 100 * (alpha / 2), axis=0)
-        ci_upper = np.percentile(boot_breakpoints_numeric, 100 * (1 - alpha / 2), axis=0)
+        if len(boot_breakpoints_numeric) > 0:
+            # Calculate CIs on numeric breakpoints
+            ci_lower = np.percentile(boot_breakpoints_numeric, 100 * (alpha / 2), axis=0)
+            ci_upper = np.percentile(boot_breakpoints_numeric, 100 * (1 - alpha / 2), axis=0)
 
-        if is_datetime:
-            breakpoints_final = pd.to_datetime(breakpoints, unit='s')
+            if is_datetime:
+                breakpoints_final = pd.to_datetime(breakpoints, unit='s')
 
-            flat_boot = boot_breakpoints_numeric.flatten()
-            flat_boot_dt = pd.to_datetime(flat_boot, unit='s')
-            boot_breakpoints_final = flat_boot_dt.values.reshape(boot_breakpoints_numeric.shape)
+                flat_boot = boot_breakpoints_numeric.flatten()
+                flat_boot_dt = pd.to_datetime(flat_boot, unit='s')
+                boot_breakpoints_final = flat_boot_dt.values.reshape(boot_breakpoints_numeric.shape)
 
-            ci_lower_final = pd.to_datetime(ci_lower, unit='s')
-            ci_upper_final = pd.to_datetime(ci_upper, unit='s')
+                ci_lower_final = pd.to_datetime(ci_lower, unit='s')
+                ci_upper_final = pd.to_datetime(ci_upper, unit='s')
+                breakpoint_cis = list(zip(ci_lower_final, ci_upper_final))
+            else:
+                breakpoints_final = breakpoints
+                boot_breakpoints_final = boot_breakpoints_numeric
+                breakpoint_cis = list(zip(ci_lower, ci_upper))
         else:
-            breakpoints_final = breakpoints
-            boot_breakpoints_final = boot_breakpoints_numeric
-            ci_lower_final = ci_lower
-            ci_upper_final = ci_upper
+            # No bootstrap samples
+            if is_datetime:
+                breakpoints_final = pd.to_datetime(breakpoints, unit='s')
+            else:
+                breakpoints_final = breakpoints
+            breakpoint_cis = [(np.nan, np.nan)] * n_breakpoints
 
-        breakpoint_cis = list(zip(ci_lower_final, ci_upper_final))
     else:
         breakpoints_final = []
 
@@ -222,7 +229,12 @@ def find_best_segmentation(x, t, max_breakpoints=3, **kwargs):
 
     for n in range(max_breakpoints + 1):
         try:
-            res = segmented_trend_test(x, t, n_breakpoints=n, **kwargs)
+            # Run without bootstrap first for speed
+            # Copy kwargs and set n_bootstrap=0
+            kwargs_fast = kwargs.copy()
+            kwargs_fast['n_bootstrap'] = 0
+
+            res = segmented_trend_test(x, t, n_breakpoints=n, **kwargs_fast)
             models.append(res)
             results_list.append({
                 'n_breakpoints': n,
@@ -249,6 +261,13 @@ def find_best_segmentation(x, t, max_breakpoints=3, **kwargs):
         raise RuntimeError("No models converged.")
 
     best_n = valid_summary.loc[valid_summary['bic'].idxmin(), 'n_breakpoints']
-    best_result = models[best_n]
+
+    # If the user requested n_bootstrap > 0, we should rerun the best model with full bootstrap
+    user_n_boot = kwargs.get('n_bootstrap', 200)
+    if user_n_boot > 0 and best_n > 0:
+        # Re-run best model with full bootstrap
+        best_result = segmented_trend_test(x, t, n_breakpoints=best_n, **kwargs)
+    else:
+        best_result = models[best_n]
 
     return best_result, summary
