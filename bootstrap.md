@@ -34,8 +34,9 @@ For calculating confidence intervals around the Sen's Slope, we use a **Pairs Bl
 **Procedure:**
 1.  **Block Sampling:** Instead of separating residuals, we sample blocks of time-value pairs $(x_i, t_i)$.
 2.  **Resampling:** Concatenate these blocks to form a new dataset $(x^*_{boot}, t^*_{boot})$.
-    *   *Note:* The bootstrapped time vector $t^*_{boot}$ will contain duplicate timestamps and will not be strictly increasing. The Sen's Slope estimator handles this by calculating pairwise slopes between all valid pairs in the resampled data.
-3.  **Estimation:** Calculate Sen's Slope on this bootstrapped dataset.
+    *   *Note:* The bootstrapped time vector $t^*_{boot}$ will contain duplicate timestamps and will not be strictly increasing.
+3.  **Sorting:** To ensure correct calculation of pairwise slopes (especially for censored data logic), we sort the bootstrapped sample by time: $(x^*_{sorted}, t^*_{sorted})$.
+4.  **Estimation:** Calculate Sen's Slope on this sorted bootstrapped dataset.
 4.  **Confidence Interval:** The 90% CI is determined from the 5th and 95th percentiles of the bootstrap distribution of slopes.
 
 ### Why Pairs Bootstrap? (The "Shifting Limit" Issue)
