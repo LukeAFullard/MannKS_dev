@@ -92,23 +92,21 @@ def run_comparison(n_iterations=50):
     print(f"Running {n_iterations} comparison iterations...")
 
     for i in range(n_iterations):
-        if i % 5 == 0:
+        if i % 10 == 0:
             print(f"Iteration {i}/{n_iterations}...")
 
         t, x, true_n, true_bps = generate_random_dataset(seed=42+i)
 
+        # -----------------------------------
         # 1. Piecewise Regression (Standard OLS)
+        # -----------------------------------
         try:
-            # Model Selection
             ms_pw = piecewise_regression.ModelSelection(t, x, max_breakpoints=2)
             # Find best model based on BIC
-            # ms_pw.models is a list of Fit objects.
-            # We iterate to find min BIC
             best_bic_pw = np.inf
             best_model_pw = None
 
             for fit in ms_pw.models:
-                # piecewise_regression Fit object has 'get_results()' dict.
                 res = fit.get_results()
                 bic = res.get('bic')
                 if bic is not None and bic < best_bic_pw:
@@ -116,76 +114,92 @@ def run_comparison(n_iterations=50):
                     best_model_pw = fit
 
             pw_n = best_model_pw.n_breakpoints
-            pw_bps = best_model_pw.get_results()['estimates'].get('breakpoints', [])
-            # pw_bps is a list of estimates
-            if pw_n == 1:
-                pw_bps = [best_model_pw.get_results()['estimates']['breakpoint1']['estimate']]
-                pw_cis = [(best_model_pw.get_results()['estimates']['breakpoint1']['confidence_interval'])]
-            elif pw_n == 2:
+            if pw_n > 0:
                 est = best_model_pw.get_results()['estimates']
-                pw_bps = [est['breakpoint1']['estimate'], est['breakpoint2']['estimate']]
-                pw_cis = [est['breakpoint1']['confidence_interval'], est['breakpoint2']['confidence_interval']]
+                pw_bps = []
+                for k in range(1, pw_n + 1):
+                    pw_bps.append(est[f'breakpoint{k}']['estimate'])
             else:
                 pw_bps = []
-                pw_cis = []
 
         except Exception as e:
-            print(f"Piecewise Regression failed on iter {i}: {e}")
+            # print(f"Piecewise Regression failed on iter {i}: {e}")
             pw_n = -1
             pw_bps = []
-            pw_cis = []
 
-        # 2. MannKS (Robust)
+        # -----------------------------------
+        # 2. MannKS - Standard (merge=False)
+        # -----------------------------------
         try:
-            # We use smaller n_bootstrap for speed in validation loop
             mk_res, _ = find_best_segmentation(
                 x=x, t=t, max_breakpoints=2, n_bootstrap=20, alpha=0.05,
-                min_segment_size=3
+                min_segment_size=3, merge_similar_segments=False
             )
             mk_n = mk_res.n_breakpoints
-            mk_bps = mk_res.breakpoints # This might be Timestamp or float depending on input
-            # Input t is float (linspace). So mk_bps is float.
-            # But wait, segmented_trend_test converts numeric t to numeric internally,
-            # and returns breakpoints matching input type if numeric.
-            # If t is float array, is_datetime=False.
-            # So mk_bps is numeric array.
-
-            mk_bps = list(mk_bps)
-            mk_cis = mk_res.breakpoint_cis
-
+            mk_bps = list(mk_res.breakpoints)
         except Exception as e:
-            print(f"MannKS failed on iter {i}: {e}")
             mk_n = -1
             mk_bps = []
-            mk_cis = []
 
-        # Store result
+        # -----------------------------------
+        # 3. MannKS - Merged (merge=True)
+        # -----------------------------------
+        try:
+            mk_merge_res, _ = find_best_segmentation(
+                x=x, t=t, max_breakpoints=2, n_bootstrap=20, alpha=0.05,
+                min_segment_size=3, merge_similar_segments=True
+            )
+            mk_merge_n = mk_merge_res.n_breakpoints
+            mk_merge_bps = list(mk_merge_res.breakpoints)
+        except Exception as e:
+            mk_merge_n = -1
+            mk_merge_bps = []
+
+        # -----------------------------------
+        # Calculate Error Metrics
+        # -----------------------------------
         row = {
             'iter': i,
             'true_n': true_n,
             'true_bps': str(true_bps),
             'pw_n': pw_n,
             'mk_n': mk_n,
+            'mk_merge_n': mk_merge_n,
             'pw_bps': str(pw_bps),
             'mk_bps': str(mk_bps),
-            'match_n': (pw_n == mk_n)
+            'mk_merge_bps': str(mk_merge_bps),
+
+            # Correct N Detection
+            'pw_correct_n': (pw_n == true_n),
+            'mk_correct_n': (mk_n == true_n),
+            'mk_merge_correct_n': (mk_merge_n == true_n)
         }
 
-        # Compare positions if N matches and > 0
-        if pw_n == mk_n and pw_n > 0:
-            # Assuming order is sorted (usually is)
-            diffs = np.abs(np.array(pw_bps) - np.array(mk_bps))
-            row['mean_bp_diff'] = np.mean(diffs)
+        # Calculate Breakpoint Location Error (only if N matches true N and N > 0)
+        def calc_bp_error(pred_bps, true_bps):
+            if len(pred_bps) != len(true_bps):
+                return np.nan
+            if len(true_bps) == 0:
+                return 0.0 # No error if no breakpoints
+            # Sort both
+            p = np.sort(pred_bps)
+            t = np.sort(true_bps)
+            return np.mean(np.abs(p - t))
 
-            # CI widths
-            pw_widths = [ci[1] - ci[0] for ci in pw_cis]
-            mk_widths = [ci[1] - ci[0] for ci in mk_cis]
-            row['mean_pw_ci_width'] = np.mean(pw_widths)
-            row['mean_mk_ci_width'] = np.mean(mk_widths)
+        if pw_n == true_n:
+            row['pw_loc_error'] = calc_bp_error(pw_bps, true_bps)
         else:
-            row['mean_bp_diff'] = np.nan
-            row['mean_pw_ci_width'] = np.nan
-            row['mean_mk_ci_width'] = np.nan
+            row['pw_loc_error'] = np.nan
+
+        if mk_n == true_n:
+            row['mk_loc_error'] = calc_bp_error(mk_bps, true_bps)
+        else:
+            row['mk_loc_error'] = np.nan
+
+        if mk_merge_n == true_n:
+            row['mk_merge_loc_error'] = calc_bp_error(mk_merge_bps, true_bps)
+        else:
+            row['mk_merge_loc_error'] = np.nan
 
         results.append(row)
 
@@ -196,96 +210,62 @@ def run_comparison(n_iterations=50):
 def generate_report(df):
     total = len(df)
 
-    # 1. Model Selection Agreement
-    agreement_matrix = pd.crosstab(df['pw_n'], df['mk_n'])
-    match_rate = df['match_n'].mean()
+    # Accuracy Rates
+    pw_acc = df['pw_correct_n'].mean()
+    mk_acc = df['mk_correct_n'].mean()
+    mk_merge_acc = df['mk_merge_correct_n'].mean()
 
-    # 2. Breakpoint Position Agreement
-    # Filter for matches where n > 0
-    valid_comparison = df[(df['match_n']) & (df['pw_n'] > 0)]
-    avg_bp_diff = valid_comparison['mean_bp_diff'].mean()
+    # Location Errors (Filter out NaN)
+    pw_err = df['pw_loc_error'].mean()
+    mk_err = df['mk_loc_error'].mean()
+    mk_merge_err = df['mk_merge_loc_error'].mean()
 
-    # 3. CI Width Comparison
-    avg_pw_width = valid_comparison['mean_pw_ci_width'].mean()
-    avg_mk_width = valid_comparison['mean_mk_ci_width'].mean()
+    # Confusion Matrices
+    cm_pw = pd.crosstab(df['true_n'], df['pw_n'])
+    cm_mk = pd.crosstab(df['true_n'], df['mk_n'])
+    cm_mk_merge = pd.crosstab(df['true_n'], df['mk_merge_n'])
 
-    # New: Plot mismatches
-    mismatch_df = df[~df['match_n'] & (df['pw_n'] != -1) & (df['mk_n'] != -1)]
-    if not mismatch_df.empty:
-        # Plot up to 2
-        for i, idx in enumerate(mismatch_df.head(2).index):
-            iter_id = mismatch_df.loc[idx, 'iter']
-            # Re-generate data
-            t, x, true_n, true_bps = generate_random_dataset(seed=42+int(iter_id))
-
-            plt.figure(figsize=(10, 6))
-            plt.scatter(t, x, color='gray', alpha=0.5, label='Data')
-
-            # Plot PW breakpoints
-            pw_bps = eval(mismatch_df.loc[idx, 'pw_bps'])
-            for bp in pw_bps:
-                plt.axvline(bp, color='blue', linestyle='--', label='PW Breakpoint')
-
-            # Plot MK breakpoints
-            mk_bps = eval(mismatch_df.loc[idx, 'mk_bps'])
-            for bp in mk_bps:
-                plt.axvline(bp, color='red', linestyle=':', label='MK Breakpoint')
-
-            plt.title(f"Mismatch (Iter {iter_id}): PW n={mismatch_df.loc[idx, 'pw_n']}, MK n={mismatch_df.loc[idx, 'mk_n']}")
-
-            # Dedupe legend
-            handles, labels = plt.gca().get_legend_handles_labels()
-            by_label = dict(zip(labels, handles))
-            plt.legend(by_label.values(), by_label.keys())
-
-            plt.savefig(os.path.join(OUTPUT_DIR, f'mismatch_plot_{i}.png'))
-            plt.close()
-
-    # Plots
-    # Scatter plot of BPs
-    plt.figure(figsize=(8, 8))
-
-    # We need to extract all paired BPs
-    pw_bp_list = []
-    mk_bp_list = []
-
-    for idx, row in valid_comparison.iterrows():
-        # safe eval
-        p = eval(row['pw_bps'])
-        m = eval(row['mk_bps'])
-        pw_bp_list.extend(p)
-        mk_bp_list.extend(m)
-
-    plt.scatter(pw_bp_list, mk_bp_list, alpha=0.6)
-    plt.plot([0, 100], [0, 100], 'r--')
-    plt.xlabel('Piecewise Regression (OLS) Breakpoint')
-    plt.ylabel('MannKS (Sen) Breakpoint')
-    plt.title('Comparison of Breakpoint Estimates')
-    plt.savefig(os.path.join(OUTPUT_DIR, 'bp_scatter.png'))
-    plt.close()
-
-    # Markdown Report
     with open(REPORT_FILE, 'w') as f:
-        f.write("# Validation 46: Comparison with `piecewise-regression`\n\n")
-        f.write(f"Comparision across {total} random datasets (Non-censored, Normal noise).\n\n")
+        f.write("# Validation 46: Comparison with Truth & `piecewise-regression`\n\n")
+        f.write(f"Comparision across {total} random datasets (Non-censored, Normal noise) against **Ground Truth**.\n\n")
 
-        f.write("## 1. Model Selection (Number of Breakpoints)\n")
-        f.write(f"**Match Rate:** {match_rate:.1%}\n\n")
-        f.write("### Confusion Matrix (Rows=Piecewise, Cols=MannKS)\n")
-        f.write(agreement_matrix.to_markdown())
+        f.write("## 1. Model Selection Accuracy (Finding Correct Number of Breakpoints)\n")
+        f.write("| Method | Accuracy (Correct N) |\n")
+        f.write("| :--- | :--- |\n")
+        f.write(f"| Piecewise (OLS) | {pw_acc:.1%} |\n")
+        f.write(f"| MannKS (Standard) | {mk_acc:.1%} |\n")
+        f.write(f"| **MannKS (Merged)** | **{mk_merge_acc:.1%}** |\n\n")
+
+        f.write("### Confusion Matrices (Rows=True N, Cols=Predicted N)\n")
+        f.write("#### Piecewise (OLS)\n")
+        f.write(cm_pw.to_markdown())
+        f.write("\n\n")
+        f.write("#### MannKS (Standard)\n")
+        f.write(cm_mk.to_markdown())
+        f.write("\n\n")
+        f.write("#### MannKS (Merged)\n")
+        f.write(cm_mk_merge.to_markdown())
         f.write("\n\n")
 
-        f.write("## 2. Breakpoint Estimation Accuracy\n")
-        f.write(f"Analyzed {len(valid_comparison)} matching cases where n > 0.\n\n")
-        f.write(f"**Mean Absolute Difference (MannKS vs PW):** {avg_bp_diff:.4f} units\n")
-        f.write("This measures how close the robust estimator (MannKS) is to the optimal OLS estimator (PW) for normally distributed data.\n\n")
-        f.write("![BP Scatter](bp_scatter.png)\n\n")
+        f.write("## 2. Breakpoint Location Accuracy\n")
+        f.write("Mean Absolute Error (MAE) when the correct number of breakpoints was found.\n\n")
+        f.write("| Method | Mean Location Error |\n")
+        f.write("| :--- | :--- |\n")
+        f.write(f"| Piecewise (OLS) | {pw_err:.4f} |\n")
+        f.write(f"| MannKS (Standard) | {mk_err:.4f} |\n")
+        f.write(f"| MannKS (Merged) | {mk_merge_err:.4f} |\n\n")
 
-        f.write("## 3. Confidence Intervals\n")
-        f.write(f"**Mean CI Width (Piecewise/OLS):** {avg_pw_width:.4f}\n")
-        f.write(f"**Mean CI Width (MannKS/Bootstrap):** {avg_mk_width:.4f}\n\n")
-        f.write("Note: OLS CIs assume normality and are asymptotic. MannKS CIs use percentile bootstrap. "
-                "Differences are expected, but they should be of similar magnitude.\n")
+        f.write("## 3. Analysis\n")
+        f.write("*   **Accuracy:** Does enabling merging improve the detection of the correct number of segments (specifically reducing over-segmentation)?\n")
+        if mk_merge_acc > mk_acc:
+             f.write("    *   **Yes.** The merging step improved overall accuracy, likely by correcting cases where standard BIC overestimated the number of breakpoints.\n")
+        elif mk_merge_acc < mk_acc:
+             f.write("    *   **No.** The merging step reduced accuracy, possibly by under-segmenting (merging distinct segments incorrectly).\n")
+        else:
+             f.write("    *   **Neutral.** Performance was identical.\n")
+
+        f.write("*   **Comparison to OLS:** Piecewise OLS is theoretically optimal for this normal noise data. How close is MannKS?\n")
+        f.write(f"    *   MannKS (Merged) is within {abs(pw_acc - mk_merge_acc)*100:.1f}% accuracy of OLS.\n")
 
 if __name__ == "__main__":
     df = run_comparison(n_iterations=50)
