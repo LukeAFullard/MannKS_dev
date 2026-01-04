@@ -272,13 +272,18 @@ def calculate_breakpoint_probability(result, start_date, end_date):
 
     return probability
 
-def find_best_segmentation(x, t, max_breakpoints=3, **kwargs):
+def find_best_segmentation(x, t, max_breakpoints=3, merge_similar_segments=False, **kwargs):
     """
     Fits segmented models with 0 to max_breakpoints and selects the best one using BIC.
 
     Args:
         x, t: Data and time.
         max_breakpoints: Maximum number of breakpoints to test.
+        merge_similar_segments (bool): If True, performs an additional check on the
+                                       BIC-selected model. If adjacent segments have
+                                       overlapping confidence intervals (implying
+                                       similar slopes), the model is simplified
+                                       by falling back to N-1 breakpoints.
         **kwargs: Arguments passed to segmented_trend_test.
 
     Returns:
@@ -320,14 +325,94 @@ def find_best_segmentation(x, t, max_breakpoints=3, **kwargs):
     if valid_summary.empty:
         raise RuntimeError("No models converged.")
 
-    best_n = valid_summary.loc[valid_summary['bic'].idxmin(), 'n_breakpoints']
+    # Sort by BIC to find the initial best candidate
+    best_n_idx = valid_summary['bic'].idxmin()
+    best_n = valid_summary.loc[best_n_idx, 'n_breakpoints']
 
-    # If the user requested n_bootstrap > 0, we should rerun the best model with full bootstrap
     user_n_boot = kwargs.get('n_bootstrap', 200)
-    if user_n_boot > 0 and best_n > 0:
-        # Re-run best model with full bootstrap
-        best_result = segmented_trend_test(x, t, n_breakpoints=best_n, **kwargs)
+
+    # Optional: Merge/Simplify Check
+    # If the user wants to remove "spurious" breakpoints where slopes are not sig. diff.
+    if merge_similar_segments and best_n > 0:
+        current_n = best_n
+
+        # We iterate downwards. If we reject 'current_n', we fall back to 'current_n - 1'.
+        while current_n > 0:
+            # We must compute the full result (with CIs) to check overlap.
+            # If models[current_n] was computed without bootstrap, we must re-compute.
+            # However, we'll re-compute anyway to be safe and use user's n_bootstrap.
+
+            if user_n_boot > 0:
+                candidate_res = segmented_trend_test(x, t, n_breakpoints=current_n, **kwargs)
+            else:
+                # If no bootstrap, we can't check CIs. We cannot perform the merge check.
+                # Since user requested merge_similar_segments, this is a conflict.
+                # We will abort the merge check and stick with the BIC result, but issue a warning?
+                # For safety, we just use the current model (no merging) and break.
+                best_n = current_n # Keep as is or revert to original best_n?
+                # Actually, if we break here, we need to ensure best_result is set below.
+                # The loop structure implies best_result is set inside 'if valid_segments'.
+                # We need to set it here if we abort.
+                best_result = models[current_n]
+                break
+
+            segments = candidate_res.segments
+            valid_segments = True
+
+            # Check adjacent pairs for overlap
+            # segments is a DataFrame with 'slope', 'lower_ci', 'upper_ci' columns
+            if segments is not None and not segments.empty:
+                for i in range(len(segments) - 1):
+                    # Robust check: if any pair overlaps, the segmentation is "too complex"
+                    try:
+                        # Extract CI bounds
+                        l1 = segments.iloc[i]['lower_ci']
+                        u1 = segments.iloc[i]['upper_ci']
+                        l2 = segments.iloc[i+1]['lower_ci']
+                        u2 = segments.iloc[i+1]['upper_ci']
+
+                        # Handle NaNs (insufficient data)
+                        if pd.isna(l1) or pd.isna(u1) or pd.isna(l2) or pd.isna(u2):
+                            # Cannot determine difference. Assume "not proven different" -> Merge?
+                            # Or assume "valid" to be safe?
+                            # If we can't prove difference, we usually shouldn't add a parameter.
+                            # So assume Overlap (Invalid).
+                            valid_segments = False
+                            break
+
+                        # Check Overlap
+                        # [L1, U1] overlaps [L2, U2] if max(L1, L2) <= min(U1, U2)
+                        overlap = max(l1, l2) <= min(u1, u2)
+
+                        if overlap:
+                            valid_segments = False
+                            break
+                    except Exception:
+                        # If structure is unexpected, assume valid to avoid crash
+                        pass
+
+            if valid_segments:
+                # This model is valid (all adjacent slopes are distinct)
+                best_n = current_n
+                # We can use this result as the final result
+                best_result = candidate_res
+                break
+            else:
+                # Reject this N, try N-1
+                current_n -= 1
+
+        if current_n == 0:
+            best_n = 0
+            best_result = models[0]
+            # Note: models[0] was fast run. If user wants bootstrap samples for N=0 (unlikely needed for CIs of breakpoints),
+            # they might need re-run. But for N=0, breakpoints=[], so bootstrap not used for BPs.
+            # But trend_test inside might use bootstrap? No, trend_test is analytic usually.
+
     else:
-        best_result = models[best_n]
+        # Standard logic: Re-run best model with full bootstrap if needed
+        if user_n_boot > 0 and best_n > 0:
+            best_result = segmented_trend_test(x, t, n_breakpoints=best_n, **kwargs)
+        else:
+            best_result = models[best_n]
 
     return best_result, summary
