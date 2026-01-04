@@ -28,81 +28,93 @@ def _create_segments(t, breakpoints):
 
 def _calculate_segment_residuals(x, t, censored, cen_type, breakpoints, **kwargs):
     """
-    Calculate sum of absolute residuals for segmented model.
-    Uses Sen's slope for robust estimation (L1 norm equivalent).
+    Calculate sum of absolute residuals for continuous segmented model.
+    Uses Sen's slopes for segments and a robust global intercept.
     """
     segments = _create_segments(t, breakpoints)
-    total_residual = 0
 
     # Extract kwargs for _sens_estimator_censored
     lt_mult = kwargs.get('lt_mult', 0.5)
     gt_mult = kwargs.get('gt_mult', 1.1)
     sens_slope_method = kwargs.get('sens_slope_method', 'nan')
-    min_segment_size = kwargs.get('min_segment_size', 3) # Default safety lower bound
+    min_segment_size = kwargs.get('min_segment_size', 3)
 
-    for seg_start, seg_end in segments:
-        # Use a slightly more robust mask to handle floating point edges
-        # We assume left-inclusive, right-exclusive [start, end) except for last point?
-        # Actually standard for segments is usually [start, end)
-        # But we need to make sure we cover all points.
-        # Let's stick to simple >= and <, but handle the very last point separately or ensure t_max is included.
-        # However, _create_segments uses t_max as the end of the last segment.
-        # If t == t_max, (t < seg_end) will be false for the last segment.
-        # Let's adjust the mask for the last segment.
+    # 1. Estimate Slopes for each segment
+    slopes = []
 
-        if seg_end == np.max(t):
+    for i, (seg_start, seg_end) in enumerate(segments):
+        # Handle last segment inclusive bound
+        if i == len(segments) - 1:
              mask = (t >= seg_start) & (t <= seg_end)
         else:
              mask = (t >= seg_start) & (t < seg_end)
 
         if np.sum(mask) < min_segment_size:
-            # Penalize segments with too few points to discourage them
-            total_residual += np.inf
-            continue
+            return np.inf
 
         x_seg = x[mask]
         t_seg = t[mask]
         cen_seg = censored[mask]
         cen_type_seg = cen_type[mask]
 
-        # Estimate Sen's slope for this segment
         if np.any(cen_seg):
-            slopes = _sens_estimator_censored(x_seg, t_seg, cen_type_seg,
+            s_vals = _sens_estimator_censored(x_seg, t_seg, cen_type_seg,
                                               lt_mult=lt_mult, gt_mult=gt_mult, method=sens_slope_method)
         else:
-            slopes = _sens_estimator_unequal_spacing(x_seg, t_seg)
+            s_vals = _sens_estimator_unequal_spacing(x_seg, t_seg)
 
-        slope = np.nanmedian(slopes)
+        slope_est = np.nanmedian(s_vals)
+        if np.isnan(slope_est):
+             return np.inf
+        slopes.append(slope_est)
 
-        if np.isnan(slope):
-             total_residual += np.inf
-             continue
+    # 2. Construct Continuous Model Function (without intercept)
+    # y_shape(t) = Integral of slope(t) dt
+    # F(t) = Sum(slope_j * (min(t, bp_j+1) - max(t, bp_j))) effectively.
+    # We can compute it vector-wise.
 
-        # Calculate fitted values (Robust centering on median)
-        t_center = np.median(t_seg)
-        # Intercept proxy: median of y minus slope*median(t)
-        # We calculate intercept based on non-censored data residuals if possible,
-        # or robustly. The guide used median of (x - slope*t).
+    y_shape = np.zeros_like(t)
+    sorted_bp = np.sort(breakpoints)
+    boundaries = [np.min(t)] + list(sorted_bp) + [np.max(t)]
 
-        # Guide code: x_fitted = np.median(x_seg[~cen_seg]) + slope * (t_seg - t_center)
-        # This implies intercept is at t_center.
-        # Let's follow the guide logic, but handle all-censored case.
+    # We define the shape relative to t_min = 0 for the shape function
+    # F(t) = slope_0 * (t - t0)   for t in seg 0
+    # F(t) = slope_0 * (t1 - t0) + slope_1 * (t - t1)  for t in seg 1
+    # etc.
 
-        if np.any(~cen_seg):
-             x_median_obs = np.median(x_seg[~cen_seg])
-             # The intercept at t_center is x_median_obs.
-             # So fitted line passes through (t_center, x_median_obs) with slope.
-             # y = y_center + m(t - t_center)
-             x_fitted = x_median_obs + slope * (t_seg - t_center)
+    cumulative_y = 0.0
 
-             # Sum absolute residuals (Robust metric) on observed data
-             residuals = np.abs(x_seg[~cen_seg] - x_fitted[~cen_seg])
-             total_residual += np.sum(residuals)
+    for i in range(len(slopes)):
+        t_start = boundaries[i]
+        t_end = boundaries[i+1]
+
+        # Mask for points in this segment
+        if i == len(slopes) - 1:
+             mask = (t >= t_start) & (t <= t_end)
         else:
-             # If segment is all censored, we can't easily calculate residuals.
-             # Penalize? Or use censored values proxy?
-             # For now, let's skip/penalize to avoid empty segments being valid.
-             total_residual += np.inf
+             mask = (t >= t_start) & (t < t_end)
+
+        # Contribution for points in this segment
+        # y = cumulative_y_at_start + slope * (t - t_start)
+        y_shape[mask] = cumulative_y + slopes[i] * (t[mask] - t_start)
+
+        # Update cumulative_y for next segment start
+        cumulative_y += slopes[i] * (t_end - t_start)
+
+    # 3. Estimate Robust Global Intercept
+    # We want y = y_shape + Intercept
+    # Intercept = median(y - y_shape)
+    # Only use uncensored data for intercept estimation
+    if np.any(~censored):
+        residuals_raw = x - y_shape
+        intercept = np.median(residuals_raw[~censored])
+
+        # 4. Calculate Final Residuals
+        y_fitted = y_shape + intercept
+        final_residuals = np.abs(x[~censored] - y_fitted[~censored])
+        total_residual = np.sum(final_residuals)
+    else:
+        total_residual = np.inf
 
     return total_residual
 
