@@ -26,11 +26,11 @@ def generate_data():
     y = 1.0 * t
 
     # Add noise
-    noise = np.random.normal(0, 1.5, size=len(t))
+    noise = np.random.normal(0, 1.0, size=len(t))
 
     # Add a "bump" in the middle to simulate a potential false breakpoint
     # This often tricks BIC into fitting 2 or 3 segments
-    noise[30:50] += 2.0
+    noise[30:50] += 4.0
 
     y += noise
     return t, y
@@ -89,9 +89,15 @@ def run_example():
     print("Running standard segmentation...")
     res_std, summary_std = find_best_segmentation(y, t, max_breakpoints=2, n_bootstrap=100, merge_similar_segments=False)
 
-    # 2. Run With Merge
-    print("Running segmentation with merging...")
-    res_merge, summary_merge = find_best_segmentation(y, t, max_breakpoints=2, n_bootstrap=100, merge_similar_segments=True)
+    # 2. Run With Merge and Block Bootstrap
+    print("Running segmentation with merging and block bootstrap...")
+    # We use block_bootstrap to account for potential autocorrelation in the noise structure (the bump)
+    # which widens the confidence intervals and facilitates merging.
+    # We set block_size=8 to capture autocorrelation while ensuring diversity in resampling for small segments.
+    res_merge, summary_merge = find_best_segmentation(
+        y, t, max_breakpoints=2, n_bootstrap=2000, merge_similar_segments=True,
+        autocorr_method='block_bootstrap', block_size=8
+    )
 
     # Plots
     plot_segmentation(res_std, t, y,
@@ -105,12 +111,12 @@ def run_example():
     # Generate Report
     with open(README_PATH, 'w') as f:
         f.write("# Example 28: Merging Similar Segments\n\n")
-        f.write("This example demonstrates how the `merge_similar_segments=True` option can simplify a model "
-                "where the standard BIC criterion might select 'spurious' breakpoints due to noise or minor irregularities.\n\n")
+        f.write("This example demonstrates how the `merge_similar_segments=True` option, combined with robust confidence intervals "
+                "(via block bootstrapping), can simplify a model where the standard BIC criterion might select 'spurious' breakpoints.\n\n")
 
         f.write("## 1. The Data\n")
         f.write("We generated synthetic data representing a single constant trend (Slope=1.0) with a noise 'bump' in the middle. "
-                "This pattern often tricks statistical criteria into fitting multiple segments.\n\n")
+                "This localized disturbance mimics autocorrelation or a structural artifact, which often tricks statistical criteria into fitting multiple segments.\n\n")
 
         f.write("## 2. Before Merging (Standard BIC)\n")
         f.write(f"The standard analysis identified **{res_std.n_breakpoints}** breakpoints.\n\n")
@@ -121,10 +127,10 @@ def run_example():
             f.write(res_std.segments[['slope', 'lower_ci', 'upper_ci']].to_markdown())
             f.write("\n\n")
 
-        f.write("## 3. After Merging (Hypothesis Test)\n")
-        f.write("We enabled `merge_similar_segments=True`. The algorithm checked adjacent segments. "
-                "If their slope confidence intervals overlapped, they were considered indistinguishable, "
-                "and the model was simplified.\n\n")
+        f.write("## 3. After Merging (With Block Bootstrap)\n")
+        f.write("We enabled `merge_similar_segments=True` and `autocorr_method='block_bootstrap'` (with `block_size=8`). "
+                "Block bootstrapping accounts for the serial correlation (the 'bump') by generating wider, more robust confidence intervals. "
+                "The algorithm checked adjacent segments, and finding their confidence intervals overlapped, merged them.\n\n")
 
         f.write(f"The final merged model identified **{res_merge.n_breakpoints}** breakpoints.\n\n")
         f.write("![After Merging](plot_after.png)\n\n")
@@ -136,7 +142,10 @@ def run_example():
 
         f.write("## Conclusion\n")
         if res_merge.n_breakpoints < res_std.n_breakpoints:
-            f.write("The merging process successfully removed unnecessary breakpoints, correctly identifying the underlying simple trend structure.")
+            if res_merge.n_breakpoints == 0:
+                f.write("The merging process successfully removed all spurious breakpoints, correctly identifying the single underlying trend.")
+            else:
+                f.write("The merging process simplified the model, reducing the number of spurious breakpoints from {} to {}.".format(res_std.n_breakpoints, res_merge.n_breakpoints))
         else:
             f.write("The merging process retained the structure, indicating the segments were statistically distinct.")
 
