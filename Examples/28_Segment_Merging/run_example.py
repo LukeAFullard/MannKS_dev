@@ -26,11 +26,11 @@ def generate_data():
     y = 1.0 * t
 
     # Add noise
-    noise = np.random.normal(0, 1.5, size=len(t))
+    noise = np.random.normal(0, 1.0, size=len(t))
 
     # Add a "bump" in the middle to simulate a potential false breakpoint
     # This often tricks BIC into fitting 2 or 3 segments
-    noise[30:50] += 2.0
+    noise[30:50] += 4.0
 
     y += noise
     return t, y
@@ -136,7 +136,7 @@ def run_example():
 
         f.write("## Conclusion\n")
         if res_merge.n_breakpoints < res_std.n_breakpoints:
-            f.write("The merging process successfully removed unnecessary breakpoints, correctly identifying the underlying simple trend structure.")
+            f.write("The merging process successfully removed unnecessary breakpoints, simplifying the model structure.")
         else:
             f.write("The merging process retained the structure, indicating the segments were statistically distinct.")
 
