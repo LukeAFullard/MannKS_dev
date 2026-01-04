@@ -268,6 +268,6 @@ def generate_report(df):
         f.write(f"    *   MannKS (Merged) is within {abs(pw_acc - mk_merge_acc)*100:.1f}% accuracy of OLS.\n")
 
 if __name__ == "__main__":
-    df = run_comparison(n_iterations=50)
+    df = run_comparison(n_iterations=200)
     generate_report(df)
     print("Comparison complete.")
