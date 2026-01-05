@@ -78,6 +78,7 @@ def segmented_trend_test(
     n_bootstrap: int = 200,  # For probability/CI generation
     alpha: float = 0.05,
     hicensor: Union[bool, float] = False,
+    criterion: str = 'bic',
     **kwargs
 ):
     """
@@ -91,6 +92,7 @@ def segmented_trend_test(
         n_bootstrap: Number of bootstrap samples for breakpoint uncertainty.
         alpha: Significance level.
         hicensor: High-censor rule flag.
+        criterion: Model selection criterion ('bic' or 'aic'). Default 'bic'.
         **kwargs: Additional arguments passed to trend_test and the Sen's estimator
                   (e.g., lt_mult, sens_slope_method, slope_scaling).
 
@@ -130,7 +132,7 @@ def segmented_trend_test(
             x_val, t_numeric, censored, cen_type, breakpoints, **kwargs
         )
 
-    # Calculate BIC
+    # Calculate Criterion (BIC or AIC)
     # k = parameters. Independent segments:
     # Each segment has slope and intercept (2 params).
     # Plus breakpoints (n_breakpoints params).
@@ -146,10 +148,12 @@ def segmented_trend_test(
         safe_residual = best_residual
 
     bic = n_obs * np.log(safe_residual / n_obs) + k * np.log(n_obs)
-    # Also calculate RSS equivalent? SAR is L1 norm.
-    # BIC formula assumes likelihood. For Laplace (L1), -2*ln(L) = 2 * SAR / scale?
-    # Common approx for L1: n * ln(SAR/n) + k * ln(n) (assuming scale is estimated)
-    # We use this proxy.
+    aic = n_obs * np.log(safe_residual / n_obs) + 2 * k
+
+    if criterion.lower() == 'aic':
+        score = aic
+    else:
+        score = bic
 
     # 3. Generate Bootstrap Distribution (For CIs and Probabilities)
     # Only if n_breakpoints > 0 and n_bootstrap > 0
@@ -227,7 +231,7 @@ def segmented_trend_test(
     # 6. Construct Result
     Result = namedtuple('Segmented_Trend_Test', [
         'n_breakpoints', 'breakpoints', 'breakpoint_cis', 'bootstrap_samples', 'segments',
-        'converged', 'is_datetime', 'sar', 'bic'
+        'converged', 'is_datetime', 'sar', 'bic', 'aic', 'score'
     ])
 
     valid_results = [r for r in segment_results if r is not None]
@@ -241,7 +245,9 @@ def segmented_trend_test(
         converged=converged,
         is_datetime=is_datetime,
         sar=best_residual,
-        bic=bic
+        bic=bic,
+        aic=aic,
+        score=score
     )
 
 def calculate_breakpoint_probability(result, start_date, end_date):
@@ -272,18 +278,19 @@ def calculate_breakpoint_probability(result, start_date, end_date):
 
     return probability
 
-def find_best_segmentation(x, t, max_breakpoints=3, merge_similar_segments=False, **kwargs):
+def find_best_segmentation(x, t, max_breakpoints=3, merge_similar_segments=False, criterion='bic', **kwargs):
     """
-    Fits segmented models with 0 to max_breakpoints and selects the best one using BIC.
+    Fits segmented models with 0 to max_breakpoints and selects the best one using BIC or AIC.
 
     Args:
         x, t: Data and time.
         max_breakpoints: Maximum number of breakpoints to test.
         merge_similar_segments (bool): If True, performs an additional check on the
-                                       BIC-selected model. If adjacent segments have
+                                       selected model. If adjacent segments have
                                        overlapping confidence intervals (implying
                                        similar slopes), the model is simplified
                                        by falling back to N-1 breakpoints.
+        criterion (str): 'bic' (default) or 'aic'.
         **kwargs: Arguments passed to segmented_trend_test.
 
     Returns:
@@ -298,12 +305,15 @@ def find_best_segmentation(x, t, max_breakpoints=3, merge_similar_segments=False
             # Copy kwargs and set n_bootstrap=0
             kwargs_fast = kwargs.copy()
             kwargs_fast['n_bootstrap'] = 0
+            kwargs_fast['criterion'] = criterion # Pass criterion
 
             res = segmented_trend_test(x, t, n_breakpoints=n, **kwargs_fast)
             models.append(res)
             results_list.append({
                 'n_breakpoints': n,
                 'bic': res.bic,
+                'aic': res.aic,
+                'score': res.score,
                 'sar': res.sar,
                 'converged': res.converged
             })
@@ -311,6 +321,8 @@ def find_best_segmentation(x, t, max_breakpoints=3, merge_similar_segments=False
             results_list.append({
                 'n_breakpoints': n,
                 'bic': np.inf,
+                'aic': np.inf,
+                'score': np.inf,
                 'sar': np.inf,
                 'converged': False,
                 'error': str(e)
@@ -319,14 +331,14 @@ def find_best_segmentation(x, t, max_breakpoints=3, merge_similar_segments=False
 
     summary = pd.DataFrame(results_list)
 
-    # Select best model (min BIC)
+    # Select best model (min Score)
     # Filter out failed models
     valid_summary = summary[summary['converged'] == True]
     if valid_summary.empty:
         raise RuntimeError("No models converged.")
 
-    # Sort by BIC to find the initial best candidate
-    best_n_idx = valid_summary['bic'].idxmin()
+    # Sort by Score to find the initial best candidate
+    best_n_idx = valid_summary['score'].idxmin()
     best_n = valid_summary.loc[best_n_idx, 'n_breakpoints']
 
     user_n_boot = kwargs.get('n_bootstrap', 200)
@@ -343,7 +355,7 @@ def find_best_segmentation(x, t, max_breakpoints=3, merge_similar_segments=False
             # However, we'll re-compute anyway to be safe and use user's n_bootstrap.
 
             if user_n_boot > 0:
-                candidate_res = segmented_trend_test(x, t, n_breakpoints=current_n, **kwargs)
+                candidate_res = segmented_trend_test(x, t, n_breakpoints=current_n, criterion=criterion, **kwargs)
             else:
                 # If no bootstrap, we can't check CIs. We cannot perform the merge check.
                 # Since user requested merge_similar_segments, this is a conflict.
@@ -411,7 +423,7 @@ def find_best_segmentation(x, t, max_breakpoints=3, merge_similar_segments=False
     else:
         # Standard logic: Re-run best model with full bootstrap if needed
         if user_n_boot > 0 and best_n > 0:
-            best_result = segmented_trend_test(x, t, n_breakpoints=best_n, **kwargs)
+            best_result = segmented_trend_test(x, t, n_breakpoints=best_n, criterion=criterion, **kwargs)
         else:
             best_result = models[best_n]
 
