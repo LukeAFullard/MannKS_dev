@@ -135,29 +135,14 @@ def run_comparison(n_iterations=50):
         try:
             ms_pw = piecewise_regression.ModelSelection(t, x, max_breakpoints=2)
             # Find best model based on BIC
-            best_bic_pw = np.inf
-            best_model_pw = None
-
-            # Check 0-breakpoint fit first (stored separately in ms_pw.no_breakpoint_fit)
-            # no_breakpoint_fit might be a simple structure, not a full Fit object, need to verify
-            # But the debug script showed it calculates BIC.
-            # Usually it's a list [rss, bic, n_param, n_breakpoints, converged] or an object?
-            # Actually debug output showed `no_breakpoint_fit` attribute exists.
-            # We will rely on model_summaries list which contains dictionaries for all models.
-
             summaries = ms_pw.model_summaries
             if summaries:
-                # summaries is a list of dicts, including n_breakpoints=0
                 best_summary = min(summaries, key=lambda x: x['bic'])
                 pw_n = best_summary['n_breakpoints']
 
                 if pw_n == 0:
                     pw_bps = []
                 else:
-                    # If > 0, we need to find the fit object in ms_pw.models
-                    # ms_pw.models only contains fits for n_breakpoints >= 1
-                    # They are usually in order of n_breakpoints starting from 1
-                    # But safest to iterate and match n_breakpoints
                     found_fit = False
                     for fit in ms_pw.models:
                         if fit.n_breakpoints == pw_n:
@@ -168,14 +153,12 @@ def run_comparison(n_iterations=50):
                             found_fit = True
                             break
                     if not found_fit:
-                        pw_bps = [] # Should not happen if logic is consistent
+                        pw_bps = []
             else:
-                # Fallback if summaries empty?
                 pw_n = -1
                 pw_bps = []
 
         except Exception as e:
-            # print(f"Piecewise Regression failed on iter {i}: {e}")
             pw_n = -1
             pw_bps = []
 
@@ -194,18 +177,32 @@ def run_comparison(n_iterations=50):
             mk_bps = []
 
         # -----------------------------------
-        # 3. MannKS - Merged (merge=True)
+        # 3. MannKS - Merged (merge=True, alpha=0.05)
         # -----------------------------------
         try:
             mk_merge_res, _ = find_best_segmentation(
                 x=x, t=t, max_breakpoints=2, n_bootstrap=20, alpha=0.05,
-                min_segment_size=3, merge_similar_segments=True
+                min_segment_size=3, merge_similar_segments=True, merging_alpha=0.05
             )
             mk_merge_n = mk_merge_res.n_breakpoints
             mk_merge_bps = list(mk_merge_res.breakpoints)
         except Exception as e:
             mk_merge_n = -1
             mk_merge_bps = []
+
+        # -----------------------------------
+        # 4. MannKS - Permutation Test
+        # -----------------------------------
+        try:
+            mk_perm_res, _ = find_best_segmentation(
+                x=x, t=t, max_breakpoints=2, n_bootstrap=20, alpha=0.05,
+                min_segment_size=3, use_permutation_test=True, n_permutations=200
+            )
+            mk_perm_n = mk_perm_res.n_breakpoints
+            mk_perm_bps = list(mk_perm_res.breakpoints)
+        except Exception as e:
+            mk_perm_n = -1
+            mk_perm_bps = []
 
         # Plot the first few iterations
         if i < 3:
@@ -223,6 +220,7 @@ def run_comparison(n_iterations=50):
             'pw_n': pw_n,
             'mk_n': mk_n,
             'mk_merge_n': mk_merge_n,
+            'mk_perm_n': mk_perm_n,
             'pw_bps': str(pw_bps),
             'mk_bps': str(mk_bps),
             'mk_merge_bps': str(mk_merge_bps),
@@ -230,7 +228,8 @@ def run_comparison(n_iterations=50):
             # Correct N Detection
             'pw_correct_n': (pw_n == true_n),
             'mk_correct_n': (mk_n == true_n),
-            'mk_merge_correct_n': (mk_merge_n == true_n)
+            'mk_merge_correct_n': (mk_merge_n == true_n),
+            'mk_perm_correct_n': (mk_perm_n == true_n)
         }
 
         # Calculate Breakpoint Location Error (only if N matches true N and N > 0)
@@ -259,6 +258,11 @@ def run_comparison(n_iterations=50):
         else:
             row['mk_merge_loc_error'] = np.nan
 
+        if mk_perm_n == true_n:
+            row['mk_perm_loc_error'] = calc_bp_error(mk_perm_bps, true_bps)
+        else:
+            row['mk_perm_loc_error'] = np.nan
+
         results.append(row)
 
     df_res = pd.DataFrame(results)
@@ -272,16 +276,19 @@ def generate_report(df):
     pw_acc = df['pw_correct_n'].mean()
     mk_acc = df['mk_correct_n'].mean()
     mk_merge_acc = df['mk_merge_correct_n'].mean()
+    mk_perm_acc = df['mk_perm_correct_n'].mean()
 
     # Location Errors (Filter out NaN)
     pw_err = df['pw_loc_error'].mean()
     mk_err = df['mk_loc_error'].mean()
     mk_merge_err = df['mk_merge_loc_error'].mean()
+    mk_perm_err = df['mk_perm_loc_error'].mean()
 
     # Confusion Matrices
     cm_pw = pd.crosstab(df['true_n'], df['pw_n'])
     cm_mk = pd.crosstab(df['true_n'], df['mk_n'])
     cm_mk_merge = pd.crosstab(df['true_n'], df['mk_merge_n'])
+    cm_mk_perm = pd.crosstab(df['true_n'], df['mk_perm_n'])
 
     with open(REPORT_FILE, 'w') as f:
         f.write("# Validation 50: High SNR Breakpoint Detection\n\n")
@@ -292,7 +299,8 @@ def generate_report(df):
         f.write("| :--- | :--- |\n")
         f.write(f"| Piecewise (OLS) | {pw_acc:.1%} |\n")
         f.write(f"| MannKS (Standard) | {mk_acc:.1%} |\n")
-        f.write(f"| **MannKS (Merged)** | **{mk_merge_acc:.1%}** |\n\n")
+        f.write(f"| MannKS (Merged) | {mk_merge_acc:.1%} |\n")
+        f.write(f"| **MannKS (Permutation)** | **{mk_perm_acc:.1%}** |\n\n")
 
         f.write("### Confusion Matrices (Rows=True N, Cols=Predicted N)\n")
         f.write("#### Piecewise (OLS)\n")
@@ -304,6 +312,9 @@ def generate_report(df):
         f.write("#### MannKS (Merged)\n")
         f.write(cm_mk_merge.to_markdown())
         f.write("\n\n")
+        f.write("#### MannKS (Permutation)\n")
+        f.write(cm_mk_perm.to_markdown())
+        f.write("\n\n")
 
         f.write("## 2. Breakpoint Location Accuracy\n")
         f.write("Mean Absolute Error (MAE) when the correct number of breakpoints was found.\n\n")
@@ -311,19 +322,23 @@ def generate_report(df):
         f.write("| :--- | :--- |\n")
         f.write(f"| Piecewise (OLS) | {pw_err:.4f} |\n")
         f.write(f"| MannKS (Standard) | {mk_err:.4f} |\n")
-        f.write(f"| MannKS (Merged) | {mk_merge_err:.4f} |\n\n")
+        f.write(f"| MannKS (Merged) | {mk_merge_err:.4f} |\n")
+        f.write(f"| MannKS (Permutation) | {mk_perm_err:.4f} |\n\n")
 
         f.write("## 3. Analysis\n")
-        f.write("*   **Accuracy:** Does enabling merging improve the detection of the correct number of segments (specifically reducing over-segmentation)?\n")
+        f.write("*   **Accuracy:** Does enabling merging improve the detection of the correct number of segments?\n")
         if mk_merge_acc > mk_acc:
-             f.write("    *   **Yes.** The merging step improved overall accuracy, likely by correcting cases where standard BIC overestimated the number of breakpoints.\n")
+             f.write("    *   **Yes.** The merging step improved overall accuracy.\n")
         elif mk_merge_acc < mk_acc:
-             f.write("    *   **No.** The merging step reduced accuracy, possibly by under-segmenting (merging distinct segments incorrectly).\n")
+             f.write("    *   **No.** The merging step reduced accuracy (likely due to over-merging).\n")
         else:
              f.write("    *   **Neutral.** Performance was identical.\n")
 
+        f.write("*   **Permutation Test:** How does the permutation test perform?\n")
+        f.write(f"    *   Permutation test accuracy: {mk_perm_acc:.1%}.\n")
+
         f.write("*   **Comparison to OLS:** Piecewise OLS is theoretically optimal for this normal noise data. How close is MannKS?\n")
-        f.write(f"    *   MannKS (Merged) is within {abs(pw_acc - mk_merge_acc)*100:.1f}% accuracy of OLS.\n")
+        f.write(f"    *   MannKS (Permutation) is within {abs(pw_acc - mk_perm_acc)*100:.1f}% accuracy of OLS.\n")
 
         f.write("\n## 4. Example Plots\n")
         for i in range(3):
