@@ -167,9 +167,10 @@ def run_comparison(n_iterations=50):
         # 2. MannKS - Standard (merge=False)
         # -----------------------------------
         try:
+            # Use AIC for Low SNR
             mk_res, _ = find_best_segmentation(
                 x=x, t=t, max_breakpoints=2, n_bootstrap=20, alpha=0.05,
-                min_segment_size=3, merge_similar_segments=False
+                min_segment_size=3, merge_similar_segments=False, criterion='aic'
             )
             mk_n = mk_res.n_breakpoints
             mk_bps = list(mk_res.breakpoints)
@@ -181,9 +182,10 @@ def run_comparison(n_iterations=50):
         # 3. MannKS - Merged (merge=True)
         # -----------------------------------
         try:
+            # Use AIC for Low SNR
             mk_merge_res, _ = find_best_segmentation(
                 x=x, t=t, max_breakpoints=2, n_bootstrap=20, alpha=0.05,
-                min_segment_size=3, merge_similar_segments=True
+                min_segment_size=3, merge_similar_segments=True, criterion='aic'
             )
             mk_merge_n = mk_merge_res.n_breakpoints
             mk_merge_bps = list(mk_merge_res.breakpoints)

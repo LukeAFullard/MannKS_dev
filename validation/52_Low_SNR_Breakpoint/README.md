@@ -6,8 +6,8 @@ Comparision across 100 random datasets (Non-censored, Low SNR, Sigma=5.0) agains
 | Method | Accuracy (Correct N) |
 | :--- | :--- |
 | Piecewise (OLS) | 40.0% |
-| MannKS (Standard) | 35.0% |
-| **MannKS (Merged)** | **35.0%** |
+| MannKS (Standard) | 48.0% |
+| **MannKS (Merged)** | **45.0%** |
 
 ### Confusion Matrices (Rows=True N, Cols=Predicted N)
 #### Piecewise (OLS)
@@ -18,18 +18,18 @@ Comparision across 100 random datasets (Non-censored, Low SNR, Sigma=5.0) agains
 |        2 |    3 |   7 |  22 |   1 |
 
 #### MannKS (Standard)
-|   true_n |   0 |   1 |
-|---------:|----:|----:|
-|        0 |  25 |   0 |
-|        1 |  32 |  10 |
-|        2 |  21 |  12 |
+|   true_n |   0 |   1 |   2 |
+|---------:|----:|----:|----:|
+|        0 |  25 |   0 |   0 |
+|        1 |  19 |  22 |   1 |
+|        2 |  11 |  21 |   1 |
 
 #### MannKS (Merged)
 |   true_n |   0 |   1 |
 |---------:|----:|----:|
 |        0 |  25 |   0 |
-|        1 |  32 |  10 |
-|        2 |  21 |  12 |
+|        1 |  22 |  20 |
+|        2 |  11 |  22 |
 
 ## 2. Breakpoint Location Accuracy
 Mean Absolute Error (MAE) when the correct number of breakpoints was found.
@@ -37,12 +37,12 @@ Mean Absolute Error (MAE) when the correct number of breakpoints was found.
 | Method | Mean Location Error |
 | :--- | :--- |
 | Piecewise (OLS) | 4.4892 |
-| MannKS (Standard) | 0.8555 |
-| MannKS (Merged) | 0.8208 |
+| MannKS (Standard) | 3.5792 |
+| MannKS (Merged) | 2.4456 |
 
 ## 3. Analysis
 *   **Accuracy:** Does enabling merging improve the detection of the correct number of segments (specifically reducing over-segmentation)?
-    *   **Neutral.** Performance was identical.
+    *   **No.** The merging step reduced accuracy, possibly by under-segmenting (merging distinct segments incorrectly).
 *   **Comparison to OLS:** Piecewise OLS is theoretically optimal for this normal noise data. How close is MannKS?
     *   MannKS (Merged) is within 5.0% accuracy of OLS.
 
