@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 from typing import Union, Optional, List, Tuple
 from collections import namedtuple
+from scipy.stats import norm
+
 from ._segmented import (bootstrap_restart_segmented,
                          get_breakpoint_bootstrap_distribution,
                          _create_segments,
@@ -278,7 +280,16 @@ def calculate_breakpoint_probability(result, start_date, end_date):
 
     return probability
 
-def find_best_segmentation(x, t, max_breakpoints=3, merge_similar_segments=False, criterion='bic', **kwargs):
+def find_best_segmentation(
+    x, t,
+    max_breakpoints=3,
+    merge_similar_segments=False,
+    merging_alpha=0.05,
+    criterion='bic',
+    use_permutation_test=False,
+    n_permutations=1000,
+    **kwargs
+):
     """
     Fits segmented models with 0 to max_breakpoints and selects the best one using BIC or AIC.
 
@@ -286,16 +297,100 @@ def find_best_segmentation(x, t, max_breakpoints=3, merge_similar_segments=False
         x, t: Data and time.
         max_breakpoints: Maximum number of breakpoints to test.
         merge_similar_segments (bool): If True, performs an additional check on the
-                                       selected model. If adjacent segments have
-                                       overlapping confidence intervals (implying
-                                       similar slopes), the model is simplified
-                                       by falling back to N-1 breakpoints.
+                                       selected model. If adjacent segments do not have
+                                       statistically different slopes (based on Z-test),
+                                       the model is simplified by falling back to N-1 breakpoints.
+        merging_alpha (float): Significance level for the Z-test when merging (default 0.05).
         criterion (str): 'bic' (default) or 'aic'.
+        use_permutation_test (bool): If True, uses a permutation test to decide if adding
+                                     breakpoints significantly reduces residual error.
+        n_permutations (int): Number of permutations for the significance test.
         **kwargs: Arguments passed to segmented_trend_test.
 
     Returns:
         tuple: (best_result, summary_dataframe)
     """
+
+    # --- Permutation Test Branch ---
+    if use_permutation_test:
+        from ._segmented import _perform_permutation_test
+
+        # Start with N=0
+        current_n = 0
+        best_n = 0
+
+        # Calculate N=0 model (Base)
+        kwargs_fast = kwargs.copy()
+        kwargs_fast['n_bootstrap'] = 0
+        kwargs_fast['criterion'] = criterion
+
+        current_model = segmented_trend_test(x, t, n_breakpoints=0, **kwargs_fast)
+        models_perm = {0: current_model}
+
+        while current_n < max_breakpoints:
+            next_n = current_n + 1
+
+            # Calculate N+1 model
+            next_model = segmented_trend_test(x, t, n_breakpoints=next_n, **kwargs_fast)
+            models_perm[next_n] = next_model
+
+            # Test Significance (current vs next)
+            # Null: current_n (fewer breakpoints) is sufficient
+            # Alt: next_n (more breakpoints) is significantly better
+
+            # We need to pass the actual data arrays for permutation
+            # _prepare_data is internal, so we call it again or trust helper
+            df_prep, _ = _prepare_data(x, t, kwargs.get('hicensor', False))
+            x_vals = df_prep['value'].to_numpy()
+            t_vals = df_prep['t'].to_numpy()
+            censored = df_prep['censored'].to_numpy()
+            cen_type = df_prep['cen_type'].to_numpy()
+
+            p_value = _perform_permutation_test(
+                x_vals, t_vals, censored, cen_type,
+                base_sar=current_model.sar,
+                alt_sar=next_model.sar,
+                n_breakpoints_base=current_n,
+                n_breakpoints_alt=next_n,
+                n_permutations=n_permutations,
+                **kwargs
+            )
+
+            if p_value < merging_alpha: # Use merging_alpha as significance threshold? Or separate?
+                # Let's use standard alpha or reusing merging_alpha for consistency in "strictness"
+                # If significant, we accept the new breakpoint and continue looking
+                best_n = next_n
+                current_n = next_n
+                current_model = next_model
+            else:
+                # Not significant improvement, stop here
+                break
+
+        # Now we have best_n decided by permutation test.
+        # Proceed to bootstrap final model if requested.
+        user_n_boot = kwargs.get('n_bootstrap', 200)
+        if user_n_boot > 0 and best_n > 0:
+            final_result = segmented_trend_test(x, t, n_breakpoints=best_n, criterion=criterion, **kwargs)
+        else:
+            final_result = models_perm[best_n]
+
+        # Create a summary compatible with the function return (even if fake)
+        summary_list = []
+        for n, mod in models_perm.items():
+            summary_list.append({
+                'n_breakpoints': n,
+                'bic': mod.bic,
+                'aic': mod.aic,
+                'score': mod.score,
+                'sar': mod.sar,
+                'converged': mod.converged
+            })
+        summary = pd.DataFrame(summary_list)
+
+        return final_result, summary
+
+    # --- Standard AIC/BIC Branch ---
+
     results_list = []
     models = []
 
@@ -359,54 +454,75 @@ def find_best_segmentation(x, t, max_breakpoints=3, merge_similar_segments=False
             else:
                 # If no bootstrap, we can't check CIs. We cannot perform the merge check.
                 # Since user requested merge_similar_segments, this is a conflict.
-                # We will abort the merge check and stick with the BIC result, but issue a warning?
-                # For safety, we just use the current model (no merging) and break.
-                best_n = current_n # Keep as is or revert to original best_n?
-                # Actually, if we break here, we need to ensure best_result is set below.
-                # The loop structure implies best_result is set inside 'if valid_segments'.
-                # We need to set it here if we abort.
+                best_n = current_n
                 best_result = models[current_n]
                 break
 
             segments = candidate_res.segments
             valid_segments = True
 
-            # Check adjacent pairs for overlap
-            # segments is a DataFrame with 'slope', 'lower_ci', 'upper_ci' columns
+            # Check adjacent pairs for difference
             if segments is not None and not segments.empty:
                 for i in range(len(segments) - 1):
-                    # Robust check: if any pair overlaps, the segmentation is "too complex"
                     try:
-                        # Extract CI bounds
+                        # Extract Slopes and CI bounds
+                        s1 = segments.iloc[i]['slope']
                         l1 = segments.iloc[i]['lower_ci']
                         u1 = segments.iloc[i]['upper_ci']
+
+                        s2 = segments.iloc[i+1]['slope']
                         l2 = segments.iloc[i+1]['lower_ci']
                         u2 = segments.iloc[i+1]['upper_ci']
 
-                        # Handle NaNs (insufficient data)
-                        if pd.isna(l1) or pd.isna(u1) or pd.isna(l2) or pd.isna(u2):
-                            # Cannot determine difference. Assume "not proven different" -> Merge?
-                            # Or assume "valid" to be safe?
-                            # If we can't prove difference, we usually shouldn't add a parameter.
-                            # So assume Overlap (Invalid).
-                            valid_segments = False
+                        # Handle NaNs
+                        if pd.isna(s1) or pd.isna(l1) or pd.isna(u1) or \
+                           pd.isna(s2) or pd.isna(l2) or pd.isna(u2):
+                            valid_segments = False # Can't prove distinct
                             break
 
-                        # Check Overlap
-                        # [L1, U1] overlaps [L2, U2] if max(L1, L2) <= min(U1, U2)
-                        overlap = max(l1, l2) <= min(u1, u2)
+                        # Z-Test for Difference
+                        # Estimate SE = (Upper - Lower) / (2 * Z_crit)
+                        # We assume 95% CI implies Z_crit ~ 1.96
+                        # This works regardless of user's 'alpha' if we consistently un-standardize.
+                        # However, strictly, if user provided alpha=0.10, the range is 1.645 sigma.
+                        # We should use the Z corresponding to the alpha used in trend_test.
 
-                        if overlap:
-                            valid_segments = False
+                        # Get user alpha from kwargs or default 0.05
+                        test_alpha = kwargs.get('alpha', 0.05)
+                        z_crit = norm.ppf(1 - test_alpha / 2)
+
+                        se1 = (u1 - l1) / (2 * z_crit)
+                        se2 = (u2 - l2) / (2 * z_crit)
+
+                        # Pooled SE for difference
+                        se_diff = np.sqrt(se1**2 + se2**2)
+
+                        if se_diff == 0:
+                             # Should not happen with bootstrap unless identical resamples
+                             # If slopes are diff, Z is inf -> distinct. If slopes same, Z=0 -> merge.
+                             if s1 != s2:
+                                 z_stat = np.inf
+                             else:
+                                 z_stat = 0
+                        else:
+                            z_stat = (s1 - s2) / se_diff
+
+                        p_val = 2 * (1 - norm.cdf(abs(z_stat)))
+
+                        # Null Hypothesis: Slopes are equal.
+                        # If p_val > merging_alpha, we Fail to Reject H0. -> Slopes are similar -> Merge (Invalid Segments)
+                        # If p_val < merging_alpha, we Reject H0. -> Slopes are different -> Keep.
+
+                        if p_val > merging_alpha:
+                            valid_segments = False # Found a pair that is "similar"
                             break
+
                     except Exception:
-                        # If structure is unexpected, assume valid to avoid crash
                         pass
 
             if valid_segments:
                 # This model is valid (all adjacent slopes are distinct)
                 best_n = current_n
-                # We can use this result as the final result
                 best_result = candidate_res
                 break
             else:
@@ -416,9 +532,6 @@ def find_best_segmentation(x, t, max_breakpoints=3, merge_similar_segments=False
         if current_n == 0:
             best_n = 0
             best_result = models[0]
-            # Note: models[0] was fast run. If user wants bootstrap samples for N=0 (unlikely needed for CIs of breakpoints),
-            # they might need re-run. But for N=0, breakpoints=[], so bootstrap not used for BPs.
-            # But trend_test inside might use bootstrap? No, trend_test is analytic usually.
 
     else:
         # Standard logic: Re-run best model with full bootstrap if needed

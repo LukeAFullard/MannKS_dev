@@ -6,30 +6,36 @@ from ._datetime import _to_numeric_time
 
 def _create_segments(t, breakpoints):
     """Create segment boundaries from breakpoints."""
-    t_min, t_max = np.min(t), np.max(t)
-    sorted_bp = np.sort(breakpoints)
-    segments = []
+    try:
+        t_min, t_max = np.min(t), np.max(t)
+        sorted_bp = np.sort(breakpoints)
+        segments = []
 
-    if len(sorted_bp) == 0:
-        # No breakpoints, single segment covering full range
-        return [(t_min, t_max)]
+        if len(sorted_bp) == 0:
+            # No breakpoints, single segment covering full range
+            return [(t_min, t_max)]
 
-    # First segment
-    segments.append((t_min, sorted_bp[0]))
+        # First segment
+        segments.append((t_min, sorted_bp[0]))
 
-    # Middle segments
-    for i in range(len(sorted_bp) - 1):
-        segments.append((sorted_bp[i], sorted_bp[i+1]))
+        # Middle segments
+        for i in range(len(sorted_bp) - 1):
+            segments.append((sorted_bp[i], sorted_bp[i+1]))
 
-    # Last segment
-    segments.append((sorted_bp[-1], t_max))
+        # Last segment
+        segments.append((sorted_bp[-1], t_max))
 
-    return segments
+        return segments
+    except Exception as e:
+        # Re-raise to be handled by caller, but log if needed in future
+        raise
 
-def _calculate_segment_residuals(x, t, censored, cen_type, breakpoints, **kwargs):
+def _calculate_segment_residuals(x, t, censored, cen_type, breakpoints, return_fitted=False, **kwargs):
     """
     Calculate sum of absolute residuals for continuous segmented model.
     Uses Sen's slopes for segments and a robust global intercept.
+
+    If return_fitted=True, returns (total_residual, y_fitted).
     """
     segments = _create_segments(t, breakpoints)
 
@@ -50,6 +56,8 @@ def _calculate_segment_residuals(x, t, censored, cen_type, breakpoints, **kwargs
              mask = (t >= seg_start) & (t < seg_end)
 
         if np.sum(mask) < min_segment_size:
+            if return_fitted:
+                return np.inf, None
             return np.inf
 
         x_seg = x[mask]
@@ -65,6 +73,8 @@ def _calculate_segment_residuals(x, t, censored, cen_type, breakpoints, **kwargs
 
         slope_est = np.nanmedian(s_vals)
         if np.isnan(slope_est):
+             if return_fitted:
+                return np.inf, None
              return np.inf
         slopes.append(slope_est)
 
@@ -113,8 +123,13 @@ def _calculate_segment_residuals(x, t, censored, cen_type, breakpoints, **kwargs
         y_fitted = y_shape + intercept
         final_residuals = np.abs(x[~censored] - y_fitted[~censored])
         total_residual = np.sum(final_residuals)
+
+        if return_fitted:
+            return total_residual, y_fitted
     else:
         total_residual = np.inf
+        if return_fitted:
+            return np.inf, None
 
     return total_residual
 
@@ -132,9 +147,12 @@ def segmented_sens_slope(x, t, censored, cen_type,
 
     # Initialize breakpoints evenly if not provided
     if start_values is None:
-        t_range = np.max(t) - np.min(t)
-        start_values = [np.min(t) + (i+1) * t_range / (n_breakpoints + 1)
-                        for i in range(n_breakpoints)]
+        if n_breakpoints > 0:
+            t_range = np.max(t) - np.min(t)
+            start_values = [np.min(t) + (i+1) * t_range / (n_breakpoints + 1)
+                            for i in range(n_breakpoints)]
+        else:
+            start_values = []
 
     breakpoints = np.array(start_values, dtype=float)
     t_min_global = np.min(t)
@@ -222,7 +240,10 @@ def segmented_sens_slope(x, t, censored, cen_type,
             breakpoints[bp_idx] = best_local_bp
 
         # Check convergence
-        if np.max(np.abs(breakpoints - breakpoints_old)) < tol:
+        if n_breakpoints > 0:
+            if np.max(np.abs(breakpoints - breakpoints_old)) < tol:
+                return breakpoints, True
+        else:
             return breakpoints, True
 
     return breakpoints, False
@@ -235,6 +256,18 @@ def bootstrap_restart_segmented(x, t, censored, cen_type,
     """
     Randomized restart to avoid local optima (common in segmented regression).
     """
+
+    # Clean kwargs to remove parameters that shouldn't be propagated recursively or cause duplicates
+    # n_bootstrap is consumed here, so we remove it from kwargs passed to children
+    # criterion is not used by segmented_sens_slope or _calculate_segment_residuals
+    # merging_alpha is not used here
+    kwargs_clean = kwargs.copy()
+    kwargs_clean.pop('n_bootstrap', None)
+    kwargs_clean.pop('criterion', None)
+    kwargs_clean.pop('merging_alpha', None)
+    kwargs_clean.pop('use_permutation_test', None)
+    kwargs_clean.pop('n_permutations', None)
+
     best_residual = np.inf
     best_breakpoints = None
     best_converged = False
@@ -262,7 +295,7 @@ def bootstrap_restart_segmented(x, t, censored, cen_type,
         for gp in grid_points:
             test_bp = np.array([gp])
             # Quick check (no optimization yet, just evaluation)
-            resid = _calculate_segment_residuals(x, t, censored, cen_type, test_bp, min_segment_size=min_segment_size, **kwargs)
+            resid = _calculate_segment_residuals(x, t, censored, cen_type, test_bp, min_segment_size=min_segment_size, **kwargs_clean)
             if resid < grid_best_resid:
                 grid_best_resid = resid
                 grid_best_bp = test_bp
@@ -279,9 +312,14 @@ def bootstrap_restart_segmented(x, t, censored, cen_type,
             # Run 2-5: Random starts (Stochastic)
             # Use actual data with random start points
             x_run, t_run, cen_run, centype_run = x, t, censored, cen_type
-            # Random starts within inner 80% of data to avoid edges
-            buffer = (t_max - t_min) * 0.1
-            start_vals = np.sort(np.random.uniform(t_min + buffer, t_max - buffer, n_breakpoints))
+
+            if n_breakpoints > 0:
+                # Random starts within inner 80% of data to avoid edges
+                buffer = (t_max - t_min) * 0.1
+                start_vals = np.sort(np.random.uniform(t_min + buffer, t_max - buffer, n_breakpoints))
+            else:
+                start_vals = []
+
         else:
             # Bootstrap resample the data
             idx = np.random.choice(len(x), len(x), replace=True)
@@ -296,10 +334,10 @@ def bootstrap_restart_segmented(x, t, censored, cen_type,
         bp, conv = segmented_sens_slope(x_run, t_run, cen_run, centype_run,
                                         n_breakpoints, start_values=start_vals,
                                         min_segment_size=min_segment_size,
-                                        **kwargs)
+                                        **kwargs_clean)
 
         # Evaluate found breakpoints on ORIGINAL data
-        resid = _calculate_segment_residuals(x, t, censored, cen_type, bp, min_segment_size=min_segment_size, **kwargs)
+        resid = _calculate_segment_residuals(x, t, censored, cen_type, bp, min_segment_size=min_segment_size, **kwargs_clean)
 
         if resid < best_residual:
             best_residual = resid
@@ -318,6 +356,15 @@ def get_breakpoint_bootstrap_distribution(x, t, censored, cen_type,
     Returns:
         boot_breakpoints: Array of shape (n_bootstrap, n_breakpoints)
     """
+
+    # Clean kwargs
+    kwargs_clean = kwargs.copy()
+    kwargs_clean.pop('n_bootstrap', None)
+    kwargs_clean.pop('criterion', None)
+    kwargs_clean.pop('merging_alpha', None)
+    kwargs_clean.pop('use_permutation_test', None)
+    kwargs_clean.pop('n_permutations', None)
+
     n = len(x)
     boot_dist = []
 
@@ -331,7 +378,105 @@ def get_breakpoint_bootstrap_distribution(x, t, censored, cen_type,
         bp, _ = segmented_sens_slope(x[idx], t[idx], censored[idx], cen_type[idx],
                                      n_breakpoints=len(final_breakpoints),
                                      start_values=final_breakpoints,
-                                     **kwargs)
+                                     **kwargs_clean)
         boot_dist.append(bp)
 
     return np.array(boot_dist)
+
+def _perform_permutation_test(x, t, censored, cen_type, base_sar, alt_sar,
+                              n_breakpoints_base, n_breakpoints_alt,
+                              n_permutations=1000, **kwargs):
+    """
+    Perform a permutation test to check if adding breakpoints significantly reduces residual error.
+
+    Logic:
+    1. Get residuals from the BASE model (N breakpoints).
+    2. Permute residuals randomly.
+    3. Add permuted residuals to the BASE model's fitted values to create synthetic data.
+    4. Fit the ALT model (N+1 breakpoints) to this synthetic data.
+    5. Calculate the reduction in SAR (Base_SAR - Alt_SAR) for the synthetic data.
+    6. Compare Observed Reduction with the distribution of Permuted Reductions.
+
+    Args:
+        base_sar: SAR of the base model on real data.
+        alt_sar: SAR of the alt model on real data.
+        n_breakpoints_base: Number of breakpoints in base model.
+        n_breakpoints_alt: Number of breakpoints in alt model.
+
+    Returns:
+        p_value: Probability that the observed reduction is due to chance.
+    """
+    observed_reduction = base_sar - alt_sar
+
+    if observed_reduction <= 0:
+        return 1.0 # No improvement, definitely not significant
+
+    # We need to re-fit the BASE model to get fitted values (y_hat)
+    # We assume 'bootstrap_restart_segmented' or 'segmented_sens_slope' logic was used to get best params.
+    # But here we don't have the params passed in, just the SAR.
+    # To be precise, we should fit the base model again here to get parameters.
+    # Since we don't know the exact breakpoints used for base_sar, we re-optimize.
+    # This might result in slightly different SAR if optimization is stochastic, but it's consistent.
+
+    # clean kwargs for recursive calls
+    kwargs_clean = kwargs.copy()
+    kwargs_clean.pop('n_bootstrap', None)
+    kwargs_clean.pop('criterion', None)
+    kwargs_clean.pop('merging_alpha', None)
+    kwargs_clean.pop('use_permutation_test', None)
+    kwargs_clean.pop('n_permutations', None)
+
+    # 1. Fit Base Model to get Fitted Values and Residuals
+    # Use fewer restarts for speed here as we just need a good fit
+    bp_base, _, _ = bootstrap_restart_segmented(x, t, censored, cen_type,
+                                                n_breakpoints=n_breakpoints_base,
+                                                n_bootstrap=5, **kwargs_clean)
+
+    _, y_fitted_base = _calculate_segment_residuals(x, t, censored, cen_type, bp_base,
+                                                    return_fitted=True, **kwargs_clean)
+
+    if y_fitted_base is None:
+        return 1.0 # Failed to fit base model
+
+    residuals_base = x - y_fitted_base # Simple diff, okay for censored?
+    # For censored data, residuals are tricky.
+    # If censored, y_fitted might not be "true" y.
+    # Permutation tests for censored data usually involve permuting survival residuals or similar.
+    # Given we are using L1 norm (Sen's slope), permuting simple residuals of observed data
+    # is a reasonable approx if censoring is light. If heavy censoring, this is invalid.
+    # However, for this implementation, we assume residuals of (value - fit).
+
+    perm_reductions = []
+
+    for _ in range(n_permutations):
+        # 2. Permute Residuals
+        resid_perm = np.random.permutation(residuals_base)
+
+        # 3. Synthetic Data
+        y_synth = y_fitted_base + resid_perm
+
+        # 4. Fit Base and Alt models to Synthetic Data
+        # We need to calculate SAR improvement on this synthetic data
+        # Note: We must re-fit BOTH Base and Alt on synthetic data to see how much Alt improves over Base
+        # strictly due to flexibility, not due to signal.
+
+        # Fit Base on Synthetic
+        _, _, sar_base_synth = bootstrap_restart_segmented(y_synth, t, censored, cen_type,
+                                                           n_breakpoints=n_breakpoints_base,
+                                                           n_bootstrap=0, **kwargs_clean) # Fast fit
+
+        # Fit Alt on Synthetic
+        _, _, sar_alt_synth = bootstrap_restart_segmented(y_synth, t, censored, cen_type,
+                                                          n_breakpoints=n_breakpoints_alt,
+                                                          n_bootstrap=0, **kwargs_clean) # Fast fit
+
+        perm_reduction = sar_base_synth - sar_alt_synth
+        perm_reductions.append(perm_reduction)
+
+    perm_reductions = np.array(perm_reductions)
+
+    # 5. Calculate P-Value
+    # P = (Number of perm_reductions >= observed_reduction) / n_permutations
+    p_value = np.mean(perm_reductions >= observed_reduction)
+
+    return p_value

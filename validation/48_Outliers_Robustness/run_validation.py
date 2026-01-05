@@ -99,7 +99,7 @@ def run_comparison(n_iterations=200):
 
         # 3. MannKS (Merged)
         try:
-            mk_m_res, _ = find_best_segmentation(x, t, max_breakpoints=2, n_bootstrap=20, merge_similar_segments=True)
+            mk_m_res, _ = find_best_segmentation(x, t, max_breakpoints=2, n_bootstrap=20, merge_similar_segments=True, merging_alpha=0.05)
             mk_m_n = mk_m_res.n_breakpoints
             if mk_m_n == 1:
                 mk_m_bp = mk_m_res.breakpoints[0]
@@ -109,6 +109,18 @@ def run_comparison(n_iterations=200):
             mk_m_n = -1
             mk_m_bp = np.nan
 
+        # 4. MannKS (Permutation)
+        try:
+            mk_p_res, _ = find_best_segmentation(x, t, max_breakpoints=2, n_bootstrap=20, use_permutation_test=True, n_permutations=200)
+            mk_p_n = mk_p_res.n_breakpoints
+            if mk_p_n == 1:
+                mk_p_bp = mk_p_res.breakpoints[0]
+            else:
+                mk_p_bp = np.nan
+        except:
+            mk_p_n = -1
+            mk_p_bp = np.nan
+
         # Metrics
         row = {
             'iter': i,
@@ -117,14 +129,17 @@ def run_comparison(n_iterations=200):
             'pw_n': pw_n,
             'mk_n': mk_n,
             'mk_m_n': mk_m_n,
+            'mk_p_n': mk_p_n,
 
             'pw_success': (pw_n == 1),
             'mk_success': (mk_n == 1),
             'mk_m_success': (mk_m_n == 1),
+            'mk_p_success': (mk_p_n == 1),
 
             'pw_error': abs(pw_bp - true_bp) if pw_n == 1 else np.nan,
             'mk_error': abs(mk_bp - true_bp) if mk_n == 1 else np.nan,
-            'mk_m_error': abs(mk_m_bp - true_bp) if mk_m_n == 1 else np.nan
+            'mk_m_error': abs(mk_m_bp - true_bp) if mk_m_n == 1 else np.nan,
+            'mk_p_error': abs(mk_p_bp - true_bp) if mk_p_n == 1 else np.nan
         }
         results.append(row)
 
@@ -140,21 +155,25 @@ def generate_report(df):
         pw_acc = df['pw_success'].mean()
         mk_acc = df['mk_success'].mean()
         mk_m_acc = df['mk_m_success'].mean()
+        mk_p_acc = df['mk_p_success'].mean()
 
         f.write("## 1. Detection Accuracy (Finding 1 Breakpoint)\n")
         f.write(f"*   **Piecewise (OLS):** {pw_acc:.1%}\n")
         f.write(f"*   **MannKS (Standard):** {mk_acc:.1%}\n")
-        f.write(f"*   **MannKS (Merged):** {mk_m_acc:.1%}\n\n")
+        f.write(f"*   **MannKS (Merged):** {mk_m_acc:.1%}\n")
+        f.write(f"*   **MannKS (Permutation):** {mk_p_acc:.1%}\n\n")
 
         # Location Error (MAE)
         pw_err = df['pw_error'].mean()
         mk_err = df['mk_error'].mean()
         mk_m_err = df['mk_m_error'].mean()
+        mk_p_err = df['mk_p_error'].mean()
 
         f.write("## 2. Location Precision (MAE)\n")
         f.write(f"*   **Piecewise (OLS):** {pw_err:.4f}\n")
         f.write(f"*   **MannKS (Standard):** {mk_err:.4f}\n")
-        f.write(f"*   **MannKS (Merged):** {mk_m_err:.4f}\n\n")
+        f.write(f"*   **MannKS (Merged):** {mk_m_err:.4f}\n")
+        f.write(f"*   **MannKS (Permutation):** {mk_p_err:.4f}\n\n")
 
         # Example Plot
         f.write("## 3. Visual Example\n")

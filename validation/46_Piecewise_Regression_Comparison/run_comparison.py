@@ -151,13 +151,27 @@ def run_comparison(n_iterations=50):
         try:
             mk_merge_res, _ = find_best_segmentation(
                 x=x, t=t, max_breakpoints=2, n_bootstrap=20, alpha=0.05,
-                min_segment_size=3, merge_similar_segments=True
+                min_segment_size=3, merge_similar_segments=True, merging_alpha=0.05
             )
             mk_merge_n = mk_merge_res.n_breakpoints
             mk_merge_bps = list(mk_merge_res.breakpoints)
         except Exception as e:
             mk_merge_n = -1
             mk_merge_bps = []
+
+        # -----------------------------------
+        # 4. MannKS - Permutation Test
+        # -----------------------------------
+        try:
+            mk_perm_res, _ = find_best_segmentation(
+                x=x, t=t, max_breakpoints=2, n_bootstrap=20, alpha=0.05,
+                min_segment_size=3, use_permutation_test=True, n_permutations=200
+            )
+            mk_perm_n = mk_perm_res.n_breakpoints
+            mk_perm_bps = list(mk_perm_res.breakpoints)
+        except Exception as e:
+            mk_perm_n = -1
+            mk_perm_bps = []
 
         # -----------------------------------
         # Calculate Error Metrics
@@ -169,6 +183,7 @@ def run_comparison(n_iterations=50):
             'pw_n': pw_n,
             'mk_n': mk_n,
             'mk_merge_n': mk_merge_n,
+            'mk_perm_n': mk_perm_n,
             'pw_bps': str(pw_bps),
             'mk_bps': str(mk_bps),
             'mk_merge_bps': str(mk_merge_bps),
@@ -176,7 +191,8 @@ def run_comparison(n_iterations=50):
             # Correct N Detection
             'pw_correct_n': (pw_n == true_n),
             'mk_correct_n': (mk_n == true_n),
-            'mk_merge_correct_n': (mk_merge_n == true_n)
+            'mk_merge_correct_n': (mk_merge_n == true_n),
+            'mk_perm_correct_n': (mk_perm_n == true_n)
         }
 
         # Calculate Breakpoint Location Error (only if N matches true N and N > 0)
@@ -205,6 +221,11 @@ def run_comparison(n_iterations=50):
         else:
             row['mk_merge_loc_error'] = np.nan
 
+        if mk_perm_n == true_n:
+            row['mk_perm_loc_error'] = calc_bp_error(mk_perm_bps, true_bps)
+        else:
+            row['mk_perm_loc_error'] = np.nan
+
         results.append(row)
 
     df_res = pd.DataFrame(results)
@@ -218,16 +239,19 @@ def generate_report(df):
     pw_acc = df['pw_correct_n'].mean()
     mk_acc = df['mk_correct_n'].mean()
     mk_merge_acc = df['mk_merge_correct_n'].mean()
+    mk_perm_acc = df['mk_perm_correct_n'].mean()
 
     # Location Errors (Filter out NaN)
     pw_err = df['pw_loc_error'].mean()
     mk_err = df['mk_loc_error'].mean()
     mk_merge_err = df['mk_merge_loc_error'].mean()
+    mk_perm_err = df['mk_perm_loc_error'].mean()
 
     # Confusion Matrices
     cm_pw = pd.crosstab(df['true_n'], df['pw_n'])
     cm_mk = pd.crosstab(df['true_n'], df['mk_n'])
     cm_mk_merge = pd.crosstab(df['true_n'], df['mk_merge_n'])
+    cm_mk_perm = pd.crosstab(df['true_n'], df['mk_perm_n'])
 
     with open(REPORT_FILE, 'w') as f:
         f.write("# Validation 46: Comparison with Truth & `piecewise-regression`\n\n")
@@ -238,7 +262,8 @@ def generate_report(df):
         f.write("| :--- | :--- |\n")
         f.write(f"| Piecewise (OLS) | {pw_acc:.1%} |\n")
         f.write(f"| MannKS (Standard) | {mk_acc:.1%} |\n")
-        f.write(f"| **MannKS (Merged)** | **{mk_merge_acc:.1%}** |\n\n")
+        f.write(f"| MannKS (Merged) | {mk_merge_acc:.1%} |\n")
+        f.write(f"| **MannKS (Permutation)** | **{mk_perm_acc:.1%}** |\n\n")
 
         f.write("### Confusion Matrices (Rows=True N, Cols=Predicted N)\n")
         f.write("#### Piecewise (OLS)\n")
@@ -250,6 +275,9 @@ def generate_report(df):
         f.write("#### MannKS (Merged)\n")
         f.write(cm_mk_merge.to_markdown())
         f.write("\n\n")
+        f.write("#### MannKS (Permutation)\n")
+        f.write(cm_mk_perm.to_markdown())
+        f.write("\n\n")
 
         f.write("## 2. Breakpoint Location Accuracy\n")
         f.write("Mean Absolute Error (MAE) when the correct number of breakpoints was found.\n\n")
@@ -257,7 +285,8 @@ def generate_report(df):
         f.write("| :--- | :--- |\n")
         f.write(f"| Piecewise (OLS) | {pw_err:.4f} |\n")
         f.write(f"| MannKS (Standard) | {mk_err:.4f} |\n")
-        f.write(f"| MannKS (Merged) | {mk_merge_err:.4f} |\n\n")
+        f.write(f"| MannKS (Merged) | {mk_merge_err:.4f} |\n")
+        f.write(f"| MannKS (Permutation) | {mk_perm_err:.4f} |\n\n")
 
         f.write("## 3. Analysis\n")
         f.write("*   **Accuracy:** Does enabling merging improve the detection of the correct number of segments (specifically reducing over-segmentation)?\n")
