@@ -56,19 +56,24 @@ def run_comparison(n_iterations=200):
         # 1. Piecewise (OLS)
         try:
             ms_pw = piecewise_regression.ModelSelection(t, x, max_breakpoints=2)
-            best_bic_pw = np.inf
-            best_model_pw = None
-            for fit in ms_pw.models:
-                res = fit.get_results()
-                bic = res.get('bic')
-                if bic is not None and bic < best_bic_pw:
-                    best_bic_pw = bic
-                    best_model_pw = fit
+            summaries = ms_pw.model_summaries
+            if summaries:
+                best_summary = min(summaries, key=lambda x: x['bic'])
+                pw_n = best_summary['n_breakpoints']
 
-            pw_n = best_model_pw.n_breakpoints
-            if pw_n == 1:
-                pw_bp = best_model_pw.get_results()['estimates']['breakpoint1']['estimate']
+                if pw_n == 1:
+                    found_fit = False
+                    for fit in ms_pw.models:
+                        if fit.n_breakpoints == pw_n:
+                            pw_bp = fit.get_results()['estimates']['breakpoint1']['estimate']
+                            found_fit = True
+                            break
+                    if not found_fit:
+                         pw_bp = np.nan
+                else:
+                    pw_bp = np.nan
             else:
+                pw_n = -1
                 pw_bp = np.nan
         except:
             pw_n = -1

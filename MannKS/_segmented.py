@@ -239,15 +239,44 @@ def bootstrap_restart_segmented(x, t, censored, cen_type,
     best_breakpoints = None
     best_converged = False
 
-    # Try 5 random starts + n_bootstrap resamples
+    # Try Grid Search + 5 random starts + n_bootstrap resamples
     # We use fewer attempts if data is small to save time
     n_attempts = 5 + n_bootstrap
 
     t_min = np.min(t)
     t_max = np.max(t)
 
+    # 0. Grid Search Initialization (for robustness in noisy data)
+    # Especially for n_breakpoints=1, a grid search is cheap and prevents getting stuck
+    grid_best_bp = None
+    if n_breakpoints == 1:
+        grid_size = 20
+        buffer = (t_max - t_min) * 0.1
+        # Search inner 80%
+        grid_points = np.linspace(t_min + buffer, t_max - buffer, grid_size)
+
+        # We perform a quick check of residuals for each grid point
+        # This acts as a "coarse" search
+        grid_best_resid = np.inf
+
+        for gp in grid_points:
+            test_bp = np.array([gp])
+            # Quick check (no optimization yet, just evaluation)
+            resid = _calculate_segment_residuals(x, t, censored, cen_type, test_bp, min_segment_size=min_segment_size, **kwargs)
+            if resid < grid_best_resid:
+                grid_best_resid = resid
+                grid_best_bp = test_bp
+
+        # We will use this best grid point as one of our starts below
+
     for i in range(n_attempts):
-        if i < 5:
+        start_vals = None
+        if i == 0 and grid_best_bp is not None:
+            # Run 1: Best Grid Point (Deterministic)
+            x_run, t_run, cen_run, centype_run = x, t, censored, cen_type
+            start_vals = grid_best_bp
+        elif i < 5:
+            # Run 2-5: Random starts (Stochastic)
             # Use actual data with random start points
             x_run, t_run, cen_run, centype_run = x, t, censored, cen_type
             # Random starts within inner 80% of data to avoid edges
