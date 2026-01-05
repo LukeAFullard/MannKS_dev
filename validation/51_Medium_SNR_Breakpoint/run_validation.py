@@ -80,16 +80,48 @@ def generate_random_dataset(n_points=100, seed=None):
 
     # Add noise
     # Signal magnitude over 100 steps is ~ 0.5 * 100 = 50.
-    # Noise sigma = 1.0. SNR ~ 50. Good.
-    noise = np.random.normal(0, 1.0, n_points)
+    # Medium SNR: Sigma = 2.0.
+    noise = np.random.normal(0, 2.0, n_points)
     y += noise
 
     return t, y, n_bp, bps
 
+def plot_segmentation_comparison(t, x, true_bps, mk_bps, pw_bps, filename):
+    """
+    Plots the data and vertical lines for true, MannKS, and Piecewise breakpoints.
+    """
+    plt.figure(figsize=(10, 6))
+    plt.scatter(t, x, c='gray', alpha=0.5, label='Data')
+
+    # Plot True Breakpoints
+    for bp in true_bps:
+        plt.axvline(x=bp, color='green', linestyle='-', linewidth=2, label='True BP' if bp == true_bps[0] else "")
+
+    # Plot MannKS Breakpoints
+    for bp in mk_bps:
+        plt.axvline(x=bp, color='blue', linestyle='--', linewidth=2, label='MannKS BP' if len(mk_bps)>0 and bp == mk_bps[0] else "")
+
+    # Plot Piecewise Breakpoints
+    for bp in pw_bps:
+        plt.axvline(x=bp, color='red', linestyle=':', linewidth=2, label='Piecewise BP' if len(pw_bps)>0 and bp == pw_bps[0] else "")
+
+    plt.title("Breakpoint Detection Comparison (Medium SNR)")
+    plt.xlabel("Time")
+    plt.ylabel("Value")
+
+    # De-duplicate legend labels
+    handles, labels = plt.gca().get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    plt.legend(by_label.values(), by_label.keys())
+
+    plt.tight_layout()
+    plt.savefig(filename)
+    plt.close()
+
 def run_comparison(n_iterations=50):
     results = []
 
-    print(f"Running {n_iterations} comparison iterations...")
+    print(f"Running {n_iterations} comparison iterations (Medium SNR, Sigma=2.0)...")
 
     for i in range(n_iterations):
         if i % 10 == 0:
@@ -158,6 +190,11 @@ def run_comparison(n_iterations=50):
         except Exception as e:
             mk_merge_n = -1
             mk_merge_bps = []
+
+        # Plot the first few iterations
+        if i < 3:
+            plot_filename = os.path.join(OUTPUT_DIR, f'example_plot_{i}.png')
+            plot_segmentation_comparison(t, x, true_bps, mk_merge_bps, pw_bps, plot_filename)
 
         # -----------------------------------
         # Calculate Error Metrics
@@ -230,8 +267,8 @@ def generate_report(df):
     cm_mk_merge = pd.crosstab(df['true_n'], df['mk_merge_n'])
 
     with open(REPORT_FILE, 'w') as f:
-        f.write("# Validation 46: Comparison with Truth & `piecewise-regression`\n\n")
-        f.write(f"Comparision across {total} random datasets (Non-censored, Normal noise) against **Ground Truth**.\n\n")
+        f.write("# Validation 51: Medium SNR Breakpoint Detection\n\n")
+        f.write(f"Comparision across {total} random datasets (Non-censored, Medium SNR, Sigma=2.0) against **Ground Truth**.\n\n")
 
         f.write("## 1. Model Selection Accuracy (Finding Correct Number of Breakpoints)\n")
         f.write("| Method | Accuracy (Correct N) |\n")
@@ -271,7 +308,11 @@ def generate_report(df):
         f.write("*   **Comparison to OLS:** Piecewise OLS is theoretically optimal for this normal noise data. How close is MannKS?\n")
         f.write(f"    *   MannKS (Merged) is within {abs(pw_acc - mk_merge_acc)*100:.1f}% accuracy of OLS.\n")
 
+        f.write("\n## 4. Example Plots\n")
+        for i in range(3):
+            f.write(f"![Example {i}](example_plot_{i}.png)\n")
+
 if __name__ == "__main__":
-    df = run_comparison(n_iterations=200)
+    df = run_comparison(n_iterations=100)
     generate_report(df)
     print("Comparison complete.")
