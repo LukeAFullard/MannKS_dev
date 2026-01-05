@@ -102,24 +102,28 @@ def run_comparison(n_iterations=50):
         # -----------------------------------
         try:
             ms_pw = piecewise_regression.ModelSelection(t, x, max_breakpoints=2)
-            # Find best model based on BIC
-            best_bic_pw = np.inf
-            best_model_pw = None
+            # Check 0-breakpoint fit using model_summaries
+            summaries = ms_pw.model_summaries
+            if summaries:
+                best_summary = min(summaries, key=lambda x: x['bic'])
+                pw_n = best_summary['n_breakpoints']
 
-            for fit in ms_pw.models:
-                res = fit.get_results()
-                bic = res.get('bic')
-                if bic is not None and bic < best_bic_pw:
-                    best_bic_pw = bic
-                    best_model_pw = fit
-
-            pw_n = best_model_pw.n_breakpoints
-            if pw_n > 0:
-                est = best_model_pw.get_results()['estimates']
-                pw_bps = []
-                for k in range(1, pw_n + 1):
-                    pw_bps.append(est[f'breakpoint{k}']['estimate'])
+                if pw_n == 0:
+                    pw_bps = []
+                else:
+                    found_fit = False
+                    for fit in ms_pw.models:
+                        if fit.n_breakpoints == pw_n:
+                            est = fit.get_results()['estimates']
+                            pw_bps = []
+                            for k in range(1, pw_n + 1):
+                                pw_bps.append(est[f'breakpoint{k}']['estimate'])
+                            found_fit = True
+                            break
+                    if not found_fit:
+                        pw_bps = []
             else:
+                pw_n = -1
                 pw_bps = []
 
         except Exception as e:
@@ -268,6 +272,6 @@ def generate_report(df):
         f.write(f"    *   MannKS (Merged) is within {abs(pw_acc - mk_merge_acc)*100:.1f}% accuracy of OLS.\n")
 
 if __name__ == "__main__":
-    df = run_comparison(n_iterations=200)
+    df = run_comparison(n_iterations=100)
     generate_report(df)
     print("Comparison complete.")
