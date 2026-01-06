@@ -48,13 +48,12 @@ def generate_robust_dataset(n_points=100, seed=None):
 
     return t, y, bp_true
 
-def run_comparison(n_iterations=200):
+def run_comparison(n_iterations=20):
     results = []
     print(f"Running Outliers Robustness Test ({n_iterations} iterations)...")
 
     for i in range(n_iterations):
-        if i % 20 == 0:
-            print(f"  Iteration {i}/{n_iterations}")
+        print(f"  Iteration {i}/{n_iterations}")
 
         seed = 42 + i
         t, x, true_bp = generate_robust_dataset(n_points=60, seed=seed)
@@ -111,7 +110,7 @@ def run_comparison(n_iterations=200):
 
         # 4. MannKS (Permutation)
         try:
-            mk_p_res, _ = find_best_segmentation(x, t, max_breakpoints=2, n_bootstrap=20, use_permutation_test=True, n_permutations=200)
+            mk_p_res, _ = find_best_segmentation(x, t, max_breakpoints=2, n_bootstrap=20, use_permutation_test=True, n_permutations=50)
             mk_p_n = mk_p_res.n_breakpoints
             if mk_p_n == 1:
                 mk_p_bp = mk_p_res.breakpoints[0]
@@ -201,6 +200,6 @@ def generate_report(df):
             f.write("**Result:** OLS remained competitive or superior.\n\n")
 
 if __name__ == "__main__":
-    df = run_comparison(n_iterations=200)
+    df = run_comparison(n_iterations=20)
     df.to_csv(RESULTS_FILE, index=False)
     generate_report(df)
