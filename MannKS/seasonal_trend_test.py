@@ -14,7 +14,7 @@ from ._stats import (_z_score, _p_value,
                    _mk_probability, _mk_score_and_var_censored,
                    _sens_estimator_censored, _sen_probability)
 from ._ats import ats_slope, seasonal_ats_slope
-from ._datetime import (_get_season_func, _get_cycle_identifier, _get_time_ranks)
+from ._datetime import (_get_season_func, _get_cycle_identifier, _get_time_ranks, _infer_period)
 from ._helpers import (_prepare_data, _aggregate_by_group, _value_for_time_increment)
 from .plotting import plot_trend, plot_residuals
 from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
@@ -26,7 +26,7 @@ from typing import Union, Optional
 def seasonal_trend_test(
     x: Union[np.ndarray, pd.DataFrame],
     t: np.ndarray,
-    period: int = 12,
+    period: Optional[int] = None,
     alpha: float = 0.05,
     agg_method: str = 'none',
     agg_period: Optional[str] = None,
@@ -55,7 +55,9 @@ def seasonal_trend_test(
     Input:
         x: a vector of data, or a DataFrame from prepare_censored_data.
         t: a vector of timestamps.
-        period: seasonal cycle (default 12).
+        period: seasonal cycle.
+                If None (default), it is inferred from `season_type` if `t` is datetime-like.
+                For numeric `t`, `period` is required.
         alpha: significance level (default 0.05).
         hicensor (bool): If True, applies the high-censor rule, where all
                          values below the highest left-censor limit are
@@ -264,6 +266,16 @@ def seasonal_trend_test(
     note = get_analysis_note(data_filtered, values_col='value', censored_col='censored')
     analysis_notes.append(note)
 
+    # --- Infer or Validate Period ---
+    if period is None:
+        if is_datetime:
+            # Try to infer period from season_type
+            # If inference returns None (e.g. week_of_year), period stays None.
+            # _get_season_func handles period=None by skipping validation.
+            period = _infer_period(season_type)
+        else:
+            raise ValueError("The `period` parameter must be specified for numeric (non-datetime) time inputs.")
+
     if is_datetime:
         season_func = _get_season_func(season_type, period)
 
@@ -280,6 +292,7 @@ def seasonal_trend_test(
             cycles = _get_cycle_identifier(t_pd, season_type)
             seasons_agg = season_func(t_pd) if season_type != 'year' else np.ones(len(t_pd))
         else:
+            # period is guaranteed to be not None here due to check above
             t_numeric_agg = data_filtered['t'].to_numpy()
             t_normalized = t_numeric_agg - t_numeric_agg[0]
             cycles = np.floor(t_normalized / period)
@@ -337,6 +350,7 @@ def seasonal_trend_test(
         cycles = _get_cycle_identifier(t_pd, season_type)
         season_range = np.unique(seasons)
     elif not is_datetime:
+        # period is guaranteed to be not None here
         t_normalized = data_filtered['t'] - data_filtered['t'].min()
         seasons = (np.floor(t_normalized) % period).astype(int)
         cycles = np.floor(t_normalized / period)

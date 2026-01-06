@@ -36,32 +36,52 @@ def _to_numeric_time(t):
         except Exception:
              raise ValueError("Could not convert time vector `t` to numeric values.")
 
-def _get_season_func(season_type, period):
+
+def _get_dt_prop(dt, prop):
+    return getattr(dt.dt, prop) if isinstance(dt, pd.Series) else getattr(dt, prop)
+
+# Define season specifications at module level
+# Structure: season_type -> (expected_period, extraction_function)
+_SEASON_SPECS = {
+    'year': (1, lambda dt: _get_dt_prop(dt, 'year')),
+    'month': (12, lambda dt: _get_dt_prop(dt, 'month')),
+    'day_of_week': (7, lambda dt: _get_dt_prop(dt, 'dayofweek')),
+    'quarter': (4, lambda dt: _get_dt_prop(dt, 'quarter')),
+    'hour': (24, lambda dt: _get_dt_prop(dt, 'hour')),
+    'week_of_year': ([52, 53], lambda dt: _get_dt_prop(dt, 'isocalendar')().week),
+    'biweekly': ([26, 27], lambda dt: (_get_dt_prop(dt, 'isocalendar')().week - 1) // 2),
+    'day_of_year': (None, lambda dt: _get_dt_prop(dt, 'dayofyear')),
+    'minute': (60, lambda dt: _get_dt_prop(dt, 'minute')),
+    'second': (60, lambda dt: _get_dt_prop(dt, 'second')),
+}
+
+def _infer_period(season_type):
+    """
+    Attempts to infer the period from the season_type.
+    Returns the period if it is a fixed integer, otherwise None.
+    """
+    if season_type not in _SEASON_SPECS:
+        return None
+
+    expected_period, _ = _SEASON_SPECS[season_type]
+
+    # If it's a list (e.g. week_of_year), we can't infer a single value unambiguously
+    if isinstance(expected_period, list):
+        return None
+
+    return expected_period
+
+def _get_season_func(season_type, period=None):
     """
     Returns a function to extract seasonal data based on the season_type,
-    and validates the period.
+    and validates the period if provided.
     """
-    def get_dt_prop(dt, prop):
-        return getattr(dt.dt, prop) if isinstance(dt, pd.Series) else getattr(dt, prop)
+    if season_type not in _SEASON_SPECS:
+        raise ValueError(f"Unknown season_type: '{season_type}'. Must be one of {list(_SEASON_SPECS.keys())}")
 
-    season_map = {
-        'year': (1, lambda dt: get_dt_prop(dt, 'year')),
-        'month': (12, lambda dt: get_dt_prop(dt, 'month')),
-        'day_of_week': (7, lambda dt: get_dt_prop(dt, 'dayofweek')),
-        'quarter': (4, lambda dt: get_dt_prop(dt, 'quarter')),
-        'hour': (24, lambda dt: get_dt_prop(dt, 'hour')),
-        'week_of_year': ([52, 53], lambda dt: get_dt_prop(dt, 'isocalendar')().week),
-        'biweekly': ([26, 27], lambda dt: (get_dt_prop(dt, 'isocalendar')().week - 1) // 2),
-        'day_of_year': (None, lambda dt: get_dt_prop(dt, 'dayofyear')),
-        'minute': (60, lambda dt: get_dt_prop(dt, 'minute')),
-        'second': (60, lambda dt: get_dt_prop(dt, 'second')),
-    }
-    if season_type not in season_map:
-        raise ValueError(f"Unknown season_type: '{season_type}'. Must be one of {list(season_map.keys())}")
+    expected_period, season_func = _SEASON_SPECS[season_type]
 
-    expected_period, season_func = season_map[season_type]
-
-    if expected_period is not None:
+    if period is not None and expected_period is not None:
         if isinstance(expected_period, list):
             if period not in expected_period:
                 raise ValueError(f"For season_type='{season_type}', period must be one of {expected_period}.")
