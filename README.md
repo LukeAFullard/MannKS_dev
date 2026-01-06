@@ -118,16 +118,15 @@ Confidence: 98.47%
 ```python
 from MannKS import seasonal_trend_test, check_seasonality
 
-# Check if seasonality exists
-seasonality = check_seasonality(x=data, t=dates, period=12, season_type='month')
+# Check if seasonality exists (period=12 is inferred from season_type='month')
+seasonality = check_seasonality(x=data, t=dates, season_type='month')
 print(f"Seasonal pattern detected: {seasonality.is_seasonal}")
 
 # Run seasonal trend test
 result = seasonal_trend_test(
     x=data,
     t=dates,
-    period=12,
-    season_type='month',
+    season_type='month',         # Infers period=12 automatically
     agg_method='robust_median',  # Aggregates multiple samples per month
     slope_scaling='year'
 )
