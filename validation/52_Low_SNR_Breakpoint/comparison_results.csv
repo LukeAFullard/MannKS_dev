@@ -1,0 +1,6 @@
+iter,true_n,true_bps,pw_n,mk_n,mk_merge_n,mk_bag_n,pw_bps,mk_bps,mk_merge_bps,pw_correct_n,mk_correct_n,mk_merge_correct_n,mk_bag_correct_n,pw_loc_error,mk_loc_error,mk_merge_loc_error,mk_bag_loc_error
+0,1,[63.919636508684306],1,1,1,1,[np.float64(61.16580881758785)],[np.float64(64.5639486336909)],[np.float64(64.60489670366212)],True,True,True,True,2.753827691096454,0.6443121250065929,0.6852601949778148,1.6222344425433732
+1,0,[],-1,0,0,0,[],[],[],False,True,True,True,,0.0,0.0,0.0
+2,2,"[64.67842890077107, 86.59685973224038]",1,1,1,1,[np.float64(60.97821088602986)],[np.float64(57.62148231284034)],[np.float64(57.733715758407115)],False,False,False,False,,,,
+3,2,"[36.88683811730377, 59.44614003072676]",1,1,1,1,[np.float64(43.08077292235317)],[np.float64(39.23875240747668)],[np.float64(39.23875240747668)],False,False,False,False,,,,
+4,2,"[34.942585490944936, 81.51876530728391]",-1,0,0,0,[],[],[],False,False,False,False,,,,

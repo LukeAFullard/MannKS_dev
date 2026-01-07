@@ -1,4 +1,5 @@
 import os
+import time
 import numpy as np
 import pandas as pd
 import piecewise_regression
@@ -6,6 +7,7 @@ import MannKS as mk
 from MannKS.segmented_trend_test import find_best_segmentation
 import matplotlib.pyplot as plt
 import warnings
+import sys
 
 # Suppress warnings for cleaner output
 warnings.filterwarnings('ignore')
@@ -118,14 +120,14 @@ def plot_segmentation_comparison(t, x, true_bps, mk_bps, pw_bps, filename):
     plt.savefig(filename)
     plt.close()
 
-def run_comparison(n_iterations=50):
+def run_comparison(n_iterations=100):
     results = []
 
     print(f"Running {n_iterations} comparison iterations (Low SNR, Sigma=5.0)...")
+    start_time = time.time()
 
     for i in range(n_iterations):
-        if i % 10 == 0:
-            print(f"Iteration {i}/{n_iterations}...")
+        print(f"[{time.strftime('%H:%M:%S')}] Iteration {i+1}/{n_iterations}...", flush=True)
 
         t, x, true_n, true_bps = generate_random_dataset(seed=42+i)
 
@@ -194,23 +196,25 @@ def run_comparison(n_iterations=50):
             mk_merge_bps = []
 
         # -----------------------------------
-        # 4. MannKS - Permutation Test
+        # 4. MannKS - Bagging
         # -----------------------------------
         try:
-            mk_perm_res, _ = find_best_segmentation(
+            # use_bagging=True
+            mk_bag_res, _ = find_best_segmentation(
                 x=x, t=t, max_breakpoints=2, n_bootstrap=20, alpha=0.05,
-                min_segment_size=3, use_permutation_test=True, n_permutations=200
+                min_segment_size=3, merge_similar_segments=False, criterion='aic',
+                use_bagging=True, bagging_options={'n_bootstrap': 20, 'aggregation': 'median'}
             )
-            mk_perm_n = mk_perm_res.n_breakpoints
-            mk_perm_bps = list(mk_perm_res.breakpoints)
+            mk_bag_n = mk_bag_res.n_breakpoints
+            mk_bag_bps = list(mk_bag_res.breakpoints)
         except Exception as e:
-            mk_perm_n = -1
-            mk_perm_bps = []
+            mk_bag_n = -1
+            mk_bag_bps = []
 
         # Plot the first few iterations
         if i < 3:
             plot_filename = os.path.join(OUTPUT_DIR, f'example_plot_{i}.png')
-            plot_segmentation_comparison(t, x, true_bps, mk_merge_bps, pw_bps, plot_filename)
+            plot_segmentation_comparison(t, x, true_bps, mk_bag_bps, pw_bps, plot_filename)
 
         # -----------------------------------
         # Calculate Error Metrics
@@ -222,7 +226,7 @@ def run_comparison(n_iterations=50):
             'pw_n': pw_n,
             'mk_n': mk_n,
             'mk_merge_n': mk_merge_n,
-            'mk_perm_n': mk_perm_n,
+            'mk_bag_n': mk_bag_n,
             'pw_bps': str(pw_bps),
             'mk_bps': str(mk_bps),
             'mk_merge_bps': str(mk_merge_bps),
@@ -231,7 +235,7 @@ def run_comparison(n_iterations=50):
             'pw_correct_n': (pw_n == true_n),
             'mk_correct_n': (mk_n == true_n),
             'mk_merge_correct_n': (mk_merge_n == true_n),
-            'mk_perm_correct_n': (mk_perm_n == true_n)
+            'mk_bag_correct_n': (mk_bag_n == true_n)
         }
 
         # Calculate Breakpoint Location Error (only if N matches true N and N > 0)
@@ -260,15 +264,18 @@ def run_comparison(n_iterations=50):
         else:
             row['mk_merge_loc_error'] = np.nan
 
-        if mk_perm_n == true_n:
-            row['mk_perm_loc_error'] = calc_bp_error(mk_perm_bps, true_bps)
+        if mk_bag_n == true_n:
+            row['mk_bag_loc_error'] = calc_bp_error(mk_bag_bps, true_bps)
         else:
-            row['mk_perm_loc_error'] = np.nan
+            row['mk_bag_loc_error'] = np.nan
 
         results.append(row)
 
     df_res = pd.DataFrame(results)
     df_res.to_csv(RESULTS_FILE, index=False)
+
+    elapsed = time.time() - start_time
+    print(f"Comparison complete in {elapsed:.1f} seconds.")
     return df_res
 
 def generate_report(df):
@@ -278,19 +285,19 @@ def generate_report(df):
     pw_acc = df['pw_correct_n'].mean()
     mk_acc = df['mk_correct_n'].mean()
     mk_merge_acc = df['mk_merge_correct_n'].mean()
-    mk_perm_acc = df['mk_perm_correct_n'].mean()
+    mk_bag_acc = df['mk_bag_correct_n'].mean()
 
     # Location Errors (Filter out NaN)
     pw_err = df['pw_loc_error'].mean()
     mk_err = df['mk_loc_error'].mean()
     mk_merge_err = df['mk_merge_loc_error'].mean()
-    mk_perm_err = df['mk_perm_loc_error'].mean()
+    mk_bag_err = df['mk_bag_loc_error'].mean()
 
     # Confusion Matrices
     cm_pw = pd.crosstab(df['true_n'], df['pw_n'])
     cm_mk = pd.crosstab(df['true_n'], df['mk_n'])
     cm_mk_merge = pd.crosstab(df['true_n'], df['mk_merge_n'])
-    cm_mk_perm = pd.crosstab(df['true_n'], df['mk_perm_n'])
+    cm_mk_bag = pd.crosstab(df['true_n'], df['mk_bag_n'])
 
     with open(REPORT_FILE, 'w') as f:
         f.write("# Validation 52: Low SNR Breakpoint Detection\n\n")
@@ -302,7 +309,7 @@ def generate_report(df):
         f.write(f"| Piecewise (OLS) | {pw_acc:.1%} |\n")
         f.write(f"| MannKS (Standard AIC) | {mk_acc:.1%} |\n")
         f.write(f"| MannKS (Merged) | {mk_merge_acc:.1%} |\n")
-        f.write(f"| **MannKS (Permutation)** | **{mk_perm_acc:.1%}** |\n\n")
+        f.write(f"| **MannKS (Bagging)** | **{mk_bag_acc:.1%}** |\n\n")
 
         f.write("### Confusion Matrices (Rows=True N, Cols=Predicted N)\n")
         f.write("#### Piecewise (OLS)\n")
@@ -314,8 +321,8 @@ def generate_report(df):
         f.write("#### MannKS (Merged)\n")
         f.write(cm_mk_merge.to_markdown())
         f.write("\n\n")
-        f.write("#### MannKS (Permutation)\n")
-        f.write(cm_mk_perm.to_markdown())
+        f.write("#### MannKS (Bagging)\n")
+        f.write(cm_mk_bag.to_markdown())
         f.write("\n\n")
 
         f.write("## 2. Breakpoint Location Accuracy\n")
@@ -325,7 +332,7 @@ def generate_report(df):
         f.write(f"| Piecewise (OLS) | {pw_err:.4f} |\n")
         f.write(f"| MannKS (Standard AIC) | {mk_err:.4f} |\n")
         f.write(f"| MannKS (Merged) | {mk_merge_err:.4f} |\n")
-        f.write(f"| MannKS (Permutation) | {mk_perm_err:.4f} |\n\n")
+        f.write(f"| MannKS (Bagging) | {mk_bag_err:.4f} |\n\n")
 
         f.write("## 3. Analysis\n")
         f.write("*   **Accuracy:** Does enabling merging improve the detection of the correct number of segments?\n")
@@ -336,11 +343,12 @@ def generate_report(df):
         else:
              f.write("    *   **Neutral.** Performance was identical.\n")
 
-        f.write("*   **Permutation Test:** How does the permutation test perform?\n")
-        f.write(f"    *   Permutation test accuracy: {mk_perm_acc:.1%}.\n")
+        f.write("*   **Bagging:** How does the bagging method perform?\n")
+        f.write(f"    *   Bagging accuracy: {mk_bag_acc:.1%}.\n")
+        f.write(f"    *   Bagging Mean Location Error: {mk_bag_err:.4f} (vs Standard: {mk_err:.4f})\n")
 
         f.write("*   **Comparison to OLS:** Piecewise OLS is theoretically optimal for this normal noise data. How close is MannKS?\n")
-        f.write(f"    *   MannKS (Permutation) is within {abs(pw_acc - mk_perm_acc)*100:.1f}% accuracy of OLS.\n")
+        f.write(f"    *   MannKS (Bagging) is within {abs(pw_acc - mk_bag_acc)*100:.1f}% accuracy of OLS.\n")
 
         f.write("\n## 4. Example Plots\n")
         for i in range(3):
