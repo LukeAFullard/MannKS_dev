@@ -7,7 +7,8 @@ from scipy.stats import norm
 from ._segmented import (bootstrap_restart_segmented,
                          get_breakpoint_bootstrap_distribution,
                          _create_segments,
-                         _calculate_segment_residuals) # Need this for n=0 SAR calculation if skipped
+                         _calculate_segment_residuals,
+                         find_bagging_breakpoint) # Need this for n=0 SAR calculation if skipped
 from .trend_test import trend_test
 from ._datetime import _to_numeric_time, _is_datetime_like
 
