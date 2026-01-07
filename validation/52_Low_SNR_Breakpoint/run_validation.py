@@ -288,10 +288,18 @@ def generate_report(df):
     mk_bag_acc = df['mk_bag_correct_n'].mean()
 
     # Location Errors (Filter out NaN)
-    pw_err = df['pw_loc_error'].mean()
-    mk_err = df['mk_loc_error'].mean()
-    mk_merge_err = df['mk_merge_loc_error'].mean()
-    mk_bag_err = df['mk_bag_loc_error'].mean()
+    def get_stats(series):
+        return {
+            'mean': series.mean(),
+            'std': series.std(),
+            'min': series.min(),
+            'max': series.max()
+        }
+
+    pw_stats = get_stats(df['pw_loc_error'])
+    mk_stats = get_stats(df['mk_loc_error'])
+    mk_merge_stats = get_stats(df['mk_merge_loc_error'])
+    mk_bag_stats = get_stats(df['mk_bag_loc_error'])
 
     # Confusion Matrices
     cm_pw = pd.crosstab(df['true_n'], df['pw_n'])
@@ -326,13 +334,13 @@ def generate_report(df):
         f.write("\n\n")
 
         f.write("## 2. Breakpoint Location Accuracy\n")
-        f.write("Mean Absolute Error (MAE) when the correct number of breakpoints was found.\n\n")
-        f.write("| Method | Mean Location Error |\n")
-        f.write("| :--- | :--- |\n")
-        f.write(f"| Piecewise (OLS) | {pw_err:.4f} |\n")
-        f.write(f"| MannKS (Standard AIC) | {mk_err:.4f} |\n")
-        f.write(f"| MannKS (Merged) | {mk_merge_err:.4f} |\n")
-        f.write(f"| MannKS (Bagging) | {mk_bag_err:.4f} |\n\n")
+        f.write("Absolute Error when the correct number of breakpoints was found.\n\n")
+        f.write("| Method | Mean | Std Dev | Min | Max |\n")
+        f.write("| :--- | :--- | :--- | :--- | :--- |\n")
+        f.write(f"| Piecewise (OLS) | {pw_stats['mean']:.4f} | {pw_stats['std']:.4f} | {pw_stats['min']:.4f} | {pw_stats['max']:.4f} |\n")
+        f.write(f"| MannKS (Standard AIC) | {mk_stats['mean']:.4f} | {mk_stats['std']:.4f} | {mk_stats['min']:.4f} | {mk_stats['max']:.4f} |\n")
+        f.write(f"| MannKS (Merged) | {mk_merge_stats['mean']:.4f} | {mk_merge_stats['std']:.4f} | {mk_merge_stats['min']:.4f} | {mk_merge_stats['max']:.4f} |\n")
+        f.write(f"| MannKS (Bagging) | {mk_bag_stats['mean']:.4f} | {mk_bag_stats['std']:.4f} | {mk_bag_stats['min']:.4f} | {mk_bag_stats['max']:.4f} |\n\n")
 
         f.write("## 3. Analysis\n")
         f.write("*   **Accuracy:** Does enabling merging improve the detection of the correct number of segments?\n")
@@ -345,7 +353,7 @@ def generate_report(df):
 
         f.write("*   **Bagging:** How does the bagging method perform?\n")
         f.write(f"    *   Bagging accuracy: {mk_bag_acc:.1%}.\n")
-        f.write(f"    *   Bagging Mean Location Error: {mk_bag_err:.4f} (vs Standard: {mk_err:.4f})\n")
+        f.write(f"    *   Bagging Mean Location Error: {mk_bag_stats['mean']:.4f} (vs Standard: {mk_stats['mean']:.4f})\n")
 
         f.write("*   **Comparison to OLS:** Piecewise OLS is theoretically optimal for this normal noise data. How close is MannKS?\n")
         f.write(f"    *   MannKS (Bagging) is within {abs(pw_acc - mk_bag_acc)*100:.1f}% accuracy of OLS.\n")
