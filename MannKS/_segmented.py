@@ -480,3 +480,66 @@ def _perform_permutation_test(x, t, censored, cen_type, base_sar, alt_sar,
     p_value = np.mean(perm_reductions >= observed_reduction)
 
     return p_value
+
+def find_bagging_breakpoint(x, t, censored, cen_type,
+                           n_breakpoints=1,
+                           n_bootstrap=100,
+                           aggregation='median',
+                           **kwargs):
+    """
+    Estimate breakpoint locations using Bagging (Bootstrap Aggregating).
+
+    This method generates 'n_bootstrap' resamples of the data, finds the optimal
+    breakpoints for each resample, and then aggregates these estimates to provide
+    a robust breakpoint location.
+
+    Args:
+        x, t: Data arrays.
+        censored, cen_type: Censoring information.
+        n_breakpoints: Number of breakpoints to detect.
+        n_bootstrap: Number of bootstrap samples.
+        aggregation: Method to aggregate bootstrap results ('median' or 'mean').
+        **kwargs: Arguments passed to the breakpoint search function.
+
+    Returns:
+        bagged_breakpoints: The aggregated breakpoint locations (numeric).
+    """
+    # Clean kwargs
+    kwargs_clean = kwargs.copy()
+    kwargs_clean.pop('n_bootstrap', None)
+    kwargs_clean.pop('criterion', None)
+
+    n = len(x)
+    all_breakpoints = []
+
+    for _ in range(n_bootstrap):
+        # Bootstrap Resample (Pairs bootstrap)
+        idx = np.random.choice(n, n, replace=True)
+        x_boot = x[idx]
+        t_boot = t[idx]
+        cen_boot = censored[idx]
+        cen_type_boot = cen_type[idx]
+
+        # Find breakpoints for this sample
+        # We use a fast search (fewer restarts) for each bootstrap sample
+        # to keep computational cost reasonable.
+        bp, _, _ = bootstrap_restart_segmented(
+            x_boot, t_boot, cen_boot, cen_type_boot,
+            n_breakpoints=n_breakpoints,
+            n_bootstrap=5, # Minimal restarts for local search
+            **kwargs_clean
+        )
+        all_breakpoints.append(bp)
+
+    all_breakpoints = np.array(all_breakpoints)
+
+    # Aggregate
+    # For multiple breakpoints, we need to ensure we aggregate "corresponding" breakpoints.
+    # Since 'segmented_sens_slope' returns sorted breakpoints, bp[0] is always the first, etc.
+    # So column-wise aggregation is valid.
+    if aggregation == 'mean':
+        final_bp = np.nanmean(all_breakpoints, axis=0)
+    else:
+        final_bp = np.nanmedian(all_breakpoints, axis=0)
+
+    return final_bp
