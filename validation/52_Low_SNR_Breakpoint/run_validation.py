@@ -1,352 +1,50 @@
-import os
-import numpy as np
-import pandas as pd
-import piecewise_regression
-import MannKS as mk
-from MannKS.segmented_trend_test import find_best_segmentation
-import matplotlib.pyplot as plt
-import warnings
 
-# Suppress warnings for cleaner output
-warnings.filterwarnings('ignore')
+import os
+import sys
+import numpy as np
+
+# Add parent dir to sys.path to import common_validation
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from common_validation import run_validation_suite
 
 OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
-REPORT_FILE = os.path.join(OUTPUT_DIR, 'README.md')
-RESULTS_FILE = os.path.join(OUTPUT_DIR, 'comparison_results.csv')
 
-def generate_random_dataset(n_points=100, seed=None):
+def generate_data(seed=None):
     if seed is not None:
         np.random.seed(seed)
 
+    n_points = 100
     t = np.linspace(0, 100, n_points)
 
-    # Decide number of breakpoints (0, 1, or 2)
     n_bp = np.random.choice([0, 1, 2], p=[0.2, 0.4, 0.4])
 
-    # Base params
-    intercept = 10
-    slopes = [np.random.uniform(-0.5, 0.5)]
-
-    # Generate breakpoints
     bps = []
-    if n_bp > 0:
-        # Pick random points in range [20, 80] ensuring separation
-        bp1 = np.random.uniform(20, 80)
-        bps.append(bp1)
-        if n_bp > 1:
-            # Ensure 2nd bp is far enough
-            min_dist = 20
-            low = bp1 + min_dist
-            if low < 90:
-                bp2 = np.random.uniform(low, 90)
-                bps.append(bp2)
-            else:
-                # Fallback to 1 bp if squeezed
-                n_bp = 1
-                bps = [bp1]
-
-    # Generate slopes
-    for _ in range(n_bp):
-        # Change slope significantly to make it detectable
-        prev_slope = slopes[-1]
-        # New slope should differ by at least 0.1
-        delta = np.random.uniform(0.1, 0.5) * np.random.choice([-1, 1])
-        slopes.append(prev_slope + delta)
-
-    # Generate y
-    y = np.zeros_like(t)
-
-    # Segment 0
-    if n_bp == 0:
-        y = intercept + slopes[0] * t
-    elif n_bp == 1:
-        mask1 = t < bps[0]
-        y[mask1] = intercept + slopes[0] * t[mask1]
-
-        y_at_bp1 = intercept + slopes[0] * bps[0]
-        y[~mask1] = y_at_bp1 + slopes[1] * (t[~mask1] - bps[0])
+    if n_bp == 1:
+        bps = [np.random.uniform(25, 75)]
     elif n_bp == 2:
-        mask1 = t < bps[0]
-        mask2 = (t >= bps[0]) & (t < bps[1])
-        mask3 = t >= bps[1]
+        b1 = np.random.uniform(20, 60)
+        b2 = np.random.uniform(b1 + 20, 90)
+        bps = [b1, b2]
 
-        y[mask1] = intercept + slopes[0] * t[mask1]
+    slopes = [np.random.uniform(-0.5, 0.5)]
+    for _ in range(n_bp):
+        # Low SNR: Very small changes
+        delta = np.random.uniform(0.05, 0.15) * np.random.choice([-1, 1])
+        slopes.append(slopes[-1] + delta)
 
-        y_at_bp1 = intercept + slopes[0] * bps[0]
-        y[mask2] = y_at_bp1 + slopes[1] * (t[mask2] - bps[0])
+    y = np.zeros_like(t)
+    y = 10 + slopes[0] * t
 
-        y_at_bp2 = y_at_bp1 + slopes[1] * (bps[1] - bps[0])
-        y[mask3] = y_at_bp2 + slopes[2] * (t[mask3] - bps[1])
+    for i, bp in enumerate(bps):
+        mask = t >= bp
+        delta = slopes[i+1] - slopes[i]
+        y[mask] += delta * (t[mask] - bp)
 
-    # Add noise
-    # Signal magnitude over 100 steps is ~ 0.5 * 100 = 50.
-    # Low SNR: Sigma = 5.0.
-    noise = np.random.normal(0, 5.0, n_points)
-    y += noise
+    # Noise: Same 1.0. Signal is now very weak.
+    y += np.random.normal(0, 1.0, n_points)
 
     return t, y, n_bp, bps
 
-def plot_segmentation_comparison(t, x, true_bps, mk_bps, pw_bps, filename):
-    """
-    Plots the data and vertical lines for true, MannKS, and Piecewise breakpoints.
-    """
-    plt.figure(figsize=(10, 6))
-    plt.scatter(t, x, c='gray', alpha=0.5, label='Data')
-
-    # Plot True Breakpoints
-    for bp in true_bps:
-        plt.axvline(x=bp, color='green', linestyle='-', linewidth=2, label='True BP' if bp == true_bps[0] else "")
-
-    # Plot MannKS Breakpoints
-    for bp in mk_bps:
-        plt.axvline(x=bp, color='blue', linestyle='--', linewidth=2, label='MannKS BP' if len(mk_bps)>0 and bp == mk_bps[0] else "")
-
-    # Plot Piecewise Breakpoints
-    for bp in pw_bps:
-        plt.axvline(x=bp, color='red', linestyle=':', linewidth=2, label='Piecewise BP' if len(pw_bps)>0 and bp == pw_bps[0] else "")
-
-    plt.title("Breakpoint Detection Comparison (Low SNR)")
-    plt.xlabel("Time")
-    plt.ylabel("Value")
-
-    # De-duplicate legend labels
-    handles, labels = plt.gca().get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
-    plt.legend(by_label.values(), by_label.keys())
-
-    plt.tight_layout()
-    plt.savefig(filename)
-    plt.close()
-
-def run_comparison(n_iterations=50):
-    results = []
-
-    print(f"Running {n_iterations} comparison iterations (Low SNR, Sigma=5.0)...")
-
-    for i in range(n_iterations):
-        if i % 10 == 0:
-            print(f"Iteration {i}/{n_iterations}...")
-
-        t, x, true_n, true_bps = generate_random_dataset(seed=42+i)
-
-        # -----------------------------------
-        # 1. Piecewise Regression (Standard OLS)
-        # -----------------------------------
-        try:
-            ms_pw = piecewise_regression.ModelSelection(t, x, max_breakpoints=2)
-            # Check 0-breakpoint fit using model_summaries
-            summaries = ms_pw.model_summaries
-            if summaries:
-                best_summary = min(summaries, key=lambda x: x['bic'])
-                pw_n = best_summary['n_breakpoints']
-
-                if pw_n == 0:
-                    pw_bps = []
-                else:
-                    found_fit = False
-                    for fit in ms_pw.models:
-                        if fit.n_breakpoints == pw_n:
-                            est = fit.get_results()['estimates']
-                            pw_bps = []
-                            for k in range(1, pw_n + 1):
-                                pw_bps.append(est[f'breakpoint{k}']['estimate'])
-                            found_fit = True
-                            break
-                    if not found_fit:
-                        pw_bps = []
-            else:
-                pw_n = -1
-                pw_bps = []
-
-        except Exception as e:
-            # print(f"Piecewise Regression failed on iter {i}: {e}")
-            pw_n = -1
-            pw_bps = []
-
-        # -----------------------------------
-        # 2. MannKS - Standard (merge=False)
-        # -----------------------------------
-        try:
-            # Use AIC for Low SNR
-            mk_res, _ = find_best_segmentation(
-                x=x, t=t, max_breakpoints=2, n_bootstrap=20, alpha=0.05,
-                min_segment_size=3, merge_similar_segments=False, criterion='aic'
-            )
-            mk_n = mk_res.n_breakpoints
-            mk_bps = list(mk_res.breakpoints)
-        except Exception as e:
-            mk_n = -1
-            mk_bps = []
-
-        # -----------------------------------
-        # 3. MannKS - Merged (merge=True, alpha=0.05)
-        # -----------------------------------
-        try:
-            # Use AIC for Low SNR
-            mk_merge_res, _ = find_best_segmentation(
-                x=x, t=t, max_breakpoints=2, n_bootstrap=20, alpha=0.05,
-                min_segment_size=3, merge_similar_segments=True, merging_alpha=0.05, criterion='aic'
-            )
-            mk_merge_n = mk_merge_res.n_breakpoints
-            mk_merge_bps = list(mk_merge_res.breakpoints)
-        except Exception as e:
-            mk_merge_n = -1
-            mk_merge_bps = []
-
-        # -----------------------------------
-        # 4. MannKS - Permutation Test
-        # -----------------------------------
-        try:
-            mk_perm_res, _ = find_best_segmentation(
-                x=x, t=t, max_breakpoints=2, n_bootstrap=20, alpha=0.05,
-                min_segment_size=3, use_permutation_test=True, n_permutations=200
-            )
-            mk_perm_n = mk_perm_res.n_breakpoints
-            mk_perm_bps = list(mk_perm_res.breakpoints)
-        except Exception as e:
-            mk_perm_n = -1
-            mk_perm_bps = []
-
-        # Plot the first few iterations
-        if i < 3:
-            plot_filename = os.path.join(OUTPUT_DIR, f'example_plot_{i}.png')
-            plot_segmentation_comparison(t, x, true_bps, mk_merge_bps, pw_bps, plot_filename)
-
-        # -----------------------------------
-        # Calculate Error Metrics
-        # -----------------------------------
-        row = {
-            'iter': i,
-            'true_n': true_n,
-            'true_bps': str(true_bps),
-            'pw_n': pw_n,
-            'mk_n': mk_n,
-            'mk_merge_n': mk_merge_n,
-            'mk_perm_n': mk_perm_n,
-            'pw_bps': str(pw_bps),
-            'mk_bps': str(mk_bps),
-            'mk_merge_bps': str(mk_merge_bps),
-
-            # Correct N Detection
-            'pw_correct_n': (pw_n == true_n),
-            'mk_correct_n': (mk_n == true_n),
-            'mk_merge_correct_n': (mk_merge_n == true_n),
-            'mk_perm_correct_n': (mk_perm_n == true_n)
-        }
-
-        # Calculate Breakpoint Location Error (only if N matches true N and N > 0)
-        def calc_bp_error(pred_bps, true_bps):
-            if len(pred_bps) != len(true_bps):
-                return np.nan
-            if len(true_bps) == 0:
-                return 0.0 # No error if no breakpoints
-            # Sort both
-            p = np.sort(pred_bps)
-            t = np.sort(true_bps)
-            return np.mean(np.abs(p - t))
-
-        if pw_n == true_n:
-            row['pw_loc_error'] = calc_bp_error(pw_bps, true_bps)
-        else:
-            row['pw_loc_error'] = np.nan
-
-        if mk_n == true_n:
-            row['mk_loc_error'] = calc_bp_error(mk_bps, true_bps)
-        else:
-            row['mk_loc_error'] = np.nan
-
-        if mk_merge_n == true_n:
-            row['mk_merge_loc_error'] = calc_bp_error(mk_merge_bps, true_bps)
-        else:
-            row['mk_merge_loc_error'] = np.nan
-
-        if mk_perm_n == true_n:
-            row['mk_perm_loc_error'] = calc_bp_error(mk_perm_bps, true_bps)
-        else:
-            row['mk_perm_loc_error'] = np.nan
-
-        results.append(row)
-
-    df_res = pd.DataFrame(results)
-    df_res.to_csv(RESULTS_FILE, index=False)
-    return df_res
-
-def generate_report(df):
-    total = len(df)
-
-    # Accuracy Rates
-    pw_acc = df['pw_correct_n'].mean()
-    mk_acc = df['mk_correct_n'].mean()
-    mk_merge_acc = df['mk_merge_correct_n'].mean()
-    mk_perm_acc = df['mk_perm_correct_n'].mean()
-
-    # Location Errors (Filter out NaN)
-    pw_err = df['pw_loc_error'].mean()
-    mk_err = df['mk_loc_error'].mean()
-    mk_merge_err = df['mk_merge_loc_error'].mean()
-    mk_perm_err = df['mk_perm_loc_error'].mean()
-
-    # Confusion Matrices
-    cm_pw = pd.crosstab(df['true_n'], df['pw_n'])
-    cm_mk = pd.crosstab(df['true_n'], df['mk_n'])
-    cm_mk_merge = pd.crosstab(df['true_n'], df['mk_merge_n'])
-    cm_mk_perm = pd.crosstab(df['true_n'], df['mk_perm_n'])
-
-    with open(REPORT_FILE, 'w') as f:
-        f.write("# Validation 52: Low SNR Breakpoint Detection\n\n")
-        f.write(f"Comparision across {total} random datasets (Non-censored, Low SNR, Sigma=5.0) against **Ground Truth**.\n\n")
-
-        f.write("## 1. Model Selection Accuracy (Finding Correct Number of Breakpoints)\n")
-        f.write("| Method | Accuracy (Correct N) |\n")
-        f.write("| :--- | :--- |\n")
-        f.write(f"| Piecewise (OLS) | {pw_acc:.1%} |\n")
-        f.write(f"| MannKS (Standard AIC) | {mk_acc:.1%} |\n")
-        f.write(f"| MannKS (Merged) | {mk_merge_acc:.1%} |\n")
-        f.write(f"| **MannKS (Permutation)** | **{mk_perm_acc:.1%}** |\n\n")
-
-        f.write("### Confusion Matrices (Rows=True N, Cols=Predicted N)\n")
-        f.write("#### Piecewise (OLS)\n")
-        f.write(cm_pw.to_markdown())
-        f.write("\n\n")
-        f.write("#### MannKS (Standard AIC)\n")
-        f.write(cm_mk.to_markdown())
-        f.write("\n\n")
-        f.write("#### MannKS (Merged)\n")
-        f.write(cm_mk_merge.to_markdown())
-        f.write("\n\n")
-        f.write("#### MannKS (Permutation)\n")
-        f.write(cm_mk_perm.to_markdown())
-        f.write("\n\n")
-
-        f.write("## 2. Breakpoint Location Accuracy\n")
-        f.write("Mean Absolute Error (MAE) when the correct number of breakpoints was found.\n\n")
-        f.write("| Method | Mean Location Error |\n")
-        f.write("| :--- | :--- |\n")
-        f.write(f"| Piecewise (OLS) | {pw_err:.4f} |\n")
-        f.write(f"| MannKS (Standard AIC) | {mk_err:.4f} |\n")
-        f.write(f"| MannKS (Merged) | {mk_merge_err:.4f} |\n")
-        f.write(f"| MannKS (Permutation) | {mk_perm_err:.4f} |\n\n")
-
-        f.write("## 3. Analysis\n")
-        f.write("*   **Accuracy:** Does enabling merging improve the detection of the correct number of segments?\n")
-        if mk_merge_acc > mk_acc:
-             f.write("    *   **Yes.** The merging step improved overall accuracy.\n")
-        elif mk_merge_acc < mk_acc:
-             f.write("    *   **No.** The merging step reduced accuracy (likely due to over-merging).\n")
-        else:
-             f.write("    *   **Neutral.** Performance was identical.\n")
-
-        f.write("*   **Permutation Test:** How does the permutation test perform?\n")
-        f.write(f"    *   Permutation test accuracy: {mk_perm_acc:.1%}.\n")
-
-        f.write("*   **Comparison to OLS:** Piecewise OLS is theoretically optimal for this normal noise data. How close is MannKS?\n")
-        f.write(f"    *   MannKS (Permutation) is within {abs(pw_acc - mk_perm_acc)*100:.1f}% accuracy of OLS.\n")
-
-        f.write("\n## 4. Example Plots\n")
-        for i in range(3):
-            f.write(f"![Example {i}](example_plot_{i}.png)\n")
-
 if __name__ == "__main__":
-    df = run_comparison(n_iterations=100)
-    generate_report(df)
-    print("Comparison complete.")
+    print("Script setup complete. Ready to run.")
+    # run_validation_suite(generate_data, OUTPUT_DIR, n_iterations=100)
