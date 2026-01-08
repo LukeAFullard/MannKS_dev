@@ -73,6 +73,89 @@ def _prepare_data(x, t, hicensor=False):
 
     return df, is_dt
 
+def _estimate_slope_covariance(x, t, censored, cen_type, breakpoints, n_bootstrap=50, continuity=True, **kwargs):
+    """
+    Estimate the covariance between slopes of adjacent segments using bootstrap.
+
+    This fixes the breakpoints and bootstraps the data (residuals or pairs) to see how
+    slopes co-vary.
+    """
+    # Clean kwargs
+    kwargs_clean = kwargs.copy()
+    kwargs_clean.pop('n_bootstrap', None)
+    kwargs_clean.pop('criterion', None)
+
+    n = len(x)
+    slopes_boot = []
+
+    segments = _create_segments(t, breakpoints)
+    n_segments = len(segments)
+
+    if n_segments < 2:
+        return {} # No adjacent segments
+
+    for _ in range(n_bootstrap):
+        # Bootstrap pairs
+        idx = np.random.choice(n, n, replace=True)
+        x_b, t_b = x[idx], t[idx]
+        c_b, ct_b = censored[idx], cen_type[idx]
+
+        # Sort by time for processing
+        sort_idx = np.argsort(t_b)
+        x_b, t_b = x_b[sort_idx], t_b[sort_idx]
+        c_b, ct_b = c_b[sort_idx], ct_b[sort_idx]
+
+        # Calculate slopes for each segment
+        seg_slopes = []
+        for i, (start, end) in enumerate(segments):
+            if i == n_segments - 1:
+                 mask = (t_b >= start) & (t_b <= end)
+            else:
+                 mask = (t_b >= start) & (t_b < end)
+
+            x_seg = x_b[mask]
+            t_seg = t_b[mask]
+
+            if len(x_seg) < 2:
+                seg_slopes.append(np.nan)
+                continue
+
+            # Use trend_test logic to get slope (efficiently)
+            # We can use _sens_estimator directly for speed
+            from ._stats import _sens_estimator_unequal_spacing, _sens_estimator_censored
+
+            if np.any(c_b[mask]):
+                # Censored logic
+                s_vals = _sens_estimator_censored(x_seg, t_seg, ct_b[mask],
+                                                  lt_mult=kwargs.get('lt_mult', 0.5),
+                                                  gt_mult=kwargs.get('gt_mult', 1.1),
+                                                  method=kwargs.get('sens_slope_method', 'nan'))
+            else:
+                s_vals = _sens_estimator_unequal_spacing(x_seg, t_seg)
+
+            slope = np.nanmedian(s_vals) if len(s_vals) > 0 else np.nan
+            seg_slopes.append(slope)
+
+        slopes_boot.append(seg_slopes)
+
+    slopes_boot = np.array(slopes_boot)
+
+    covariances = {}
+    for i in range(n_segments - 1):
+        s1 = slopes_boot[:, i]
+        s2 = slopes_boot[:, i+1]
+
+        # Filter NaNs
+        mask = ~np.isnan(s1) & ~np.isnan(s2)
+        if np.sum(mask) > 10:
+            cov_matrix = np.cov(s1[mask], s2[mask])
+            cov = cov_matrix[0, 1]
+            covariances[i] = cov
+        else:
+            covariances[i] = 0.0
+
+    return covariances
+
 def segmented_trend_test(
     x: Union[np.ndarray, pd.DataFrame],
     t: np.ndarray,
@@ -84,6 +167,7 @@ def segmented_trend_test(
     criterion: str = 'bic',
     continuity: bool = True,
     normalize_time: bool = False,
+    use_bagging: bool = False,
     **kwargs
 ):
     """
@@ -102,6 +186,8 @@ def segmented_trend_test(
                     If False, segments are estimated with independent intercepts.
         normalize_time: If True, normalizes time to [0, 1] during optimization
                         to improve numerical stability with large timestamps.
+        use_bagging: If True, uses bagging (bootstrap aggregating) to estimate breakpoints.
+                     This is more robust to local minima.
         **kwargs: Additional arguments passed to trend_test and the Sen's estimator
                   (e.g., lt_mult, sens_slope_method, slope_scaling).
 
@@ -132,17 +218,37 @@ def segmented_trend_test(
 
     # 2. Find Optimal Breakpoints
     if n_breakpoints > 0:
-        # Pass kwargs (like lt_mult) to the breakpoint search
-        # Use a reasonable number of restarts for the point estimate
+        # Pass kwargs to the breakpoint search
         n_restarts = min(n_bootstrap, 50)
-        breakpoints_opt, converged, best_residual = bootstrap_restart_segmented(
-            x_val, t_opt, censored, cen_type,
-            n_breakpoints=n_breakpoints,
-            min_segment_size=min_segment_size,
-            n_bootstrap=n_restarts,
-            continuity=continuity,
-            **kwargs
-        )
+
+        if use_bagging:
+            # Use Bagging
+            breakpoints_opt = find_bagging_breakpoint(
+                x_val, t_opt, censored, cen_type,
+                n_breakpoints=n_breakpoints,
+                n_bootstrap=n_bootstrap if n_bootstrap > 0 else 100, # Default if 0 passed
+                min_segment_size=min_segment_size,
+                continuity=continuity,
+                **kwargs
+            )
+            converged = True # Bagging aggregation implicitly 'converges'
+
+            # Calculate residual for the bagged breakpoints on original data
+            from ._segmented import _calculate_segment_residuals
+            best_residual = _calculate_segment_residuals(
+                x_val, t_opt, censored, cen_type, breakpoints_opt, continuity=continuity, **kwargs
+            )
+
+        else:
+            # Use Standard Restart Optimization
+            breakpoints_opt, converged, best_residual = bootstrap_restart_segmented(
+                x_val, t_opt, censored, cen_type,
+                n_breakpoints=n_breakpoints,
+                min_segment_size=min_segment_size,
+                n_bootstrap=n_restarts,
+                continuity=continuity,
+                **kwargs
+            )
 
         # Denormalize breakpoints if needed
         if normalize_time:
@@ -185,9 +291,7 @@ def segmented_trend_test(
         # Formula: n * log(SAR/n) + 3 * n_breakpoints * log(n) + penalty
         base_mbic = n_obs * np.log(safe_residual / n_obs) + 3 * n_breakpoints * np.log(n_obs)
 
-        # Calculate boundary penalty
-        # Segments in optimization space (t_opt)
-        # Range of t_opt is [0, 1] if normalized, or [t_min, t_max] if not.
+        # Calculate boundary penalty using optimization time scale
         t_min_opt = np.min(t_opt)
         t_max_opt = np.max(t_opt)
         total_range = t_max_opt - t_min_opt
@@ -216,6 +320,12 @@ def segmented_trend_test(
     # Only if n_breakpoints > 0 and n_bootstrap > 0
     boot_breakpoints_numeric = np.array([])
     if n_breakpoints > 0 and n_bootstrap > 0:
+        if use_bagging:
+             # If bagging was used, we ideally use the distribution from bagging itself.
+             # However, find_bagging_breakpoint returns point estimate.
+             # We can re-run get_breakpoint_bootstrap_distribution starting from the bagged point.
+             pass
+
         boot_breakpoints_opt = get_breakpoint_bootstrap_distribution(
             x_val, t_opt, censored, cen_type, breakpoints_opt,
             n_bootstrap=n_bootstrap,
@@ -352,6 +462,7 @@ def find_best_segmentation(
     n_permutations=1000,
     continuity: bool = True,
     normalize_time: bool = False,
+    use_bagging: bool = False,
     **kwargs
 ):
     """
@@ -390,14 +501,14 @@ def find_best_segmentation(
         kwargs_fast['n_bootstrap'] = 0
         kwargs_fast['criterion'] = criterion
 
-        current_model = segmented_trend_test(x, t, n_breakpoints=0, continuity=continuity, normalize_time=normalize_time, **kwargs_fast)
+        current_model = segmented_trend_test(x, t, n_breakpoints=0, continuity=continuity, normalize_time=normalize_time, use_bagging=use_bagging, **kwargs_fast)
         models_perm = {0: current_model}
 
         while current_n < max_breakpoints:
             next_n = current_n + 1
 
             # Calculate N+1 model
-            next_model = segmented_trend_test(x, t, n_breakpoints=next_n, continuity=continuity, normalize_time=normalize_time, **kwargs_fast)
+            next_model = segmented_trend_test(x, t, n_breakpoints=next_n, continuity=continuity, normalize_time=normalize_time, use_bagging=use_bagging, **kwargs_fast)
             models_perm[next_n] = next_model
 
             # Test Significance (current vs next)
@@ -413,27 +524,6 @@ def find_best_segmentation(
             cen_type = df_prep['cen_type'].to_numpy()
 
             # For permutation test, do we need to respect normalize_time?
-            # _perform_permutation_test calls bootstrap_restart_segmented internally.
-            # We must pass the normalize_time parameter to it so it does optimization correctly.
-            # BUT _perform_permutation_test takes raw data.
-            # If we pass normalize_time=True in kwargs, it will be passed down to bootstrap_restart_segmented.
-            # But bootstrap_restart_segmented doesn't normalize! segmented_trend_test wrapper does.
-            # This is a problem. _perform_permutation_test logic needs to know about normalization.
-            # Actually, _perform_permutation_test just permutes residuals.
-            # It re-fits using bootstrap_restart_segmented.
-            # If we rely on _perform_permutation_test to fit, it needs to do the normalization.
-            # Currently _perform_permutation_test (in _segmented.py) does NOT normalize.
-            # It just calls bootstrap_restart_segmented.
-            # So if normalize_time is requested, permutation test might fail or be unstable.
-            # Fixing this would require updating _perform_permutation_test signature and logic.
-            # Given constraints, maybe we assume permutation test + normalization is advanced?
-            # Or we can pass pre-normalized data to permutation test?
-            # If we pass pre-normalized T to permutation test, the "residuals" and "fitted" are on normalized scale.
-            # That's fine for SAR calculation.
-            # But "segmented_trend_test" calls above passed raw T.
-            # If we want permutation test to support normalization, we should probably update _segmented.py or
-            # normalize here and pass normalized T to permutation test?
-
             # Let's pass normalized T if normalize_time is True.
             t_perm = t_vals
             if normalize_time:
@@ -441,9 +531,6 @@ def find_best_segmentation(
                 t_range = np.ptp(t_vals)
                 if t_range > 0:
                      t_perm = (t_vals - t_min) / t_range
-
-            # Note: _perform_permutation_test calculates SAR. SAR is scale invariant?
-            # Yes, if we use normalized T for fit, we get normalized slopes. Residuals same.
 
             p_value = _perform_permutation_test(
                 x_vals, t_perm, censored, cen_type,
@@ -470,7 +557,7 @@ def find_best_segmentation(
         # Proceed to bootstrap final model if requested.
         user_n_boot = kwargs.get('n_bootstrap', 200)
         if user_n_boot > 0 and best_n > 0:
-            final_result = segmented_trend_test(x, t, n_breakpoints=best_n, criterion=criterion, continuity=continuity, normalize_time=normalize_time, **kwargs)
+            final_result = segmented_trend_test(x, t, n_breakpoints=best_n, criterion=criterion, continuity=continuity, normalize_time=normalize_time, use_bagging=use_bagging, **kwargs)
         else:
             final_result = models_perm[best_n]
 
@@ -503,7 +590,7 @@ def find_best_segmentation(
             kwargs_fast['n_bootstrap'] = 0
             kwargs_fast['criterion'] = criterion # Pass criterion
 
-            res = segmented_trend_test(x, t, n_breakpoints=n, continuity=continuity, normalize_time=normalize_time, **kwargs_fast)
+            res = segmented_trend_test(x, t, n_breakpoints=n, continuity=continuity, normalize_time=normalize_time, use_bagging=use_bagging, **kwargs_fast)
             models.append(res)
             results_list.append({
                 'n_breakpoints': n,
@@ -552,24 +639,38 @@ def find_best_segmentation(
             # If models[current_n] was computed without bootstrap, we must re-compute.
             # However, we'll re-compute anyway to be safe and use user's n_bootstrap.
 
-            # OPTIMIZATION:
-            # We only need the *slopes* and their CIs for the merge check.
-            # Slope CIs are calculated by trend_test, which does NOT depend on
-            # get_breakpoint_bootstrap_distribution (controlled by n_bootstrap in segmented_trend_test).
-            # So, we can run with n_bootstrap=0 inside this loop to skip the expensive
-            # breakpoint bootstrap distribution step.
-            # We rely on trend_test to provide slope CIs (analytic or internal bootstrap).
+            # Prepare data arrays for slope covariance bootstrap (moved outside loop if possible, but safe here)
+            df_prep, _ = _prepare_data(x, t, kwargs.get('hicensor', False))
+            x_vals = df_prep['value'].to_numpy()
+            t_vals = df_prep['t'].to_numpy()
+            censored = df_prep['censored'].to_numpy()
+            cen_type = df_prep['cen_type'].to_numpy()
 
+            # OPTIMIZATION: Skip breakpoint bootstrap in candidate calc
             kwargs_merge = kwargs.copy()
-            kwargs_merge['n_bootstrap'] = 0 # Skip expensive breakpoint bootstrap
+            kwargs_merge['n_bootstrap'] = 0
 
-            # Note: We assume trend_test is robust enough or user configured it appropriately
-            # (e.g. if user set autocorr_method='block_bootstrap', trend_test will still use its own bootstrap).
-
-            candidate_res = segmented_trend_test(x, t, n_breakpoints=current_n, criterion=criterion, continuity=continuity, normalize_time=normalize_time, **kwargs_merge)
+            candidate_res = segmented_trend_test(x, t, n_breakpoints=current_n, criterion=criterion, continuity=continuity, normalize_time=normalize_time, use_bagging=use_bagging, **kwargs_merge)
 
             segments = candidate_res.segments
             valid_segments = True
+
+            # Estimate Slope Covariances if needed
+            # Only if we have multiple segments
+            covariances = {}
+            if current_n > 0: # n_breakpoints > 0 means n_segments > 1
+                # Prepare kwargs specifically for cov estimation (removing conflicting n_bootstrap)
+                kwargs_cov = kwargs.copy()
+                kwargs_cov.pop('n_bootstrap', None)
+
+                # Use current breakpoints to bootstrap slopes
+                covariances = _estimate_slope_covariance(
+                    x_vals, t_vals, censored, cen_type,
+                    candidate_res.breakpoints,
+                    n_bootstrap=50, # Sufficient for cov estimation
+                    continuity=continuity,
+                    **kwargs_cov
+                )
 
             # Check adjacent pairs for difference
             if segments is not None and not segments.empty:
@@ -590,22 +691,20 @@ def find_best_segmentation(
                             valid_segments = False # Can't prove distinct
                             break
 
-                        # Z-Test for Difference
+                        # Z-Test for Difference with Covariance
                         # Estimate SE = (Upper - Lower) / (2 * Z_crit)
-                        # We assume 95% CI implies Z_crit ~ 1.96
-                        # This works regardless of user's 'alpha' if we consistently un-standardize.
-                        # However, strictly, if user provided alpha=0.10, the range is 1.645 sigma.
-                        # We should use the Z corresponding to the alpha used in trend_test.
-
-                        # Get user alpha from kwargs or default 0.05
                         test_alpha = kwargs.get('alpha', 0.05)
                         z_crit = norm.ppf(1 - test_alpha / 2)
 
                         se1 = (u1 - l1) / (2 * z_crit)
                         se2 = (u2 - l2) / (2 * z_crit)
 
-                        # Pooled SE for difference
-                        se_diff = np.sqrt(se1**2 + se2**2)
+                        cov = covariances.get(i, 0.0)
+
+                        # se_diff = sqrt(se1^2 + se2^2 - 2*cov)
+                        # Ensure term inside sqrt is positive (variance can't be negative)
+                        var_diff = se1**2 + se2**2 - 2 * cov
+                        se_diff = np.sqrt(max(var_diff, 1e-12)) # Guard against neg variance due to approx
 
                         if se_diff == 0:
                              # Should not happen with bootstrap unless identical resamples
@@ -635,7 +734,7 @@ def find_best_segmentation(
                 best_n = current_n
                 # Now we must re-run with FULL bootstrap if requested, to get proper Breakpoint CIs for the result
                 if user_n_boot > 0:
-                     best_result = segmented_trend_test(x, t, n_breakpoints=best_n, criterion=criterion, continuity=continuity, normalize_time=normalize_time, **kwargs)
+                     best_result = segmented_trend_test(x, t, n_breakpoints=best_n, criterion=criterion, continuity=continuity, normalize_time=normalize_time, use_bagging=use_bagging, **kwargs)
                 else:
                      best_result = candidate_res
                 break
@@ -650,7 +749,7 @@ def find_best_segmentation(
     else:
         # Standard logic: Re-run best model with full bootstrap if needed
         if user_n_boot > 0 and best_n > 0:
-            best_result = segmented_trend_test(x, t, n_breakpoints=best_n, criterion=criterion, continuity=continuity, normalize_time=normalize_time, **kwargs)
+            best_result = segmented_trend_test(x, t, n_breakpoints=best_n, criterion=criterion, continuity=continuity, normalize_time=normalize_time, use_bagging=use_bagging, **kwargs)
         else:
             best_result = models[best_n]
 
