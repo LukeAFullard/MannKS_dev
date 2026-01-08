@@ -30,7 +30,7 @@ def _create_segments(t, breakpoints):
         # Re-raise to be handled by caller, but log if needed in future
         raise
 
-def _calculate_segment_residuals(x, t, censored, cen_type, breakpoints, return_fitted=False, **kwargs):
+def _calculate_segment_residuals(x, t, censored, cen_type, breakpoints, return_fitted=False, continuity=True, **kwargs):
     """
     Calculate sum of absolute residuals for continuous segmented model.
     Uses Sen's slopes for segments and a robust global intercept.
@@ -78,58 +78,101 @@ def _calculate_segment_residuals(x, t, censored, cen_type, breakpoints, return_f
              return np.inf
         slopes.append(slope_est)
 
-    # 2. Construct Continuous Model Function (without intercept)
-    # y_shape(t) = Integral of slope(t) dt
-    # F(t) = Sum(slope_j * (min(t, bp_j+1) - max(t, bp_j))) effectively.
-    # We can compute it vector-wise.
+    if continuity:
+        # 2. Construct Continuous Model Function (without intercept)
+        # y_shape(t) = Integral of slope(t) dt
+        # F(t) = Sum(slope_j * (min(t, bp_j+1) - max(t, bp_j))) effectively.
+        # We can compute it vector-wise.
 
-    y_shape = np.zeros_like(t)
-    sorted_bp = np.sort(breakpoints)
-    boundaries = [np.min(t)] + list(sorted_bp) + [np.max(t)]
+        y_shape = np.zeros_like(t)
+        sorted_bp = np.sort(breakpoints)
+        boundaries = [np.min(t)] + list(sorted_bp) + [np.max(t)]
 
-    # We define the shape relative to t_min = 0 for the shape function
-    # F(t) = slope_0 * (t - t0)   for t in seg 0
-    # F(t) = slope_0 * (t1 - t0) + slope_1 * (t - t1)  for t in seg 1
-    # etc.
+        # We define the shape relative to t_min = 0 for the shape function
+        # F(t) = slope_0 * (t - t0)   for t in seg 0
+        # F(t) = slope_0 * (t1 - t0) + slope_1 * (t - t1)  for t in seg 1
+        # etc.
 
-    cumulative_y = 0.0
+        cumulative_y = 0.0
 
-    for i in range(len(slopes)):
-        t_start = boundaries[i]
-        t_end = boundaries[i+1]
+        for i in range(len(slopes)):
+            t_start = boundaries[i]
+            t_end = boundaries[i+1]
 
-        # Mask for points in this segment
-        if i == len(slopes) - 1:
-             mask = (t >= t_start) & (t <= t_end)
+            # Mask for points in this segment
+            if i == len(slopes) - 1:
+                 mask = (t >= t_start) & (t <= t_end)
+            else:
+                 mask = (t >= t_start) & (t < t_end)
+
+            # Contribution for points in this segment
+            # y = cumulative_y_at_start + slope * (t - t_start)
+            y_shape[mask] = cumulative_y + slopes[i] * (t[mask] - t_start)
+
+            # Update cumulative_y for next segment start
+            cumulative_y += slopes[i] * (t_end - t_start)
+
+        # 3. Estimate Robust Global Intercept
+        # We want y = y_shape + Intercept
+        # Intercept = median(y - y_shape)
+        # Only use uncensored data for intercept estimation
+        if np.any(~censored):
+            residuals_raw = x - y_shape
+            intercept = np.median(residuals_raw[~censored])
+
+            # 4. Calculate Final Residuals
+            y_fitted = y_shape + intercept
+            final_residuals = np.abs(x[~censored] - y_fitted[~censored])
+            total_residual = np.sum(final_residuals)
+
+            if return_fitted:
+                return total_residual, y_fitted
         else:
-             mask = (t >= t_start) & (t < t_end)
+            total_residual = np.inf
+            if return_fitted:
+                return np.inf, None
+    else:
+        # INDEPENDENT SEGMENTS (Discontinuous)
+        y_fitted = np.zeros_like(x)
+        total_residual = 0.0
+        sorted_bp = np.sort(breakpoints)
+        boundaries = [np.min(t)] + list(sorted_bp) + [np.max(t)]
 
-        # Contribution for points in this segment
-        # y = cumulative_y_at_start + slope * (t - t_start)
-        y_shape[mask] = cumulative_y + slopes[i] * (t[mask] - t_start)
+        for i in range(len(slopes)):
+            t_start = boundaries[i]
+            t_end = boundaries[i+1]
 
-        # Update cumulative_y for next segment start
-        cumulative_y += slopes[i] * (t_end - t_start)
+            # Mask logic
+            if i == len(slopes) - 1:
+                 mask = (t >= t_start) & (t <= t_end)
+            else:
+                 mask = (t >= t_start) & (t < t_end)
 
-    # 3. Estimate Robust Global Intercept
-    # We want y = y_shape + Intercept
-    # Intercept = median(y - y_shape)
-    # Only use uncensored data for intercept estimation
-    if np.any(~censored):
-        residuals_raw = x - y_shape
-        intercept = np.median(residuals_raw[~censored])
+            # Get segment data
+            x_seg = x[mask]
+            t_seg = t[mask]
+            cen_seg = censored[mask]
 
-        # 4. Calculate Final Residuals
-        y_fitted = y_shape + intercept
-        final_residuals = np.abs(x[~censored] - y_fitted[~censored])
-        total_residual = np.sum(final_residuals)
+            slope = slopes[i]
+
+            # Estimate Intercept for this segment independently
+            # intercept = median(x - slope*t)
+            if np.any(~cen_seg):
+                resid_raw = x_seg - slope * t_seg
+                intercept = np.median(resid_raw[~cen_seg])
+            else:
+                intercept = 0.0 # Cannot estimate if all censored
+
+            y_fit_seg = slope * t_seg + intercept
+            y_fitted[mask] = y_fit_seg
+
+            # Calc residuals
+            if np.any(~cen_seg):
+                seg_resids = np.abs(x_seg[~cen_seg] - y_fit_seg[~cen_seg])
+                total_residual += np.sum(seg_resids)
 
         if return_fitted:
             return total_residual, y_fitted
-    else:
-        total_residual = np.inf
-        if return_fitted:
-            return np.inf, None
 
     return total_residual
 
