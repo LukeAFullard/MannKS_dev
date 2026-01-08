@@ -165,7 +165,7 @@ def segmented_trend_test(
     alpha: float = 0.05,
     hicensor: Union[bool, float] = False,
     criterion: str = 'bic',
-    continuity: bool = True,
+    continuity: bool = False,
     normalize_time: bool = False,
     use_bagging: bool = False,
     **kwargs
@@ -460,7 +460,7 @@ def find_best_segmentation(
     criterion='bic',
     use_permutation_test=False,
     n_permutations=1000,
-    continuity: bool = True,
+    continuity: bool = False,
     normalize_time: bool = False,
     use_bagging: bool = False,
     **kwargs
