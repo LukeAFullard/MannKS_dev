@@ -467,14 +467,21 @@ def find_best_segmentation(
             # If models[current_n] was computed without bootstrap, we must re-compute.
             # However, we'll re-compute anyway to be safe and use user's n_bootstrap.
 
-            if user_n_boot > 0:
-                candidate_res = segmented_trend_test(x, t, n_breakpoints=current_n, criterion=criterion, continuity=continuity, **kwargs)
-            else:
-                # If no bootstrap, we can't check CIs. We cannot perform the merge check.
-                # Since user requested merge_similar_segments, this is a conflict.
-                best_n = current_n
-                best_result = models[current_n]
-                break
+            # OPTIMIZATION:
+            # We only need the *slopes* and their CIs for the merge check.
+            # Slope CIs are calculated by trend_test, which does NOT depend on
+            # get_breakpoint_bootstrap_distribution (controlled by n_bootstrap in segmented_trend_test).
+            # So, we can run with n_bootstrap=0 inside this loop to skip the expensive
+            # breakpoint bootstrap distribution step.
+            # We rely on trend_test to provide slope CIs (analytic or internal bootstrap).
+
+            kwargs_merge = kwargs.copy()
+            kwargs_merge['n_bootstrap'] = 0 # Skip expensive breakpoint bootstrap
+
+            # Note: We assume trend_test is robust enough or user configured it appropriately
+            # (e.g. if user set autocorr_method='block_bootstrap', trend_test will still use its own bootstrap).
+
+            candidate_res = segmented_trend_test(x, t, n_breakpoints=current_n, criterion=criterion, continuity=continuity, **kwargs_merge)
 
             segments = candidate_res.segments
             valid_segments = True
@@ -541,7 +548,11 @@ def find_best_segmentation(
             if valid_segments:
                 # This model is valid (all adjacent slopes are distinct)
                 best_n = current_n
-                best_result = candidate_res
+                # Now we must re-run with FULL bootstrap if requested, to get proper Breakpoint CIs for the result
+                if user_n_boot > 0:
+                     best_result = segmented_trend_test(x, t, n_breakpoints=best_n, criterion=criterion, continuity=continuity, **kwargs)
+                else:
+                     best_result = candidate_res
                 break
             else:
                 # Reject this N, try N-1
