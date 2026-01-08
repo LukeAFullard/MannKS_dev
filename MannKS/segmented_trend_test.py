@@ -82,6 +82,7 @@ def segmented_trend_test(
     alpha: float = 0.05,
     hicensor: Union[bool, float] = False,
     criterion: str = 'bic',
+    continuity: bool = True,
     **kwargs
 ):
     """
@@ -96,6 +97,8 @@ def segmented_trend_test(
         alpha: Significance level.
         hicensor: High-censor rule flag.
         criterion: Model selection criterion ('bic' or 'aic'). Default 'bic'.
+        continuity: If True, constraints segments to be continuous (connected).
+                    If False, segments are estimated with independent intercepts.
         **kwargs: Additional arguments passed to trend_test and the Sen's estimator
                   (e.g., lt_mult, sens_slope_method, slope_scaling).
 
@@ -123,6 +126,7 @@ def segmented_trend_test(
             n_breakpoints=n_breakpoints,
             min_segment_size=min_segment_size,
             n_bootstrap=n_restarts,
+            continuity=continuity,
             **kwargs
         )
     else:
@@ -132,17 +136,26 @@ def segmented_trend_test(
         # Calculate residual for the single segment
         from ._segmented import _calculate_segment_residuals
         best_residual = _calculate_segment_residuals(
-            x_val, t_numeric, censored, cen_type, breakpoints, **kwargs
+            x_val, t_numeric, censored, cen_type, breakpoints, continuity=continuity, **kwargs
         )
 
     # Calculate Criterion (BIC or AIC)
-    # k = parameters. Independent segments:
-    # Each segment has slope and intercept (2 params).
-    # Plus breakpoints (n_breakpoints params).
-    # Total segments = n_breakpoints + 1
-    # k = 2 * (n_breakpoints + 1) + n_breakpoints = 3 * n_breakpoints + 2
+    # k = parameters.
+    # Continuous: k = 2 + (n_breakpoints * 2).
+    #   Wait, continuous model params:
+    #     n_breakpoints (breakpoints) + (n_breakpoints + 1) slopes + 1 intercept
+    #     = 2 * n_breakpoints + 2
+    # Independent:
+    #     n_breakpoints (breakpoints) + (n_breakpoints + 1) * (slope + intercept)
+    #     = n_breakpoints + 2 * n_breakpoints + 2 = 3 * n_breakpoints + 2
+
     n_obs = len(x_val)
-    k = 3 * n_breakpoints + 2
+    if continuity:
+        # Slopes (nb+1) + Intercept (1) + Breakpoints (nb)
+        k = 2 * n_breakpoints + 2
+    else:
+        # Slopes (nb+1) + Intercepts (nb+1) + Breakpoints (nb)
+        k = 3 * n_breakpoints + 2
 
     # Handle zero residual (perfect fit) to avoid log(0)
     if best_residual <= 0:
@@ -164,6 +177,7 @@ def segmented_trend_test(
         boot_breakpoints_numeric = get_breakpoint_bootstrap_distribution(
             x_val, t_numeric, censored, cen_type, breakpoints,
             n_bootstrap=n_bootstrap,
+            continuity=continuity,
             **kwargs
         )
     else:
@@ -289,6 +303,7 @@ def find_best_segmentation(
     criterion='bic',
     use_permutation_test=False,
     n_permutations=1000,
+    continuity: bool = True,
     **kwargs
 ):
     """
@@ -306,6 +321,7 @@ def find_best_segmentation(
         use_permutation_test (bool): If True, uses a permutation test to decide if adding
                                      breakpoints significantly reduces residual error.
         n_permutations (int): Number of permutations for the significance test.
+        continuity (bool): If True, fit continuous models. If False, fit independent segments.
         **kwargs: Arguments passed to segmented_trend_test.
 
     Returns:
@@ -325,14 +341,14 @@ def find_best_segmentation(
         kwargs_fast['n_bootstrap'] = 0
         kwargs_fast['criterion'] = criterion
 
-        current_model = segmented_trend_test(x, t, n_breakpoints=0, **kwargs_fast)
+        current_model = segmented_trend_test(x, t, n_breakpoints=0, continuity=continuity, **kwargs_fast)
         models_perm = {0: current_model}
 
         while current_n < max_breakpoints:
             next_n = current_n + 1
 
             # Calculate N+1 model
-            next_model = segmented_trend_test(x, t, n_breakpoints=next_n, **kwargs_fast)
+            next_model = segmented_trend_test(x, t, n_breakpoints=next_n, continuity=continuity, **kwargs_fast)
             models_perm[next_n] = next_model
 
             # Test Significance (current vs next)
@@ -354,6 +370,7 @@ def find_best_segmentation(
                 n_breakpoints_base=current_n,
                 n_breakpoints_alt=next_n,
                 n_permutations=n_permutations,
+                continuity=continuity,
                 **kwargs
             )
 
@@ -371,7 +388,7 @@ def find_best_segmentation(
         # Proceed to bootstrap final model if requested.
         user_n_boot = kwargs.get('n_bootstrap', 200)
         if user_n_boot > 0 and best_n > 0:
-            final_result = segmented_trend_test(x, t, n_breakpoints=best_n, criterion=criterion, **kwargs)
+            final_result = segmented_trend_test(x, t, n_breakpoints=best_n, criterion=criterion, continuity=continuity, **kwargs)
         else:
             final_result = models_perm[best_n]
 
@@ -403,7 +420,7 @@ def find_best_segmentation(
             kwargs_fast['n_bootstrap'] = 0
             kwargs_fast['criterion'] = criterion # Pass criterion
 
-            res = segmented_trend_test(x, t, n_breakpoints=n, **kwargs_fast)
+            res = segmented_trend_test(x, t, n_breakpoints=n, continuity=continuity, **kwargs_fast)
             models.append(res)
             results_list.append({
                 'n_breakpoints': n,
@@ -451,7 +468,7 @@ def find_best_segmentation(
             # However, we'll re-compute anyway to be safe and use user's n_bootstrap.
 
             if user_n_boot > 0:
-                candidate_res = segmented_trend_test(x, t, n_breakpoints=current_n, criterion=criterion, **kwargs)
+                candidate_res = segmented_trend_test(x, t, n_breakpoints=current_n, criterion=criterion, continuity=continuity, **kwargs)
             else:
                 # If no bootstrap, we can't check CIs. We cannot perform the merge check.
                 # Since user requested merge_similar_segments, this is a conflict.
@@ -537,7 +554,7 @@ def find_best_segmentation(
     else:
         # Standard logic: Re-run best model with full bootstrap if needed
         if user_n_boot > 0 and best_n > 0:
-            best_result = segmented_trend_test(x, t, n_breakpoints=best_n, criterion=criterion, **kwargs)
+            best_result = segmented_trend_test(x, t, n_breakpoints=best_n, criterion=criterion, continuity=continuity, **kwargs)
         else:
             best_result = models[best_n]
 
