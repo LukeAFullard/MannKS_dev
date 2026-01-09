@@ -555,6 +555,15 @@ def find_bagging_breakpoint(x, t, censored, cen_type,
     n = len(x)
     all_breakpoints = []
 
+    # Initial Robust Estimate (Warm Start)
+    # Perform a global search on the original dataset once.
+    initial_bp, _, _ = bootstrap_restart_segmented(
+        x, t, censored, cen_type,
+        n_breakpoints=n_breakpoints,
+        n_bootstrap=0, # Use 0 bootstrap restarts for the initial global search (Grid + 5 random)
+        **kwargs_clean
+    )
+
     for _ in range(n_bootstrap):
         # Bootstrap Resample (Pairs bootstrap)
         idx = np.random.choice(n, n, replace=True)
@@ -564,12 +573,14 @@ def find_bagging_breakpoint(x, t, censored, cen_type,
         cen_type_boot = cen_type[idx]
 
         # Find breakpoints for this sample
-        # We use a fast search (fewer restarts) for each bootstrap sample
-        # to keep computational cost reasonable.
-        bp, _, _ = bootstrap_restart_segmented(
+        # Use Warm-Started Optimization:
+        # Instead of a full global search, we start the local optimizer at the
+        # robust estimate found on the full dataset. This assumes the bootstrap
+        # samples will have solutions close to the population solution.
+        bp, _ = segmented_sens_slope(
             x_boot, t_boot, cen_boot, cen_type_boot,
             n_breakpoints=n_breakpoints,
-            n_bootstrap=5, # Minimal restarts for local search
+            start_values=initial_bp, # Pass the robust estimate as warm start
             **kwargs_clean
         )
         all_breakpoints.append(bp)
