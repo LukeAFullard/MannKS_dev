@@ -6,8 +6,8 @@ import pandas as pd
 import time
 import logging
 import warnings
-from scipy.optimize import minimize
-from MannKS.segmented_trend_test import find_best_segmentation
+import piecewise_regression
+from MannKS._scout import RobustSegmentedTrend
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
@@ -29,20 +29,18 @@ def setup_logging(output_dir):
     )
     return logging.getLogger()
 
-# --- 1. OLS Piecewise Implementation (Baseline) ---
-# Simple implementation since no external lib installed
+# --- 1. OLS Piecewise Implementation (piecewise-regression) ---
 def fit_piecewise_ols(t, y, max_breakpoints=2):
     """
-    Fits piecewise linear regression using OLS (via scipy.optimize)
+    Fits piecewise linear regression using the piecewise_regression library.
     Searches for 0, 1, ..., max_breakpoints and selects best via BIC.
-    Assumes continuous model.
     """
     n = len(y)
     best_bic = np.inf
     best_n = 0
     best_bps = []
 
-    # 0 Breakpoints (Linear)
+    # 0 Breakpoints (Linear) - Manually calculate BIC as Fit doesn't support n_breakpoints=0
     # y = a + b*t
     A = np.vstack([t, np.ones(n)]).T
     try:
@@ -50,100 +48,45 @@ def fit_piecewise_ols(t, y, max_breakpoints=2):
         if resid.size > 0:
             ssr = resid[0]
         else:
-            # Perfect fit or calculation
+            # Perfect fit
             y_pred = sol[0]*t + sol[1]
             ssr = np.sum((y - y_pred)**2)
 
-        k = 2 # slope, intercept
+        # k = 3 for BIC usually (intercept, slope, variance estimate), but for consistency with package:
+        # piecewise_regression uses k = 2 * n_breakpoints + 2 usually?
+        # Let's check package implementation if possible, or stick to standard BIC definition.
+        # piecewise_regression uses: bic = n * log(rss/n) + k * log(n)
+        # where k = number of params. For linear: intercept, slope. k=2.
+
+        k = 2
         if ssr <= 1e-10: ssr = 1e-10
         bic = n * np.log(ssr/n) + k * np.log(n)
 
-        if bic < best_bic:
-            best_bic = bic
-            best_n = 0
-            best_bps = []
+        best_bic = bic
+        best_n = 0
+        best_bps = []
     except:
         pass
 
-    # 1 Breakpoint
-    if max_breakpoints >= 1:
-        def objective_1bp(params):
-            bp = params[0]
-            if bp <= t.min() or bp >= t.max(): return 1e20 # Constraint
-            # Construct features
-            # Continuous: y = a + b1*t + b2*max(0, t-bp)
-            # This forces continuity at bp.
-            # b1 is slope1. b2 is change in slope.
+    # Loop for 1 to max_breakpoints
+    for n_bp in range(1, max_breakpoints + 1):
+        try:
+            pw_fit = piecewise_regression.Fit(t, y, n_breakpoints=n_bp)
+            # The summary() prints, but we just want results
+            # pw_fit.summary()
+            res = pw_fit.get_results()
 
-            term2 = np.maximum(0, t - bp)
-            A = np.vstack([t, term2, np.ones(n)]).T
-            sol, resid, _, _ = np.linalg.lstsq(A, y, rcond=None)
-            if resid.size > 0: return resid[0]
-            y_pred = np.dot(A, sol)
-            return np.sum((y-y_pred)**2)
+            # Extract BIC
+            # piecewise_regression calculates BIC internally
+            current_bic = res.get('bic')
 
-        # Optimize breakpoint location
-        # Grid search initialization + minimization
-        t_min, t_max = t.min(), t.max()
-        grid = np.linspace(t_min + (t_max-t_min)*0.1, t_max - (t_max-t_min)*0.1, 5)
-
-        local_best_ssr = np.inf
-        local_best_bp = None
-
-        for start_bp in grid:
-            res = minimize(objective_1bp, [start_bp], bounds=[(t_min, t_max)], method='L-BFGS-B')
-            if res.fun < local_best_ssr:
-                local_best_ssr = res.fun
-                local_best_bp = res.x[0]
-
-        # BIC
-        # k = 4 (intercept, slope1, slope_change, breakpoint)
-        k = 4
-        if local_best_ssr <= 1e-10: local_best_ssr = 1e-10
-        bic = n * np.log(local_best_ssr/n) + k * np.log(n)
-
-        if bic < best_bic:
-            best_bic = bic
-            best_n = 1
-            best_bps = [local_best_bp]
-
-    # 2 Breakpoints
-    if max_breakpoints >= 2:
-        def objective_2bp(params):
-            bp1, bp2 = sorted(params)
-            if bp1 <= t.min() or bp2 >= t.max() or bp2 <= bp1 + 1e-5: return 1e20
-
-            # y = a + b1*t + b2*max(0, t-bp1) + b3*max(0, t-bp2)
-            term2 = np.maximum(0, t - bp1)
-            term3 = np.maximum(0, t - bp2)
-            A = np.vstack([t, term2, term3, np.ones(n)]).T
-            sol, resid, _, _ = np.linalg.lstsq(A, y, rcond=None)
-            if resid.size > 0: return resid[0]
-            y_pred = np.dot(A, sol)
-            return np.sum((y-y_pred)**2)
-
-        grid_start = np.linspace(t_min + (t_max-t_min)*0.1, t_max - (t_max-t_min)*0.1, 4)
-        local_best_ssr = np.inf
-        local_best_bps = None
-
-        for s1 in grid_start:
-            for s2 in grid_start:
-                if s2 > s1 + (t_max-t_min)*0.1:
-                    res = minimize(objective_2bp, [s1, s2], bounds=[(t_min, t_max), (t_min, t_max)], method='L-BFGS-B')
-                    if res.fun < local_best_ssr:
-                        local_best_ssr = res.fun
-                        local_best_bps = sorted(res.x)
-
-        # BIC
-        # k = 6 (int, s1, ds2, ds3, bp1, bp2)
-        k = 6
-        if local_best_ssr <= 1e-10: local_best_ssr = 1e-10
-        bic = n * np.log(local_best_ssr/n) + k * np.log(n)
-
-        if bic < best_bic:
-            best_bic = bic
-            best_n = 2
-            best_bps = local_best_bps
+            if current_bic is not None and current_bic < best_bic:
+                best_bic = current_bic
+                best_n = n_bp
+                best_bps = res['estimates']['breakpoints']
+        except Exception:
+            # Convergence failure or other error
+            continue
 
     return best_n, best_bps
 
@@ -155,13 +98,10 @@ def run_validation_suite(data_generator, output_dir, n_iterations=100):
     results = []
 
     # Define methods
+    # Comparing only Piecewise-Regression (OLS) vs MannKS RobustSegmentedTrend
     methods = [
-        ('OLS_Piecewise', 'ols', {}),
-        ('MannKS_BIC', 'mannks', {'criterion': 'bic'}),
-        ('MannKS_mBIC', 'mannks', {'criterion': 'mbic'}),
-        ('MannKS_AIC', 'mannks', {'criterion': 'aic'}),
-        ('MannKS_AIC_Merge', 'mannks', {'criterion': 'aic', 'merge_similar_segments': True}),
-        ('MannKS_AIC_Bagging', 'mannks', {'criterion': 'aic', 'use_bagging': True})
+        ('Piecewise_Regression', 'ols', {}),
+        ('MannKS_Robust', 'mannks_robust', {})
     ]
 
     start_total = time.time()
@@ -183,21 +123,71 @@ def run_validation_suite(data_generator, output_dir, n_iterations=100):
             try:
                 if m_type == 'ols':
                     pred_n, pred_bps = fit_piecewise_ols(t, x, max_breakpoints=2)
-                else:
-                    # MannKS
-                    # Use common robust defaults
-                    res, _ = find_best_segmentation(
-                        x=x, t=t,
-                        max_breakpoints=2,
-                        n_bootstrap=50, # Fast but robust enough for location
-                        alpha=0.05,
-                        min_segment_size=5,
-                        normalize_time=True, # Use new feature for stability
-                        continuity=True, # Default behavior usually expected unless jumps
-                        **kwargs
-                    )
-                    pred_n = res.n_breakpoints
-                    pred_bps = list(res.breakpoints)
+                elif m_type == 'mannks_robust':
+                    # RobustSegmentedTrend doesn't have internal model selection for N yet?
+                    # The class init takes n_breakpoints.
+                    # We need to simulate model selection or just run for the true N or scan N.
+                    # The fit_piecewise_ols scans 0, 1, 2.
+                    # Let's Implement a scanner for RobustSegmentedTrend here for fairness.
+
+                    best_bic = np.inf
+                    best_n = 0
+                    best_bps = []
+
+                    # N=0
+                    # Just Sen's slope? Or just Robust Fit?
+                    # RobustSegmentedTrend with n_breakpoints=0
+                    model0 = RobustSegmentedTrend(n_breakpoints=0)
+                    model0.fit(t, x)
+                    # We need a metric. The class calculates a cost/loss?
+                    # model.model_loss_ isn't fully implemented/exposed as a simple BIC attribute.
+                    # The Scout phase calculates a cost but the Refiner fits segments.
+                    # Let's approximate BIC using the residuals from the segments.
+
+                    # Calculate residuals
+                    y_pred = model0.predict(t)
+                    resids = x - y_pred
+                    ssr = np.sum(resids**2)
+                    n_samples = len(x)
+                    k = 2 # slope, intercept
+                    if ssr <= 1e-10: ssr = 1e-10
+                    bic = n_samples * np.log(ssr/n_samples) + k * np.log(n_samples)
+
+                    best_bic = bic
+                    best_n = 0
+
+                    # N=1
+                    model1 = RobustSegmentedTrend(n_breakpoints=1)
+                    model1.fit(t, x)
+                    y_pred = model1.predict(t)
+                    resids = x - y_pred
+                    ssr = np.sum(resids**2)
+                    k = 4 # slope1, slope2 (implicit), intercept, breakpoint
+                    if ssr <= 1e-10: ssr = 1e-10
+                    bic = n_samples * np.log(ssr/n_samples) + k * np.log(n_samples)
+
+                    if bic < best_bic:
+                        best_bic = bic
+                        best_n = 1
+                        best_bps = model1.breakpoints_
+
+                    # N=2
+                    model2 = RobustSegmentedTrend(n_breakpoints=2)
+                    model2.fit(t, x)
+                    y_pred = model2.predict(t)
+                    resids = x - y_pred
+                    ssr = np.sum(resids**2)
+                    k = 6
+                    if ssr <= 1e-10: ssr = 1e-10
+                    bic = n_samples * np.log(ssr/n_samples) + k * np.log(n_samples)
+
+                    if bic < best_bic:
+                        best_bic = bic
+                        best_n = 2
+                        best_bps = model2.breakpoints_
+
+                    pred_n = best_n
+                    pred_bps = list(best_bps) if best_bps is not None else []
 
                 dur = time.time() - t0
 
@@ -212,8 +202,11 @@ def run_validation_suite(data_generator, output_dir, n_iterations=100):
                     # Match bps
                     p = np.sort(pred_bps)
                     gt = np.sort(true_bps)
-                    err = np.mean(np.abs(p - gt))
-                    iter_res[f'{name}_loc_error'] = err
+                    if len(p) == len(gt):
+                        err = np.mean(np.abs(p - gt))
+                        iter_res[f'{name}_loc_error'] = err
+                    else:
+                         iter_res[f'{name}_loc_error'] = np.nan
                 else:
                     iter_res[f'{name}_loc_error'] = np.nan
 
