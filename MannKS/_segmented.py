@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from typing import Union, Optional, List, Tuple
+from scipy.optimize import minimize_scalar
 from ._stats import _sens_estimator_unequal_spacing, _sens_estimator_censored
 from ._datetime import _to_numeric_time
 
@@ -44,6 +45,7 @@ def _calculate_segment_residuals(x, t, censored, cen_type, breakpoints, return_f
     gt_mult = kwargs.get('gt_mult', 1.1)
     sens_slope_method = kwargs.get('sens_slope_method', 'nan')
     min_segment_size = kwargs.get('min_segment_size', 3)
+    max_pairs = kwargs.get('max_pairs', None)
 
     # 1. Estimate Slopes for each segment
     slopes = []
@@ -67,9 +69,10 @@ def _calculate_segment_residuals(x, t, censored, cen_type, breakpoints, return_f
 
         if np.any(cen_seg):
             s_vals = _sens_estimator_censored(x_seg, t_seg, cen_type_seg,
-                                              lt_mult=lt_mult, gt_mult=gt_mult, method=sens_slope_method)
+                                              lt_mult=lt_mult, gt_mult=gt_mult, method=sens_slope_method,
+                                              max_pairs=max_pairs)
         else:
-            s_vals = _sens_estimator_unequal_spacing(x_seg, t_seg)
+            s_vals = _sens_estimator_unequal_spacing(x_seg, t_seg, max_pairs=max_pairs)
 
         slope_est = np.nanmedian(s_vals)
         if np.isnan(slope_est):
@@ -182,9 +185,23 @@ def segmented_sens_slope(x, t, censored, cen_type,
                          max_iter=30,
                          tol=1e-6,
                          min_segment_size=10,
+                         use_optimizer=False,
                          **kwargs):
     """
     Iterative algorithm to find optimal breakpoints using robust residuals.
+
+    Args:
+        x, t, censored, cen_type: Data inputs.
+        n_breakpoints (int): Number of breakpoints to search for.
+        start_values (list): Initial guess for breakpoints.
+        max_iter (int): Maximum iterations for the coordinate descent.
+        tol (float): Convergence tolerance.
+        min_segment_size (int): Minimum number of points per segment.
+        use_optimizer (bool): If True, uses scipy.optimize.minimize_scalar (Bounded)
+            instead of a custom grid search for finding breakpoints. This is generally
+            faster but may be less robust to local minima in rough landscapes.
+            Defaults to False (custom 3-pass grid search).
+        **kwargs: Additional arguments (e.g., max_pairs).
     """
     n = len(x)
 
@@ -238,47 +255,63 @@ def segmented_sens_slope(x, t, censored, cen_type,
             if lower_bound >= upper_bound:
                 continue # Constrained too tightly, skip update
 
-            # Iterative Grid Refinement for better breakpoint location
-            # (Robust methods use grid search over derivative-based methods)
-            # We refine the grid to avoid "chattering" and find precise optimum
+            # --- Optimization Strategy ---
+            if use_optimizer:
+                # Use scipy's bounded scalar minimizer
+                def objective(bp_val):
+                    test_bps = breakpoints.copy()
+                    test_bps[bp_idx] = bp_val
+                    # Pass kwargs (including max_pairs) down
+                    return _calculate_segment_residuals(x, t, censored, cen_type, test_bps, min_segment_size=min_segment_size, **kwargs)
 
-            # Initialize with current position
-            best_local_bp = current_bp
-            # Calculate current residual if not known?
-            # We can calculate it, or assume inf and let search find better.
-            # Calculating it ensures we don't worsen the solution.
-            test_breakpoints_curr = breakpoints.copy()
-            test_breakpoints_curr[bp_idx] = current_bp
-            best_local_resid = _calculate_segment_residuals(x, t, censored, cen_type, test_breakpoints_curr, min_segment_size=min_segment_size, **kwargs)
+                # Bounded optimization
+                # We use 'bounded' (Brent's method) which is derivative-free and fast
+                res = minimize_scalar(objective, bounds=(lower_bound, upper_bound), method='bounded', options={'xatol': tol})
 
-            search_lower = lower_bound
-            search_upper = upper_bound
+                if res.success:
+                    best_local_bp = res.x
+                else:
+                    best_local_bp = current_bp # Fallback
 
-            # 3 passes of 10 points allows focusing the search
-            for _ in range(3):
-                search_grid = np.linspace(search_lower, search_upper, 10)
+            else:
+                # Iterative Grid Refinement (Standard/Robust)
+                # (Robust methods use grid search over derivative-based methods)
+                # We refine the grid to avoid "chattering" and find precise optimum
 
-                found_better_in_pass = False
-                for test_bp in search_grid:
-                    test_breakpoints = breakpoints.copy()
-                    test_breakpoints[bp_idx] = test_bp
-                    resid = _calculate_segment_residuals(x, t, censored, cen_type, test_breakpoints, min_segment_size=min_segment_size, **kwargs)
+                # Initialize with current position
+                best_local_bp = current_bp
+                test_breakpoints_curr = breakpoints.copy()
+                test_breakpoints_curr[bp_idx] = current_bp
+                best_local_resid = _calculate_segment_residuals(x, t, censored, cen_type, test_breakpoints_curr, min_segment_size=min_segment_size, **kwargs)
 
-                    if resid < best_local_resid:
-                        best_local_resid = resid
-                        best_local_bp = test_bp
-                        found_better_in_pass = True
+                search_lower = lower_bound
+                search_upper = upper_bound
 
-                # Narrow search range around the best point found
-                # Current grid spacing
-                grid_step = (search_upper - search_lower) / 9.0 if (search_upper > search_lower) else 0
+                # 3 passes of 10 points allows focusing the search
+                for _ in range(3):
+                    search_grid = np.linspace(search_lower, search_upper, 10)
 
-                if grid_step < tol:
-                    break
+                    found_better_in_pass = False
+                    for test_bp in search_grid:
+                        test_breakpoints = breakpoints.copy()
+                        test_breakpoints[bp_idx] = test_bp
+                        resid = _calculate_segment_residuals(x, t, censored, cen_type, test_breakpoints, min_segment_size=min_segment_size, **kwargs)
 
-                # New bounds: +/- 1 step around best
-                search_lower = max(lower_bound, best_local_bp - grid_step)
-                search_upper = min(upper_bound, best_local_bp + grid_step)
+                        if resid < best_local_resid:
+                            best_local_resid = resid
+                            best_local_bp = test_bp
+                            found_better_in_pass = True
+
+                    # Narrow search range around the best point found
+                    # Current grid spacing
+                    grid_step = (search_upper - search_lower) / 9.0 if (search_upper > search_lower) else 0
+
+                    if grid_step < tol:
+                        break
+
+                    # New bounds: +/- 1 step around best
+                    search_lower = max(lower_bound, best_local_bp - grid_step)
+                    search_upper = min(upper_bound, best_local_bp + grid_step)
 
             breakpoints[bp_idx] = best_local_bp
 
@@ -310,6 +343,8 @@ def bootstrap_restart_segmented(x, t, censored, cen_type,
     kwargs_clean.pop('merging_alpha', None)
     kwargs_clean.pop('use_permutation_test', None)
     kwargs_clean.pop('n_permutations', None)
+    # Ensure optimized flags are passed if they are in kwargs
+    # (They are automatically passed because they are not popped)
 
     best_residual = np.inf
     best_breakpoints = None

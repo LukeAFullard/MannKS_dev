@@ -362,7 +362,13 @@ def segmented_trend_test(
                 t_sub_orig = t_sub
 
             df_sub = data_filtered.iloc[mask].copy()
-            segment_res = trend_test(df_sub, t_sub_orig, alpha=alpha, hicensor=False, **kwargs)
+            # "Polish" step: Use full precision for final segment stats
+            # We remove 'max_pairs' and other optimization flags from kwargs so trend_test uses all data
+            # and doesn't receive unexpected arguments.
+            final_kwargs = kwargs.copy()
+            final_kwargs.pop('max_pairs', None)
+            final_kwargs.pop('use_optimizer', None)
+            segment_res = trend_test(df_sub, t_sub_orig, alpha=alpha, hicensor=False, **final_kwargs)
 
         segment_results.append(segment_res)
 

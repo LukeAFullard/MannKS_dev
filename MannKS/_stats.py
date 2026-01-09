@@ -309,7 +309,7 @@ def _mk_probability(p, s):
     Cd = C if s <= 0 else p_scalar / 2
     return float(C), float(Cd)
 
-def _sens_estimator_unequal_spacing(x, t):
+def _sens_estimator_unequal_spacing(x, t, max_pairs=None):
     """
     Computes Sen's slope for unequally spaced data using a vectorized approach.
 
@@ -323,6 +323,14 @@ def _sens_estimator_unequal_spacing(x, t):
         trend) are assumed to be independent.
     3.  **Homoscedasticity**: It is assumed that the variance of the errors is
         constant over time.
+
+    Args:
+        x (np.array): The data values.
+        t (np.array): The timestamps.
+        max_pairs (int, optional): If provided, limits the number of pairs used
+            to calculate the slope to this number, selected randomly. This
+            improves performance for large datasets at the cost of some
+            precision. Defaults to None (use all pairs).
     """
     n = len(x)
 
@@ -335,21 +343,47 @@ def _sens_estimator_unequal_spacing(x, t):
             f"Consider using the regional_test() function for aggregation or subsampling your data."
         )
 
-    if n > 5000:
+    if n > 5000 and max_pairs is None:
         import warnings
         mem_gb = (n**2 * 8 / 1e9)
         warnings.warn(
             f"Large sample size (n={n}) requires ~{mem_gb:.1f} GB memory "
             f"for pairwise calculations. Maximum safe n is {MAX_SAFE_N}. "
-            f"Consider using regional_test() for aggregating multiple smaller sites.",
+            f"Consider using regional_test() for aggregating multiple smaller sites, "
+            f"or set 'max_pairs' to a value (e.g., 1000000) to use random sampling.",
             UserWarning
         )
 
     if n < 2:
         return np.array([])
 
-    # Create all pairs of indices
-    i, j = np.triu_indices(n, k=1)
+    # Create pairs of indices
+    if max_pairs is not None:
+        total_possible_pairs = n * (n - 1) // 2
+        if total_possible_pairs > max_pairs:
+            # Random sampling of pairs
+            # We want uniform sampling from triu_indices.
+            # A simple way for large N is to sample random i, j and keep those where i < j
+            # But that might be inefficient rejection sampling.
+            # Better: Sample an index k from 0 to total_possible_pairs-1 and map back to (i,j)
+            # Or simpler: just generate random i, j and sort them.
+
+            # Since we just need *random pairs*, generating 2 random indices and sorting them works
+            # We might get duplicates, but for large N and large max_pairs, it's rare and acceptable.
+
+            rng = np.random.default_rng()
+            # Generate 2 rows of random indices
+            indices = rng.integers(0, n, size=(2, max_pairs))
+            # Sort each column so i < j
+            indices.sort(axis=0)
+            # Filter out i == j
+            mask = indices[0] != indices[1]
+            i = indices[0][mask]
+            j = indices[1][mask]
+        else:
+            i, j = np.triu_indices(n, k=1)
+    else:
+        i, j = np.triu_indices(n, k=1)
 
     # Calculate differences
     x_diff = x[j] - x[i]
@@ -361,7 +395,7 @@ def _sens_estimator_unequal_spacing(x, t):
     return x_diff[valid_mask] / t_diff[valid_mask]
 
 
-def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_mult=DEFAULT_GT_MULTIPLIER, method='nan'):
+def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_mult=DEFAULT_GT_MULTIPLIER, method='nan', max_pairs=None):
     """
     Computes Sen's slope for censored, unequally spaced data.
 
@@ -380,6 +414,8 @@ def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_m
               LWP-TRENDS R script.
             - 'nan': Sets ambiguous slopes to np.nan, which is a more
               statistically neutral approach.
+        max_pairs (int, optional): If provided, limits the number of pairs used
+            to calculate the slope to this number, selected randomly.
 
     Returns:
         np.array: An array of calculated slopes.
@@ -430,8 +466,20 @@ def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_m
     if n < 2:
         return np.array([])
 
-    # Create all pairs of indices
-    i_indices, j_indices = np.triu_indices(n, k=1)
+    # Create pairs of indices
+    if max_pairs is not None:
+        total_possible_pairs = n * (n - 1) // 2
+        if total_possible_pairs > max_pairs:
+            rng = np.random.default_rng()
+            indices = rng.integers(0, n, size=(2, max_pairs))
+            indices.sort(axis=0)
+            mask = indices[0] != indices[1]
+            i_indices = indices[0][mask]
+            j_indices = indices[1][mask]
+        else:
+            i_indices, j_indices = np.triu_indices(n, k=1)
+    else:
+        i_indices, j_indices = np.triu_indices(n, k=1)
 
     # 1. Calculate raw differences and slopes (for censor checks)
     x_diff_raw = x[j_indices] - x[i_indices]
