@@ -607,6 +607,22 @@ def plot_rolling_trend(rolling_results, data=None, time_col=None, value_col=None
 
     plt.close()
 
+def _create_segments(t, breakpoints):
+    """Internal helper to split time vector into segments"""
+    t_min, t_max = np.min(t), np.max(t)
+    sorted_bp = np.sort(breakpoints)
+    segments = []
+
+    if len(sorted_bp) == 0:
+        return [(t_min, t_max)]
+
+    segments.append((t_min, sorted_bp[0]))
+    for i in range(len(sorted_bp) - 1):
+        segments.append((sorted_bp[i], sorted_bp[i+1]))
+    segments.append((sorted_bp[-1], t_max))
+
+    return segments
+
 def plot_segmented_trend(result, x_data, t_data, save_path=None):
     """
     Visualizes the segmented trend analysis results, including confidence intervals.
@@ -620,7 +636,6 @@ def plot_segmented_trend(result, x_data, t_data, save_path=None):
     if save_path is None:
         return
 
-    from ._segmented import _create_segments
     from ._datetime import _to_numeric_time
 
     fig, ax = plt.subplots(figsize=(10, 6))
