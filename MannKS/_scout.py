@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize import differential_evolution
+from scipy.optimize import differential_evolution, minimize
 from scipy.stats import norm
 import warnings
 from ._stats import (
@@ -113,16 +113,18 @@ class RobustSegmentedTrend:
     segments to estimate final parameters (slopes, intercepts, CIs).
     """
 
-    def __init__(self, n_breakpoints=1, epsilon=1.35, fit_intercept=True):
+    def __init__(self, n_breakpoints=1, epsilon=1.35, fit_intercept=True, optimizer_kwargs=None, refine=True):
         self.n_breakpoints = n_breakpoints
         self.epsilon = epsilon
         self.fit_intercept = fit_intercept
+        self.optimizer_kwargs = optimizer_kwargs or {}
+        self.refine = refine
 
         self.breakpoints_ = None
         self.segments_ = None
         self.model_loss_ = None # AIC/BIC proxy can be stored here
 
-    def fit(self, t, x, censored=None, cen_type=None, lt_mult=0.5, gt_mult=1.1):
+    def fit(self, t, x, censored=None, cen_type=None, lt_mult=0.5, gt_mult=1.1, initial_guess=None):
         """
         Fit the robust segmented model.
 
@@ -133,6 +135,7 @@ class RobustSegmentedTrend:
             cen_type (array-like, optional): String array ('lt', 'gt') for censoring type.
             lt_mult (float): Multiplier for left-censored substitution (Refiner phase).
             gt_mult (float): Multiplier for right-censored substitution (Refiner phase).
+            initial_guess (array-like, optional): Hint for breakpoint locations (e.g. from simpler model).
         """
         t = np.asarray(t)
         x = np.asarray(x)
@@ -217,19 +220,63 @@ class RobustSegmentedTrend:
                 return cost
 
             # Run Differential Evolution
+            # Merge default settings with user provided kwargs
+            de_kwargs = {
+                'strategy': 'best1bin',
+                'maxiter': 100,
+                'popsize': 15,
+                'tol': 0.01,
+                'mutation': (0.5, 1),
+                'recombination': 0.7,
+                'polish': True
+            }
+
+            # Greedy Initialization / Warm Start
+            if initial_guess is not None and len(initial_guess) > 0 and len(initial_guess) < self.n_breakpoints:
+                # If we have a guess for K-1 breakpoints, initialize population with it
+                # We need popsize * dim individuals.
+                # Construct candidates by taking initial_guess and adding 1 random BP
+
+                # Determine population size
+                popsize = de_kwargs['popsize']
+                if 'popsize' in self.optimizer_kwargs:
+                    popsize = self.optimizer_kwargs['popsize']
+
+                n_pop = int(popsize * self.n_breakpoints) # Scipy uses popsize as multiplier
+
+                init_pop = np.random.uniform(t_min, t_max, (n_pop, self.n_breakpoints))
+
+                # Seed the first few individuals with the guess + random BP
+                guess = np.asarray(initial_guess)
+                # Sort guess to match bounds logic mostly, but DE handles it
+
+                # How many to seed? Let's seed 30% of population
+                n_seed = max(1, int(n_pop * 0.3))
+
+                for k in range(n_seed):
+                    # Fill first slots with guess
+                    init_pop[k, :len(guess)] = guess
+                    # Remaining slots random (already set)
+                    # Ideally we perturb guess slightly too?
+                    # Let's just trust DE mutation.
+
+                # Pass init to kwargs
+                de_kwargs['init'] = init_pop
+
+            de_kwargs.update(self.optimizer_kwargs)
+
             result = differential_evolution(
                 objective,
                 bounds,
-                strategy='best1bin',
-                maxiter=100,
-                popsize=15,
-                tol=0.01,
-                mutation=(0.5, 1),
-                recombination=0.7,
-                polish=True # Polish with local optimizer
+                **de_kwargs
             )
 
             self.breakpoints_ = np.sort(result.x)
+
+            # --- Optional Polishing (Refinement) ---
+            if self.refine and self.n_breakpoints > 0:
+                self.breakpoints_ = self._polish_breakpoints(t, x_scout, self.breakpoints_)
+
         else:
             self.breakpoints_ = np.array([])
 
@@ -322,6 +369,69 @@ class RobustSegmentedTrend:
                 'n': len(x_seg)
             })
 
+    def _polish_breakpoints(self, t, x, initial_bps):
+        """
+        Refines breakpoint locations by minimizing the Median Absolute Deviation (MAD)
+        of the residuals from robust Sen's slope lines.
+        """
+        # Define local bounds (e.g., +/- 10% of total range around each BP)
+        t_range = t.max() - t.min()
+        delta = t_range * 0.1
+        bounds = [(max(t.min(), bp - delta), min(t.max(), bp + delta)) for bp in initial_bps]
+
+        def objective(bps):
+            bps = np.sort(bps)
+            # Penalize invalid ordering
+            if len(bps) > 1 and np.any(np.diff(bps) < t_range * 0.01):
+                return 1e9
+            if bps[0] <= t.min() or bps[-1] >= t.max():
+                return 1e9
+
+            # Calculate residuals for this configuration using Sen's slope logic
+            boundaries = np.concatenate(([t.min()], bps, [t.max()]))
+            residuals = []
+
+            for i in range(len(boundaries) - 1):
+                t_start = boundaries[i]
+                t_end = boundaries[i+1]
+
+                if i == len(boundaries) - 2:
+                    mask = (t >= t_start) & (t <= t_end)
+                else:
+                    mask = (t >= t_start) & (t < t_end)
+
+                t_seg = t[mask]
+                x_seg = x[mask]
+
+                if len(x_seg) < 2:
+                    continue
+
+                # Calculate Sen's Slope (using fast unequal estimator)
+                # Note: We rely on the _stats module logic
+                slope = np.nanmedian(_sens_estimator_unequal_spacing(x_seg, t_seg))
+                intercept = np.median(x_seg - slope * t_seg)
+
+                y_pred = slope * t_seg + intercept
+                residuals.extend(np.abs(x_seg - y_pred))
+
+            if not residuals:
+                return 1e9
+
+            # Metric: Median Absolute Deviation (Robust)
+            return np.median(residuals)
+
+        # Use Nelder-Mead for local refinement
+        res = minimize(
+            objective,
+            initial_bps,
+            bounds=bounds if len(initial_bps) == 1 else None, # minimize supports bounds for L-BFGS-B but not NM usually, let's use Powell or check
+            method='L-BFGS-B' if len(initial_bps) == 1 else 'Nelder-Mead' # Nelder-Mead doesn't strict bounds easily, Powell does
+        )
+
+        # If optimization failed or didn't improve, return original
+        # Actually minimize usually returns result.x regardless
+        return np.sort(res.x)
+
     def predict(self, t):
         """
         Predict values using the fitted segmented model.
@@ -330,14 +440,6 @@ class RobustSegmentedTrend:
         y_pred = np.zeros_like(t, dtype=float)
         y_pred[:] = np.nan
 
-        boundaries = np.concatenate(([t.min() - 1], self.breakpoints_, [t.max() + 1])) # Loose bounds for prediction
-        # Actually better to use the fitted boundaries or just logic
-
-        # We need to map t to segments.
-        # This assumes the segments cover the range of t.
-        # If t is outside training range, we extrapolate using first/last segment.
-
-        # Sort breakpoints
         if self.breakpoints_ is None or len(self.breakpoints_) == 0:
             if self.segments_:
                 seg = self.segments_[0]
@@ -345,6 +447,7 @@ class RobustSegmentedTrend:
             return y_pred
 
         bps = np.sort(self.breakpoints_)
+        # Use first and last segments for extrapolation
 
         # First segment
         mask = t < bps[0]

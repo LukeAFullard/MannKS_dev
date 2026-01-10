@@ -43,8 +43,8 @@ def generate_data(seed=None):
     # Noise: Same 1.0. Signal is now very weak.
     y += np.random.normal(0, 1.0, n_points)
 
-    return t, y, n_bp, bps
+    return t, y, n_bp, bps, slopes
 
 if __name__ == "__main__":
-    print("Script setup complete. Ready to run.")
-    # run_validation_suite(generate_data, OUTPUT_DIR, n_iterations=100)
+    print("Script setup complete. Running validation...")
+    run_validation_suite(generate_data, OUTPUT_DIR, n_iterations=50)
