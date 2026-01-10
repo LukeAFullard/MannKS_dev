@@ -46,5 +46,5 @@ def generate_data(seed=None):
     return t, y, n_bp, bps
 
 if __name__ == "__main__":
-    print("Script setup complete. Ready to run.")
-    # run_validation_suite(generate_data, OUTPUT_DIR, n_iterations=100)
+    print("Script setup complete. Running validation...")
+    run_validation_suite(generate_data, OUTPUT_DIR, n_iterations=50)

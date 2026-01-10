@@ -71,19 +71,48 @@ def fit_piecewise_ols(t, y, max_breakpoints=2):
     # Loop for 1 to max_breakpoints
     for n_bp in range(1, max_breakpoints + 1):
         try:
-            pw_fit = piecewise_regression.Fit(t, y, n_breakpoints=n_bp)
-            # The summary() prints, but we just want results
-            # pw_fit.summary()
-            res = pw_fit.get_results()
+            pw_fit = piecewise_regression.Fit(t, y, n_breakpoints=n_bp, verbose=False)
 
-            # Extract BIC
-            # piecewise_regression calculates BIC internally
-            current_bic = res.get('bic')
+            # Access results via best_muggeo as requested for robust estimate access
+            if hasattr(pw_fit, 'best_muggeo') and hasattr(pw_fit.best_muggeo, 'best_fit'):
+                 best_fit = pw_fit.best_muggeo.best_fit
 
-            if current_bic is not None and current_bic < best_bic:
-                best_bic = current_bic
-                best_n = n_bp
-                best_bps = res['estimates']['breakpoints']
+                 # BIC
+                 # Use the library's calculated BIC directly if available
+                 if hasattr(best_fit, 'bic'):
+                     current_bic = best_fit.bic
+                 else:
+                     # Fallback calculation
+                     rss = getattr(best_fit, 'residual_sum_squares', None)
+                     if rss is None:
+                         # Try finding it in dict if it's not an attribute
+                         rss = getattr(best_fit, 'rss', np.inf)
+
+                     k = 2 * n_bp + 2
+                     if rss <= 1e-10: rss = 1e-10
+                     current_bic = n * np.log(rss/n) + k * np.log(n)
+
+                 if current_bic < best_bic:
+                    best_bic = current_bic
+                    best_n = n_bp
+
+                    # Extract breakpoints from estimates
+                    # estimates is a dict like {'breakpoint1': {'estimate': 5.0, ...}, ...}
+                    estimates = best_fit.estimates
+                    bps = []
+                    for key, val in estimates.items():
+                        if key.startswith('breakpoint'):
+                            bps.append(val['estimate'])
+                    best_bps = sorted(bps)
+            else:
+                 # Fallback to standard get_results if best_muggeo fails (though it shouldn't)
+                 res = pw_fit.get_results()
+                 current_bic = res.get('bic')
+                 if current_bic is not None and current_bic < best_bic:
+                    best_bic = current_bic
+                    best_n = n_bp
+                    best_bps = res['estimates']['breakpoints']
+
         except Exception:
             # Convergence failure or other error
             continue
@@ -193,14 +222,28 @@ def run_validation_suite(data_generator, output_dir, n_iterations=100):
 
                 # Store
                 iter_res[f'{name}_n'] = pred_n
-                iter_res[f'{name}_bps'] = str(pred_bps)
+
+                # Format bps to simple list string for CSV safety
+                if isinstance(pred_bps, np.ndarray):
+                    bps_list = pred_bps.tolist()
+                elif isinstance(pred_bps, list):
+                    bps_list = pred_bps
+                else:
+                    bps_list = []
+                iter_res[f'{name}_bps'] = str(bps_list)
+
                 iter_res[f'{name}_time'] = dur
                 iter_res[f'{name}_correct_n'] = (pred_n == true_n)
 
                 # Location Error (if N matches)
                 if pred_n == true_n and true_n > 0:
                     # Match bps
-                    p = np.sort(pred_bps)
+                    # Ensure pred_bps is a list of floats, handle if it's already a list or needs conversion
+                    if isinstance(pred_bps, list):
+                        p = np.sort(pred_bps)
+                    else:
+                        p = np.sort(list(pred_bps))
+
                     gt = np.sort(true_bps)
                     if len(p) == len(gt):
                         err = np.mean(np.abs(p - gt))
@@ -260,6 +303,33 @@ def generate_summary_report(df, output_dir, methods):
             lines.append(f"| {name} | {mean_e:.4f} | {std_e:.4f} | {min_e:.4f} | {max_e:.4f} |\n")
         else:
             lines.append(f"| {name} | N/A | N/A | N/A | N/A |\n")
+
+    # 3. Contingency Tables (Confusion Matrix)
+    lines.append("\n## 3. Confusion Matrix (True N vs Predicted N)\n")
+
+    for name, _, _ in methods:
+        lines.append(f"\n### {name}\n")
+        if 'true_n' in df.columns and f'{name}_n' in df.columns:
+            # Create crosstab
+            ct = pd.crosstab(df['true_n'], df[f'{name}_n'])
+            ct.index.name = "True N"
+            ct.columns.name = "Pred N"
+
+            # Convert to markdown manually or via to_markdown if available
+            try:
+                # Use simple formatting
+                header = "| True N \\ Pred N | " + " | ".join(map(str, ct.columns)) + " |"
+                sep = "| :--- | " + " | ".join(["---"] * len(ct.columns)) + " |"
+                lines.append(header + "\n")
+                lines.append(sep + "\n")
+
+                for idx, row in ct.iterrows():
+                    row_str = " | ".join(map(str, row.values))
+                    lines.append(f"| **{idx}** | {row_str} |\n")
+            except Exception as e:
+                lines.append(f"Error generating table: {e}\n")
+        else:
+            lines.append("Data not available for contingency table.\n")
 
     with open(os.path.join(output_dir, 'README.md'), 'w') as f:
         f.writelines(lines)
