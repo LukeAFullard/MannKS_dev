@@ -37,6 +37,7 @@ class HybridSegmentedTrend:
         self.n_breakpoints = n_breakpoints
 
         self.breakpoints_ = None
+        self.breakpoint_cis_ = None
         self.segments_ = None
         self.n_breakpoints_ = None
         self.bic_ = None
@@ -65,6 +66,7 @@ class HybridSegmentedTrend:
 
         best_n = 0
         best_bps = []
+        best_bp_cis = []
         best_bic = np.inf
         best_aic = np.inf
 
@@ -93,6 +95,7 @@ class HybridSegmentedTrend:
                         best_aic = aic
                         best_n = 0
                         best_bps = []
+                        best_bp_cis = []
                 except:
                     pass
             else:
@@ -126,24 +129,36 @@ class HybridSegmentedTrend:
                         best_aic = current_aic
                         best_n = k
 
-                        # Extract BPs
+                        # Extract BPs and CIs
                         estimates = None
                         if hasattr(pw_fit, 'best_muggeo') and hasattr(pw_fit.best_muggeo, 'best_fit'):
                              estimates = pw_fit.best_muggeo.best_fit.estimates
                         elif hasattr(pw_fit, 'get_results'):
                              estimates = pw_fit.get_results().get('estimates')
 
-                        bps = []
+                        bps_data = [] # List of (estimate, ci)
                         if estimates:
                             for key, val in estimates.items():
                                 if key.startswith('breakpoint'):
-                                    bps.append(val['estimate'])
-                        best_bps = sorted(bps)
+                                    est = val['estimate']
+                                    # CI is usually a list [low, high]
+                                    ci = val.get('confidence_interval')
+                                    if ci is None:
+                                        ci = (np.nan, np.nan)
+                                    bps_data.append((est, ci))
+
+                        # Sort by estimate
+                        bps_data.sort(key=lambda x: x[0])
+
+                        best_bps = [b[0] for b in bps_data]
+                        best_bp_cis = [b[1] for b in bps_data]
+
                 except:
                     continue
 
         self.n_breakpoints_ = best_n
         self.breakpoints_ = np.array(best_bps)
+        self.breakpoint_cis_ = best_bp_cis
         self.bic_ = best_bic
         self.aic_ = best_aic
 
@@ -341,20 +356,32 @@ def segmented_trend_test(
     # Convert breakpoints back to original time format if datetime
     if is_datetime:
         breakpoints_final = pd.to_datetime(breakpoints, unit='s')
+
+        # Convert CIs to Datetime
+        breakpoint_cis_final = []
+        if hybrid_model.breakpoint_cis_:
+            for ci in hybrid_model.breakpoint_cis_:
+                # ci should be [low, high] in numeric time
+                if isinstance(ci, (list, tuple, np.ndarray)) and len(ci) == 2:
+                    low_val = ci[0]
+                    high_val = ci[1]
+
+                    low_dt = pd.to_datetime(low_val, unit='s') if pd.notna(low_val) else pd.NaT
+                    high_dt = pd.to_datetime(high_val, unit='s') if pd.notna(high_val) else pd.NaT
+                    breakpoint_cis_final.append((low_dt, high_dt))
+                else:
+                    breakpoint_cis_final.append((pd.NaT, pd.NaT))
+        else:
+            breakpoint_cis_final = [(pd.NaT, pd.NaT)] * n_bp
     else:
         breakpoints_final = breakpoints
-
-    # Breakpoint CIs are not natively provided by the simple Hybrid fit (OLS SEs exist but not exposed here easily yet)
-    # We return NaNs for now or implement bootstrap if requested.
-    # For now, to match "clean" request, we keep it simple.
-    breakpoint_cis = [(np.nan, np.nan)] * n_bp
+        if hybrid_model.breakpoint_cis_:
+            breakpoint_cis_final = hybrid_model.breakpoint_cis_
+        else:
+            breakpoint_cis_final = [(np.nan, np.nan)] * n_bp
 
     # Format segments for output
     segments_list = hybrid_model.segments_
-    # We want to maybe add 'p_value' or 'significance' to segments?
-    # Mann-Kendall test in Phase 2 calculated 's' and 'var_s'.
-    # We could calculate p-values. But `_confidence_intervals` was used.
-    # Let's keep it consistent with simple output.
 
     Result = namedtuple('Segmented_Trend_Test', [
         'n_breakpoints', 'breakpoints', 'breakpoint_cis', 'segments',
@@ -364,7 +391,7 @@ def segmented_trend_test(
     return Result(
         n_breakpoints=n_bp,
         breakpoints=breakpoints_final,
-        breakpoint_cis=breakpoint_cis,
+        breakpoint_cis=breakpoint_cis_final,
         segments=pd.DataFrame(segments_list),
         is_datetime=is_datetime,
         bic=hybrid_model.bic_,

@@ -7,8 +7,8 @@ import time
 import logging
 import warnings
 import piecewise_regression
-from MannKS._scout import RobustSegmentedTrend
-from MannKS._hybrid import HybridSegmentedTrend
+# Updated import: HybridSegmentedTrend is now in MannKS (via __init__) or MannKS.segmented_trend_test
+from MannKS import HybridSegmentedTrend
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
@@ -52,12 +52,6 @@ def fit_piecewise_ols(t, y, max_breakpoints=2):
             # Perfect fit
             y_pred = sol[0]*t + sol[1]
             ssr = np.sum((y - y_pred)**2)
-
-        # k = 3 for BIC usually (intercept, slope, variance estimate), but for consistency with package:
-        # piecewise_regression uses k = 2 * n_breakpoints + 2 usually?
-        # Let's check package implementation if possible, or stick to standard BIC definition.
-        # piecewise_regression uses: bic = n * log(rss/n) + k * log(n)
-        # where k = number of params. For linear: intercept, slope. k=2.
 
         k = 2
         if ssr <= 1e-10: ssr = 1e-10
@@ -168,10 +162,8 @@ def run_validation_suite(data_generator, output_dir, n_iterations=100):
     results = []
 
     # Define methods
-    # Comparing Piecewise-Regression (OLS) vs MannKS Robust vs MannKS Hybrid
     methods = [
         ('Piecewise_Regression', 'ols', {}),
-        ('MannKS_BIC', 'mannks_robust', {'criterion': 'bic'}),
         ('MannKS_Hybrid', 'mannks_hybrid', {})
     ]
 
@@ -200,82 +192,19 @@ def run_validation_suite(data_generator, output_dir, n_iterations=100):
             try:
                 if m_type == 'ols':
                     pred_n, pred_bps, pred_slopes = fit_piecewise_ols(t, x, max_breakpoints=2)
-                elif m_type == 'mannks_robust':
-                    criterion = kwargs.get('criterion', 'bic')
-
-                    best_score = np.inf
-                    best_n = 0
-                    best_bps = []
-                    previous_bps = None
-                    best_model = None
-
-                    # Scan N=0, 1, 2
-                    for n_bp in range(3):
-                        model = RobustSegmentedTrend(n_breakpoints=n_bp)
-                        model.fit(t, x, initial_guess=previous_bps)
-
-                        # Update previous_bps for next iteration (greedy strategy)
-                        if n_bp > 0:
-                            previous_bps = model.breakpoints_
-
-                        y_pred = model.predict(t)
-                        resids = x - y_pred
-                        ssr = np.sum(resids**2)
-                        if ssr <= 1e-10: ssr = 1e-10
-
-                        n_samples = len(x)
-                        # k = 2 for N=0 (intercept, slope)
-                        # k = 4 for N=1 (int, slope1, slope2/alpha, bp)
-                        # k = 6 for N=2
-                        k = 2 + 2 * n_bp
-
-                        if criterion == 'aic':
-                            # AIC = n * ln(RSS/n) + 2k
-                            score = n_samples * np.log(ssr/n_samples) + 2 * k
-                        elif criterion == 'mbic':
-                            # mBIC (Modified BIC for changepoints)
-                            k_mbic = 2 + 3 * n_bp
-                            score = n_samples * np.log(ssr/n_samples) + k_mbic * np.log(n_samples)
-                        elif criterion == 'aicc':
-                            # AICc = AIC + 2k(k+1)/(n-k-1)
-                            aic = n_samples * np.log(ssr/n_samples) + 2 * k
-                            denom = n_samples - k - 1
-                            if denom > 0:
-                                score = aic + (2 * k * (k + 1)) / denom
-                            else:
-                                score = np.inf # Penalize invalid model for small N
-                        elif criterion == 'hqc':
-                            # HQC = n * ln(RSS/n) + 2k * ln(ln(n))
-                            score = n_samples * np.log(ssr/n_samples) + 2 * k * np.log(np.log(n_samples))
-                        else: # bic
-                            # BIC = n * ln(RSS/n) + k * ln(n)
-                            score = n_samples * np.log(ssr/n_samples) + k * np.log(n_samples)
-
-                        if score < best_score:
-                            best_score = score
-                            best_n = n_bp
-                            best_bps = model.breakpoints_
-                            best_model = model
-
-                    pred_n = best_n
-                    pred_bps = list(best_bps) if best_bps is not None else []
-
-                    # Extract slopes from best model
-                    if best_model and best_model.segments_:
-                        pred_slopes = [seg['slope'] for seg in best_model.segments_]
-
                 elif m_type == 'mannks_hybrid':
                     # Hybrid Segmented Trend
-                    # Uses OLS for structure, MannKS for slopes
-                    # It handles model selection internally via OLS BIC logic in fit()
-                    # We assume max_breakpoints=2 for parity
                     model = HybridSegmentedTrend(max_breakpoints=2)
                     model.fit(t, x)
 
                     pred_n = model.n_breakpoints_
                     pred_bps = list(model.breakpoints_)
+
+                    # model.segments_ is a list of dicts in the new implementation
                     if model.segments_:
                         pred_slopes = [seg['slope'] for seg in model.segments_]
+                    else:
+                        pred_slopes = []
 
                 dur = time.time() - t0
 
@@ -297,7 +226,6 @@ def run_validation_suite(data_generator, output_dir, n_iterations=100):
                 # Location Error (if N matches)
                 if pred_n == true_n and true_n > 0:
                     # Match bps
-                    # Ensure pred_bps is a list of floats, handle if it's already a list or needs conversion
                     if isinstance(pred_bps, list):
                         p = np.sort(pred_bps)
                     else:
@@ -315,8 +243,6 @@ def run_validation_suite(data_generator, output_dir, n_iterations=100):
                 # Slope Error (if N matches and true_slopes provided)
                 if pred_n == true_n and true_slopes is not None:
                     # Slopes should match segment by segment if sorted by time
-                    # Our segments are time-sorted.
-                    # true_slopes logic assumes time-sorted segments
                     if len(pred_slopes) == len(true_slopes):
                         s_err = np.mean(np.abs(np.array(pred_slopes) - np.array(true_slopes)))
                         iter_res[f'{name}_slope_error'] = s_err
@@ -329,6 +255,10 @@ def run_validation_suite(data_generator, output_dir, n_iterations=100):
                 logger.error(f"Error in {name} iter {i}: {e}")
                 iter_res[f'{name}_n'] = -1
                 iter_res[f'{name}_time'] = time.time() - t0
+                # Ensure keys exist to avoid DataFrame errors later
+                iter_res[f'{name}_correct_n'] = False
+                iter_res[f'{name}_loc_error'] = np.nan
+                iter_res[f'{name}_slope_error'] = np.nan
 
         results.append(iter_res)
 
@@ -355,9 +285,13 @@ def generate_summary_report(df, output_dir, methods):
     lines.append("| :--- | :--- | :--- |\n")
 
     for name, _, _ in methods:
-        acc = df[f'{name}_correct_n'].mean()
-        tm = df[f'{name}_time'].mean()
-        lines.append(f"| {name} | {acc:.1%} | {tm:.4f} |\n")
+        col = f'{name}_correct_n'
+        if col in df.columns:
+            acc = df[col].mean()
+            tm = df[f'{name}_time'].mean()
+            lines.append(f"| {name} | {acc:.1%} | {tm:.4f} |\n")
+        else:
+            lines.append(f"| {name} | Error | Error |\n")
 
     # 2. Location Accuracy
     lines.append("\n## 2. Breakpoint Location Accuracy (MAE)\n")
@@ -366,13 +300,16 @@ def generate_summary_report(df, output_dir, methods):
 
     for name, _, _ in methods:
         # Filter for correct detections
-        errs = df[f'{name}_loc_error'].dropna()
-        if len(errs) > 0:
-            mean_e = errs.mean()
-            std_e = errs.std()
-            min_e = errs.min()
-            max_e = errs.max()
-            lines.append(f"| {name} | {mean_e:.4f} | {std_e:.4f} | {min_e:.4f} | {max_e:.4f} |\n")
+        if f'{name}_loc_error' in df.columns:
+            errs = df[f'{name}_loc_error'].dropna()
+            if len(errs) > 0:
+                mean_e = errs.mean()
+                std_e = errs.std()
+                min_e = errs.min()
+                max_e = errs.max()
+                lines.append(f"| {name} | {mean_e:.4f} | {std_e:.4f} | {min_e:.4f} | {max_e:.4f} |\n")
+            else:
+                lines.append(f"| {name} | N/A | N/A | N/A | N/A |\n")
         else:
             lines.append(f"| {name} | N/A | N/A | N/A | N/A |\n")
 
