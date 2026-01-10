@@ -51,10 +51,10 @@ def generate_data(seed=None):
     # Signal range ~ 50. Noise 1.0. SNR 50.
     y += np.random.normal(0, 1.0, n_points)
 
-    return t, y, n_bp, bps
+    return t, y, n_bp, bps, slopes
 
 if __name__ == "__main__":
     # Just setup, don't run full suite
     print("Script setup complete. Ready to run.")
     # Uncomment to run
-    # run_validation_suite(generate_data, OUTPUT_DIR, n_iterations=100)
+    run_validation_suite(generate_data, OUTPUT_DIR, n_iterations=30)

@@ -38,8 +38,8 @@ def generate_data(seed=None):
     # Add large random value
     y[idx] += np.random.choice([-15, 15], size=n_outliers)
 
-    return t, y, 1, [bp_true]
+    return t, y, 1, [bp_true], [slope1, slope2]
 
 if __name__ == "__main__":
     print("Script setup complete.")
-    # run_validation_suite(generate_data, OUTPUT_DIR, n_iterations=100)
+    run_validation_suite(generate_data, OUTPUT_DIR, n_iterations=30)
