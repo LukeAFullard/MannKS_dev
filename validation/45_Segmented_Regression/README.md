@@ -6,7 +6,7 @@
 | V-45-02 | Single Hinge Detection (True BP=50) | PASS | 1 |
 | V-45-03 | Censored Hinge (Robustness) | PASS | 2 |
 | V-45-04 | Double Jump (True BPs=30, 70) | PASS | 2 |
-| V-45-05 | Probability Calibration (True BP=50, Window=[45, 55]) | PASS | Probability: 84.00% |
+| V-45-05 | Probability Calibration (True BP=50, Window=[45, 55]) | PASS | Probability: 100.00% |
 
 
 ## Detailed Results
@@ -15,11 +15,11 @@
 **Success:** True
 
 #### Model Selection Summary
-|   n_breakpoints |      bic |     sar | converged   |
-|----------------:|---------:|--------:|:------------|
-|               0 | -93.0995 | 35.9479 | True        |
-|               1 | -83.492  | 34.4666 | True        |
-|               2 | -71.3692 | 33.8881 | True        |
+|   n_breakpoints |      bic |      aic |     sar | converged   |
+|----------------:|---------:|---------:|--------:|:------------|
+|               0 | -149.888 | -155.098 | 20.3726 | True        |
+|               1 | -140.939 | -151.36  | 20.3194 | True        |
+|               2 | -139.151 | -154.782 | 18.8659 | True        |
 
 ![Plot](v45_01_plot.png)
 
@@ -27,13 +27,13 @@
 **Success:** True
 
 #### Model Selection Summary
-|   n_breakpoints |      bic |      sar | converged   |
-|----------------:|---------:|---------:|:------------|
-|               0 |  74.8933 | 192.867  | True        |
-|               1 | -80.413  |  35.5444 | True        |
-|               2 | -69.9952 |  34.357  | True        |
+|   n_breakpoints |      bic |      aic |      sar | converged   |
+|----------------:|---------:|---------:|---------:|:------------|
+|               0 |  166.271 |  161.061 | 480.959  | True        |
+|               1 | -143.925 | -154.345 |  19.7217 | True        |
+|               2 | -139.243 | -154.874 |  18.8484 | True        |
 
-**Detected Breakpoint:** 49.011111111111106
+**Detected Breakpoint:** 51.18134361474203
 
 ![Plot](v45_02_plot.png)
 
@@ -41,11 +41,11 @@
 **Success:** True
 
 #### Model Selection Summary
-|   n_breakpoints |       bic |     sar | converged   |
-|----------------:|----------:|--------:|:------------|
-|               0 |  -26.7649 | 69.7849 | True        |
-|               1 |  -78.7251 | 36.1494 | True        |
-|               2 | -102.009  | 24.9449 | True        |
+|   n_breakpoints |       bic |       aic |      sar | converged   |
+|----------------:|----------:|----------:|---------:|:------------|
+|               0 |   85.8194 |   80.6091 | 215.134  | True        |
+|               1 |  -75.8772 |  -86.2979 |  38.9466 | True        |
+|               2 | -160.453  | -176.084  |  15.2461 | True        |
 
 ![Plot](v45_03_plot.png)
 
@@ -53,16 +53,16 @@
 **Success:** True
 
 #### Model Selection Summary
-|   n_breakpoints |      bic |      sar | converged   |
-|----------------:|---------:|---------:|:------------|
-|               0 |  29.467  | 122.454  | True        |
-|               1 |  21.2381 |  98.2281 | True        |
-|               2 | -68.976  |  34.7089 | True        |
-|               3 | -59.3955 |  33.2697 | True        |
+|   n_breakpoints |      bic |       aic |      sar | converged   |
+|----------------:|---------:|----------:|---------:|:------------|
+|               0 |   80.109 |   74.8986 | 203.193  | True        |
+|               1 |   59.554 |   49.1333 | 150.883  | True        |
+|               2 | -136.662 | -152.293  |  19.3412 | True        |
+|               3 | -131.021 | -151.862  |  18.6631 | True        |
 
 ![Plot](v45_04_plot.png)
 
 ### V-45-05: Probability Calibration (True BP=50, Window=[45, 55])
 **Success:** True
 
-**Metric:** Probability: 84.00%
+**Metric:** Probability: 100.00%

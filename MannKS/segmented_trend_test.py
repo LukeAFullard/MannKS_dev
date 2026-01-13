@@ -1,268 +1,13 @@
 
 import numpy as np
 import pandas as pd
-import piecewise_regression
 import warnings
 from collections import namedtuple
 from typing import Union, Optional, List, Tuple
-from scipy.stats import norm
 
-from ._stats import (
-    _sens_estimator_unequal_spacing,
-    _sens_estimator_censored,
-    _mk_score_and_var_censored,
-    _confidence_intervals
-)
-from .trend_test import trend_test
+from ._segmented import HybridSegmentedTrend
 from ._datetime import _to_numeric_time, _is_datetime_like
-from ._segmented import find_bagged_breakpoints
-
-class HybridSegmentedTrend:
-    """
-    Hybrid Segmented Regression.
-
-    Phase 1 (Structure Discovery): Uses OLS (piecewise-regression) to find
-    the number and location of breakpoints. Optionally uses bagging for robustness.
-
-    Phase 2 (Robust Estimation): Uses Mann-Kendall / Sen's Slope on the
-    identified segments to estimate robust slopes and confidence intervals.
-    """
-
-    def __init__(self, max_breakpoints=5, n_breakpoints=None, use_bagging=False, n_bootstrap=100):
-        """
-        Args:
-            max_breakpoints (int): Maximum number of breakpoints to search for (if n_breakpoints is None).
-            n_breakpoints (int, optional): Fixed number of breakpoints to fit.
-            use_bagging (bool): Use bootstrap aggregating for breakpoint location.
-            n_bootstrap (int): Number of bootstrap samples if bagging is used.
-        """
-        self.max_breakpoints = max_breakpoints
-        self.n_breakpoints = n_breakpoints
-        self.use_bagging = use_bagging
-        self.n_bootstrap = n_bootstrap
-
-        self.breakpoints_ = None
-        self.breakpoint_cis_ = None
-        self.segments_ = None
-        self.n_breakpoints_ = None
-        self.bic_ = None
-        self.aic_ = None
-
-    def fit(self, t, x, censored=None, cen_type=None, lt_mult=0.5, gt_mult=1.1):
-        t = np.asarray(t)
-        x = np.asarray(x)
-
-        # Sort data
-        sort_idx = np.argsort(t)
-        t = t[sort_idx]
-        x = x[sort_idx]
-
-        if censored is not None:
-            censored = np.asarray(censored)[sort_idx]
-            cen_type = np.asarray(cen_type)[sort_idx]
-            # OLS needs numeric x. Substitute censored values.
-            x_ols = x.copy().astype(float)
-            x_ols[cen_type == 'lt'] *= lt_mult
-            x_ols[cen_type == 'gt'] *= gt_mult
-        else:
-            x_ols = x
-
-        # --- Phase 1: Structure Discovery ---
-
-        best_n = 0
-        best_bps = []
-        best_bp_cis = []
-        best_bic = np.inf
-        best_aic = np.inf
-
-        # If bagging is enabled, we need a different approach.
-        # Bagging finds *robust locations* for a given N.
-        # But we still need to select N.
-        # The standard approach is to pick N using the full dataset (via BIC),
-        # then refine locations using bagging.
-
-        # 1. Select Best N (using standard OLS on full data)
-        # Note: We could bag the model selection too, but that's expensive/complex.
-        # Let's stick to standard model selection.
-
-        n_range = []
-        if self.n_breakpoints is not None:
-            n_range = [self.n_breakpoints]
-        else:
-            n_range = range(self.max_breakpoints + 1)
-
-        for k in n_range:
-            if k == 0:
-                # Linear Fit BIC
-                try:
-                    p = np.polyfit(t, x_ols, 1)
-                    y_pred = np.polyval(p, t)
-                    rss = np.sum((x_ols - y_pred)**2)
-                    n_samples = len(x)
-                    if rss <= 1e-10: rss = 1e-10
-                    # k_params = 2 (slope, intercept)
-                    bic = n_samples * np.log(rss/n_samples) + 2 * np.log(n_samples)
-                    aic = n_samples * np.log(rss/n_samples) + 2 * 2
-
-                    if bic < best_bic:
-                        best_bic = bic
-                        best_aic = aic
-                        best_n = 0
-                        best_bps = []
-                        best_bp_cis = []
-                except Exception:
-                    pass
-            else:
-                try:
-                    pw_fit = piecewise_regression.Fit(t, x_ols, n_breakpoints=k, verbose=False)
-                    # Check BIC
-                    current_bic = np.inf
-                    current_aic = np.inf
-
-                    if hasattr(pw_fit, 'best_muggeo') and hasattr(pw_fit.best_muggeo, 'best_fit'):
-                        bf = pw_fit.best_muggeo.best_fit
-                        if hasattr(bf, 'bic'):
-                            current_bic = bf.bic
-                            k_params = 2 * k + 2
-                            n_samples = len(x)
-                            current_aic = current_bic - k_params * np.log(n_samples) + 2 * k_params
-                    else:
-                        res = pw_fit.get_results()
-                        current_bic = res.get('bic', np.inf)
-                        current_aic = current_bic
-
-                    if current_bic < best_bic:
-                        best_bic = current_bic
-                        best_aic = current_aic
-                        best_n = k
-
-                        # Standard Estimates
-                        estimates = None
-                        if hasattr(pw_fit, 'best_muggeo') and hasattr(pw_fit.best_muggeo, 'best_fit'):
-                             estimates = pw_fit.best_muggeo.best_fit.estimates
-                        elif hasattr(pw_fit, 'get_results'):
-                             estimates = pw_fit.get_results().get('estimates')
-
-                        bps_data = []
-                        if estimates:
-                            for key, val in estimates.items():
-                                if key.startswith('breakpoint'):
-                                    est = val['estimate']
-                                    ci = val.get('confidence_interval')
-                                    if ci is None: ci = (np.nan, np.nan)
-                                    bps_data.append((est, ci))
-
-                        bps_data.sort(key=lambda x: x[0])
-                        best_bps = [b[0] for b in bps_data]
-                        best_bp_cis = [b[1] for b in bps_data]
-
-                except Exception:
-                    continue
-
-        # 2. Refine Locations with Bagging (if enabled and N > 0)
-        if self.use_bagging and best_n > 0:
-            robust_bps = find_bagged_breakpoints(t, x_ols, best_n, self.n_bootstrap)
-            if len(robust_bps) == best_n:
-                 best_bps = robust_bps
-                 # CIs are tricky with bagging (could use percentile of peaks), but for now set to NaN or approximate
-                 best_bp_cis = [(np.nan, np.nan)] * best_n
-            else:
-                 # If bagging fails to find consistent N peaks, fallback to standard or warn
-                 # Here we fallback but keep the best_n count
-                 # Alternatively, use whatever bagging found?
-                 # Usually safest to stick to best_bps from OLS if bagging is unstable.
-                 pass
-
-        self.n_breakpoints_ = best_n
-        self.breakpoints_ = np.array(best_bps)
-        self.breakpoint_cis_ = best_bp_cis
-        self.bic_ = best_bic
-        self.aic_ = best_aic
-
-        # --- Phase 2: Robust Estimation (MannKS) ---
-
-        self.segments_ = []
-        boundaries = np.concatenate(([t.min()], self.breakpoints_, [t.max()]))
-
-        for i in range(len(boundaries) - 1):
-            t_start = boundaries[i]
-            t_end = boundaries[i+1]
-
-            if i == len(boundaries) - 2:
-                mask = (t >= t_start) & (t <= t_end)
-            else:
-                mask = (t >= t_start) & (t < t_end)
-
-            t_seg = t[mask]
-            x_seg = x[mask]
-
-            if len(x_seg) < 2:
-                self.segments_.append({
-                    'slope': np.nan, 'intercept': np.nan,
-                    'lower_ci': np.nan, 'upper_ci': np.nan,
-                    'n': 0
-                })
-                continue
-
-            if censored is not None:
-                cen_seg = censored[mask]
-                cen_type_seg = cen_type[mask]
-                slopes = _sens_estimator_censored(x_seg, t_seg, cen_type_seg, lt_mult, gt_mult)
-                s, var_s, _, _ = _mk_score_and_var_censored(x_seg, t_seg, cen_seg, cen_type_seg)
-            else:
-                slopes = _sens_estimator_unequal_spacing(x_seg, t_seg)
-                dummy_cen = np.zeros(len(x_seg), dtype=bool)
-                dummy_type = np.full(len(x_seg), 'not', dtype=object)
-                s, var_s, _, _ = _mk_score_and_var_censored(x_seg, t_seg, dummy_cen, dummy_type)
-
-            slope = np.nanmedian(slopes)
-            lower_ci, upper_ci = _confidence_intervals(slopes, var_s, alpha=0.05)
-
-            # Robust Intercept
-            if censored is not None:
-                uncensored_mask = ~cen_seg.astype(bool)
-                if np.any(uncensored_mask):
-                    intercept = np.median(x_seg[uncensored_mask] - slope * t_seg[uncensored_mask])
-                else:
-                    intercept = np.nan
-            else:
-                intercept = np.median(x_seg - slope * t_seg)
-
-            self.segments_.append({
-                'slope': slope,
-                'intercept': intercept,
-                'lower_ci': lower_ci,
-                'upper_ci': upper_ci,
-                'n': len(x_seg)
-            })
-
-    def predict(self, t):
-        t = np.asarray(t)
-        y_pred = np.zeros_like(t, dtype=float)
-        y_pred[:] = np.nan
-
-        if self.segments_ is None or len(self.segments_) == 0:
-            return y_pred
-
-        bps = self.breakpoints_
-        if len(bps) == 0:
-             seg = self.segments_[0]
-             return seg['slope'] * t + seg['intercept']
-
-        mask = t < bps[0]
-        seg = self.segments_[0]
-        y_pred[mask] = seg['slope'] * t[mask] + seg['intercept']
-
-        for i in range(len(bps) - 1):
-            mask = (t >= bps[i]) & (t < bps[i+1])
-            seg = self.segments_[i+1]
-            y_pred[mask] = seg['slope'] * t[mask] + seg['intercept']
-
-        mask = t >= bps[-1]
-        seg = self.segments_[-1]
-        y_pred[mask] = seg['slope'] * t[mask] + seg['intercept']
-
-        return y_pred
+from ._helpers import _get_slope_scaling_factor
 
 def _prepare_data(x, t, hicensor=False):
     """
@@ -325,6 +70,7 @@ def segmented_trend_test(
     criterion: str = 'bic', # Only BIC supported by Hybrid really, but keeps API
     use_bagging: bool = False,
     n_bootstrap: int = 100,
+    slope_scaling: Optional[str] = None,
     **kwargs
 ):
     """
@@ -344,6 +90,7 @@ def segmented_trend_test(
         criterion: 'bic' is used for model selection.
         use_bagging: Use bootstrap aggregating for robust breakpoint location.
         n_bootstrap: Number of bootstrap iterations if bagging is enabled.
+        slope_scaling: Unit to scale the slope to (e.g. 'year'). Only for datetime t.
         **kwargs: Additional arguments for trend estimation (e.g. lt_mult, gt_mult).
 
     Returns:
@@ -406,20 +153,114 @@ def segmented_trend_test(
             breakpoint_cis_final = [(np.nan, np.nan)] * n_bp
 
     # Format segments for output
-    segments_list = hybrid_model.segments_
+    segments_list = pd.DataFrame(hybrid_model.segments_)
+
+    # Apply Slope Scaling
+    if slope_scaling and not segments_list.empty:
+        if is_datetime:
+            try:
+                factor = _get_slope_scaling_factor(slope_scaling)
+                segments_list['slope_per_second'] = segments_list['slope']
+                segments_list['lower_ci_per_second'] = segments_list['lower_ci']
+                segments_list['upper_ci_per_second'] = segments_list['upper_ci']
+
+                segments_list['slope'] *= factor
+                segments_list['lower_ci'] *= factor
+                segments_list['upper_ci'] *= factor
+                segments_list['slope_units'] = f"units per {slope_scaling}"
+            except Exception as e:
+                warnings.warn(f"Slope scaling failed: {e}", UserWarning)
+        else:
+             warnings.warn("slope_scaling requires datetime inputs.", UserWarning)
+    elif not segments_list.empty:
+         # Store raw slopes as per_second just in case plotting needs it
+         segments_list['slope_per_second'] = segments_list['slope']
+         segments_list['lower_ci_per_second'] = segments_list['lower_ci']
+         segments_list['upper_ci_per_second'] = segments_list['upper_ci']
+         segments_list['slope_units'] = "units per second" if is_datetime else "units per time"
 
     Result = namedtuple('Segmented_Trend_Test', [
         'n_breakpoints', 'breakpoints', 'breakpoint_cis', 'segments',
-        'is_datetime', 'bic', 'aic', 'score'
+        'is_datetime', 'bic', 'aic', 'score', 'selection_summary', 'bootstrap_samples'
     ])
 
     return Result(
         n_breakpoints=n_bp,
         breakpoints=breakpoints_final,
         breakpoint_cis=breakpoint_cis_final,
-        segments=pd.DataFrame(segments_list),
+        segments=segments_list,
         is_datetime=is_datetime,
         bic=hybrid_model.bic_,
         aic=hybrid_model.aic_,
-        score=hybrid_model.bic_ # Default score
+        score=hybrid_model.bic_,
+        selection_summary=hybrid_model.selection_summary_,
+        bootstrap_samples=hybrid_model.bootstrap_samples_
     )
+
+
+def find_best_segmentation(x, t, max_breakpoints=5, n_bootstrap=100, alpha=0.05, **kwargs):
+    """
+    Wrapper around segmented_trend_test to perform model selection and return summary.
+
+    Args:
+        x: Data
+        t: Time
+        max_breakpoints: Max BPs to check
+        n_bootstrap: Number of bootstraps (if bagging enabled via kwargs)
+        alpha: Significance level
+        **kwargs: Passed to segmented_trend_test
+
+    Returns:
+        best_result: The optimal Segmented_Trend_Test result
+        summary: DataFrame of model selection metrics (BIC, AIC, etc.)
+    """
+    # Ensure n_breakpoints is None to trigger search
+    kwargs['n_breakpoints'] = None
+    kwargs['max_breakpoints'] = max_breakpoints
+    kwargs['n_bootstrap'] = n_bootstrap
+    kwargs['alpha'] = alpha
+
+    result = segmented_trend_test(x, t, **kwargs)
+    return result, result.selection_summary
+
+def calculate_breakpoint_probability(result, start_date, end_date):
+    """
+    Calculate the probability that a breakpoint occurred within a specific time window.
+    Requires that `use_bagging=True` was used in the test.
+
+    Args:
+        result: The result from segmented_trend_test
+        start_date: Start of the window (datetime or numeric)
+        end_date: End of the window (datetime or numeric)
+
+    Returns:
+        prob: Probability (0.0 to 1.0)
+    """
+    if result.bootstrap_samples is None or len(result.bootstrap_samples) == 0:
+        warnings.warn("No bootstrap samples available. Run with use_bagging=True.", UserWarning)
+        return np.nan
+
+    # Convert dates to numeric if needed
+    t_start = _to_numeric_time(start_date) if result.is_datetime else start_date
+    t_end = _to_numeric_time(end_date) if result.is_datetime else end_date
+
+    samples = result.bootstrap_samples
+
+    # samples is now a list of lists (breakpoints per bootstrap iteration)
+    count_in_window = 0
+    total_iter = len(samples)
+
+    if total_iter == 0:
+        return 0.0
+
+    for iteration_bps in samples:
+        # Check if ANY breakpoint in this iteration is in the window
+        found = False
+        for bp in iteration_bps:
+            if t_start <= bp <= t_end:
+                found = True
+                break
+        if found:
+            count_in_window += 1
+
+    return count_in_window / total_iter
