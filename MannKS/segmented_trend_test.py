@@ -15,26 +15,31 @@ from ._stats import (
 )
 from .trend_test import trend_test
 from ._datetime import _to_numeric_time, _is_datetime_like
+from ._segmented import find_bagged_breakpoints
 
 class HybridSegmentedTrend:
     """
     Hybrid Segmented Regression.
 
     Phase 1 (Structure Discovery): Uses OLS (piecewise-regression) to find
-    the number and location of breakpoints.
+    the number and location of breakpoints. Optionally uses bagging for robustness.
 
     Phase 2 (Robust Estimation): Uses Mann-Kendall / Sen's Slope on the
     identified segments to estimate robust slopes and confidence intervals.
     """
 
-    def __init__(self, max_breakpoints=5, n_breakpoints=None):
+    def __init__(self, max_breakpoints=5, n_breakpoints=None, use_bagging=False, n_bootstrap=100):
         """
         Args:
             max_breakpoints (int): Maximum number of breakpoints to search for (if n_breakpoints is None).
             n_breakpoints (int, optional): Fixed number of breakpoints to fit.
+            use_bagging (bool): Use bootstrap aggregating for breakpoint location.
+            n_bootstrap (int): Number of bootstrap samples if bagging is used.
         """
         self.max_breakpoints = max_breakpoints
         self.n_breakpoints = n_breakpoints
+        self.use_bagging = use_bagging
+        self.n_bootstrap = n_bootstrap
 
         self.breakpoints_ = None
         self.breakpoint_cis_ = None
@@ -62,13 +67,23 @@ class HybridSegmentedTrend:
         else:
             x_ols = x
 
-        # --- Phase 1: Structure Discovery (OLS) ---
+        # --- Phase 1: Structure Discovery ---
 
         best_n = 0
         best_bps = []
         best_bp_cis = []
         best_bic = np.inf
         best_aic = np.inf
+
+        # If bagging is enabled, we need a different approach.
+        # Bagging finds *robust locations* for a given N.
+        # But we still need to select N.
+        # The standard approach is to pick N using the full dataset (via BIC),
+        # then refine locations using bagging.
+
+        # 1. Select Best N (using standard OLS on full data)
+        # Note: We could bag the model selection too, but that's expensive/complex.
+        # Let's stick to standard model selection.
 
         n_range = []
         if self.n_breakpoints is not None:
@@ -79,7 +94,6 @@ class HybridSegmentedTrend:
         for k in n_range:
             if k == 0:
                 # Linear Fit BIC
-                # RSS = sum((y - (a+bt))^2)
                 try:
                     p = np.polyfit(t, x_ols, 1)
                     y_pred = np.polyval(p, t)
@@ -96,65 +110,68 @@ class HybridSegmentedTrend:
                         best_n = 0
                         best_bps = []
                         best_bp_cis = []
-                except:
+                except Exception:
                     pass
             else:
                 try:
                     pw_fit = piecewise_regression.Fit(t, x_ols, n_breakpoints=k, verbose=False)
                     # Check BIC
-                    # Access library BIC safely
                     current_bic = np.inf
                     current_aic = np.inf
 
-                    # Try accessing BIC from library structure
                     if hasattr(pw_fit, 'best_muggeo') and hasattr(pw_fit.best_muggeo, 'best_fit'):
                         bf = pw_fit.best_muggeo.best_fit
                         if hasattr(bf, 'bic'):
                             current_bic = bf.bic
-                            # Estimate AIC if not present
-                            # BIC = n*ln(RSS/n) + k*ln(n)
-                            # AIC = n*ln(RSS/n) + 2*k
-                            # AIC = BIC - k*ln(n) + 2*k
                             k_params = 2 * k + 2
                             n_samples = len(x)
                             current_aic = current_bic - k_params * np.log(n_samples) + 2 * k_params
                     else:
                         res = pw_fit.get_results()
                         current_bic = res.get('bic', np.inf)
-                        # Try to get AIC or estimate
-                        current_aic = current_bic # Fallback if calculation complex
+                        current_aic = current_bic
 
                     if current_bic < best_bic:
                         best_bic = current_bic
                         best_aic = current_aic
                         best_n = k
 
-                        # Extract BPs and CIs
+                        # Standard Estimates
                         estimates = None
                         if hasattr(pw_fit, 'best_muggeo') and hasattr(pw_fit.best_muggeo, 'best_fit'):
                              estimates = pw_fit.best_muggeo.best_fit.estimates
                         elif hasattr(pw_fit, 'get_results'):
                              estimates = pw_fit.get_results().get('estimates')
 
-                        bps_data = [] # List of (estimate, ci)
+                        bps_data = []
                         if estimates:
                             for key, val in estimates.items():
                                 if key.startswith('breakpoint'):
                                     est = val['estimate']
-                                    # CI is usually a list [low, high]
                                     ci = val.get('confidence_interval')
-                                    if ci is None:
-                                        ci = (np.nan, np.nan)
+                                    if ci is None: ci = (np.nan, np.nan)
                                     bps_data.append((est, ci))
 
-                        # Sort by estimate
                         bps_data.sort(key=lambda x: x[0])
-
                         best_bps = [b[0] for b in bps_data]
                         best_bp_cis = [b[1] for b in bps_data]
 
-                except:
+                except Exception:
                     continue
+
+        # 2. Refine Locations with Bagging (if enabled and N > 0)
+        if self.use_bagging and best_n > 0:
+            robust_bps = find_bagged_breakpoints(t, x_ols, best_n, self.n_bootstrap)
+            if len(robust_bps) == best_n:
+                 best_bps = robust_bps
+                 # CIs are tricky with bagging (could use percentile of peaks), but for now set to NaN or approximate
+                 best_bp_cis = [(np.nan, np.nan)] * best_n
+            else:
+                 # If bagging fails to find consistent N peaks, fallback to standard or warn
+                 # Here we fallback but keep the best_n count
+                 # Alternatively, use whatever bagging found?
+                 # Usually safest to stick to best_bps from OLS if bagging is unstable.
+                 pass
 
         self.n_breakpoints_ = best_n
         self.breakpoints_ = np.array(best_bps)
@@ -191,7 +208,6 @@ class HybridSegmentedTrend:
                 cen_seg = censored[mask]
                 cen_type_seg = cen_type[mask]
                 slopes = _sens_estimator_censored(x_seg, t_seg, cen_type_seg, lt_mult, gt_mult)
-                # We also need s and var_s for CIs
                 s, var_s, _, _ = _mk_score_and_var_censored(x_seg, t_seg, cen_seg, cen_type_seg)
             else:
                 slopes = _sens_estimator_unequal_spacing(x_seg, t_seg)
@@ -307,6 +323,8 @@ def segmented_trend_test(
     alpha: float = 0.05,
     hicensor: Union[bool, float] = False,
     criterion: str = 'bic', # Only BIC supported by Hybrid really, but keeps API
+    use_bagging: bool = False,
+    n_bootstrap: int = 100,
     **kwargs
 ):
     """
@@ -324,6 +342,8 @@ def segmented_trend_test(
         alpha: Significance level for confidence intervals.
         hicensor: High-censor rule flag.
         criterion: 'bic' is used for model selection.
+        use_bagging: Use bootstrap aggregating for robust breakpoint location.
+        n_bootstrap: Number of bootstrap iterations if bagging is enabled.
         **kwargs: Additional arguments for trend estimation (e.g. lt_mult, gt_mult).
 
     Returns:
@@ -341,7 +361,12 @@ def segmented_trend_test(
         raise ValueError("Insufficient data for segmented analysis.")
 
     # 2. Fit Hybrid Model
-    hybrid_model = HybridSegmentedTrend(max_breakpoints=max_breakpoints, n_breakpoints=n_breakpoints)
+    hybrid_model = HybridSegmentedTrend(
+        max_breakpoints=max_breakpoints,
+        n_breakpoints=n_breakpoints,
+        use_bagging=use_bagging,
+        n_bootstrap=n_bootstrap
+    )
 
     # Extract kwargs relevant for estimation
     lt_mult = kwargs.get('lt_mult', 0.5)
