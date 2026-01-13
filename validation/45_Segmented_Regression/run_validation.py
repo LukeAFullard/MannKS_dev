@@ -165,7 +165,7 @@ def run_case_v05():
     df = generate_data(pattern='hinge', noise_std=0.5)
 
     # Run with n=1 fixed
-    result = segmented_trend_test(df, df['t'], n_breakpoints=1, n_bootstrap=100)
+    result = segmented_trend_test(df, df['t'], n_breakpoints=1, use_bagging=True, n_bootstrap=100)
 
     # Calculate probability that break is in [45, 55] (True is 50)
     prob = calculate_breakpoint_probability(result, 45, 55)

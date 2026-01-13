@@ -32,7 +32,10 @@ def _to_numeric_time(t):
     except (ValueError, TypeError):
         # Fallback: try pandas conversion then numeric
         try:
-            return pd.to_datetime(t_arr).astype('int64').to_numpy() / 1e9
+            converted = pd.to_datetime(t_arr)
+            if isinstance(converted, pd.Timestamp):
+                return converted.timestamp()
+            return converted.astype('int64').to_numpy() / 1e9
         except Exception:
              raise ValueError("Could not convert time vector `t` to numeric values.")
 

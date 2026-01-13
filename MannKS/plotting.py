@@ -726,7 +726,8 @@ def plot_segmented_trend(result, x_data, t_data, save_path=None):
         if hasattr(result, 'breakpoint_cis') and i < len(result.breakpoint_cis):
             ci_low, ci_high = result.breakpoint_cis[i]
             # Add shaded region
-            ax.axvspan(ci_low, ci_high, color='orange', alpha=0.3, label='Breakpoint 95% CI')
+            if pd.notna(ci_low) and pd.notna(ci_high):
+                ax.axvspan(ci_low, ci_high, color='orange', alpha=0.3, label='Breakpoint 95% CI')
 
     ax.set_title('Segmented Trend Analysis')
     ax.set_xlabel('Time')

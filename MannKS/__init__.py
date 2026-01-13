@@ -15,7 +15,12 @@ from .classification import classify_trend
 from .preprocessing import prepare_censored_data
 from ._bootstrap import block_bootstrap_mann_kendall, block_bootstrap_confidence_intervals
 from .rolling_trend import rolling_trend_test, compare_periods
-from .segmented_trend_test import segmented_trend_test, HybridSegmentedTrend
+from .segmented_trend_test import (
+    segmented_trend_test,
+    HybridSegmentedTrend,
+    find_best_segmentation,
+    calculate_breakpoint_probability
+)
 
 __all__ = [
     'trend_test',
@@ -33,7 +38,9 @@ __all__ = [
     'rolling_trend_test',
     'compare_periods',
     'segmented_trend_test',
-    'HybridSegmentedTrend'
+    'HybridSegmentedTrend',
+    'find_best_segmentation',
+    'calculate_breakpoint_probability'
 ]
 
 __version__ = "0.3.0"

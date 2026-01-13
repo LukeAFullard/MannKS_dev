@@ -76,6 +76,7 @@ result_censored, summary_censored = find_best_segmentation(
     x=df_censored,
     t=df_censored['date'],
     max_breakpoints=2,
+    use_bagging=True,
     n_bootstrap=20,
     alpha=0.05,
     slope_scaling='year'
@@ -104,6 +105,7 @@ result_uncensored, summary_uncensored = find_best_segmentation(
     x=values,
     t=dates,
     max_breakpoints=2,
+    use_bagging=True,
     n_bootstrap=20,
     alpha=0.05,
     slope_scaling='year'
@@ -123,16 +125,64 @@ plot_segmented_trend(
 )
 print(f"Plot saved to {plot_path_uncensored}")
 
-# Compare Breakpoints
+# Compare Breakpoints with Standard OLS (No Bagging) for Reference
+print("\n--- CI Comparison: Bootstrap vs Standard OLS ---")
+
+# Re-run Censored without bagging to get Standard OLS CIs
 if result_censored.n_breakpoints > 0:
+    # Bootstrap CI
     bp_cens = result_censored.breakpoints[0]
     ci_cens = result_censored.breakpoint_cis[0]
-    print(f"\nCensored Breakpoint 1: {bp_cens} (CI: {ci_cens[0]} to {ci_cens[1]})")
+    print(f"Censored (Bootstrap): {bp_cens} (CI: {ci_cens[0]} to {ci_cens[1]})")
+
+    # Standard OLS CI
+    # We fix n_breakpoints to match the best result found above
+    res_cens_std = mk.segmented_trend_test(
+        df_censored, df_censored['date'],
+        n_breakpoints=result_censored.n_breakpoints,
+        use_bagging=False,
+        slope_scaling='year'
+    )
+    bp_std = res_cens_std.breakpoints[0]
+    ci_std = res_cens_std.breakpoint_cis[0]
+    print(f"Censored (Standard OLS): {bp_std} (CI: {ci_std[0]} to {ci_std[1]})")
+
+    # Plot Standard OLS Censored
+    plot_path_cens_ols = os.path.join(os.path.dirname(__file__), 'segmented_plot_censored_ols.png')
+    plot_segmented_trend(
+        res_cens_std,
+        x_data=df_censored['value'],
+        t_data=df_censored['date'],
+        save_path=plot_path_cens_ols
+    )
+    print(f"Standard OLS Censored Plot saved to {plot_path_cens_ols}")
 
 if result_uncensored.n_breakpoints > 0:
+    # Bootstrap CI
     bp_uncens = result_uncensored.breakpoints[0]
     ci_uncens = result_uncensored.breakpoint_cis[0]
-    print(f"Uncensored Breakpoint 1: {bp_uncens} (CI: {ci_uncens[0]} to {ci_uncens[1]})")
+    print(f"\nUncensored (Bootstrap): {bp_uncens} (CI: {ci_uncens[0]} to {ci_uncens[1]})")
+
+    # Standard OLS CI
+    res_uncens_std = mk.segmented_trend_test(
+        values, dates,
+        n_breakpoints=result_uncensored.n_breakpoints,
+        use_bagging=False,
+        slope_scaling='year'
+    )
+    bp_std_u = res_uncens_std.breakpoints[0]
+    ci_std_u = res_uncens_std.breakpoint_cis[0]
+    print(f"Uncensored (Standard OLS): {bp_std_u} (CI: {ci_std_u[0]} to {ci_std_u[1]})")
+
+    # Plot Standard OLS Uncensored
+    plot_path_uncens_ols = os.path.join(os.path.dirname(__file__), 'segmented_plot_uncensored_ols.png')
+    plot_segmented_trend(
+        res_uncens_std,
+        x_data=values,
+        t_data=dates,
+        save_path=plot_path_uncens_ols
+    )
+    print(f"Standard OLS Uncensored Plot saved to {plot_path_uncens_ols}")
 
 # Calculate Probability for Uncensored
 prob_uncens = calculate_breakpoint_probability(
@@ -149,11 +199,11 @@ print(f"Uncensored: Probability change occurred in 2010: {prob_uncens:.1%}")
 Running Model Selection (0-2 breakpoints) on Censored Data...
 
 Model Selection Summary (Censored):
-|   n_breakpoints |       bic |      sar | converged   |
-|----------------:|----------:|---------:|:------------|
-|               0 |  187.447  | 500.695  | True        |
-|               1 |  -39.0384 | 181.962  | True        |
-|               2 | -235.927  |  74.8078 | True        |
+|   n_breakpoints |      bic |      aic |       sar | converged   |
+|----------------:|---------:|---------:|----------:|:------------|
+|               0 |  652.065 |  645.104 | 3469.98   | True        |
+|               1 |  280.711 |  266.788 |  705.511  | True        |
+|               2 | -421.626 | -442.51  |   36.1201 | True        |
 
 Best Model (Censored): 2 Breakpoints
 Plot saved to /app/Examples/27_Segmented_Regression/segmented_plot_censored.png
@@ -162,18 +212,24 @@ Plot saved to /app/Examples/27_Segmented_Regression/segmented_plot_censored.png
 Running Model Selection (0-2 breakpoints) on Uncensored Data...
 
 Model Selection Summary (Uncensored):
-|   n_breakpoints |      bic |       sar | converged   |
-|----------------:|---------:|----------:|:------------|
-|               0 |  451.412 | 1503.95   | True        |
-|               1 | -204.345 |   91.3795 | True        |
-|               2 | -191.609 |   89.9793 | True        |
+|   n_breakpoints |      bic |      aic |        sar | converged   |
+|----------------:|---------:|---------:|-----------:|:------------|
+|               0 |  940.669 |  933.708 | 11549.8    | True        |
+|               1 | -328.415 | -342.337 |    55.7513 | True        |
+|               2 | -322.515 | -343.398 |    54.5879 | True        |
 
 Best Model (Uncensored): 1 Breakpoints
 Plot saved to /app/Examples/27_Segmented_Regression/segmented_plot_uncensored.png
 
-Censored Breakpoint 1: 2009-10-22 09:55:56.115532160 (CI: 2009-01-04 23:51:34.547395229 to 2010-09-13 16:29:05.065752506)
-Uncensored Breakpoint 1: 2010-03-21 00:15:48.148148060 (CI: 2009-12-28 23:56:14.814814806 to 2010-12-08 01:45:34.814814806)
-Uncensored: Probability change occurred in 2010: 90.0%
+--- CI Comparison: Bootstrap vs Standard OLS ---
+Censored (Bootstrap): 2010-05-16 18:29:15.925353765 (CI: 2005-03-04 13:10:48.055573225 to 2010-06-11 01:56:30.094152689)
+Censored (Standard OLS): 2010-05-25 01:55:24.474270582 (CI: 2010-05-03 16:04:51.965868235 to 2010-06-15 11:45:56.982672930)
+Standard OLS Censored Plot saved to /app/Examples/27_Segmented_Regression/segmented_plot_censored_ols.png
+
+Uncensored (Bootstrap): 2010-05-28 19:54:14.609125614 (CI: 2010-05-02 05:13:40.837299109 to 2010-06-10 14:16:06.407772303)
+Uncensored (Standard OLS): 2010-05-30 18:27:04.428439617 (CI: 2010-05-11 23:17:11.799438 to 2010-06-18 13:36:57.057441235)
+Standard OLS Uncensored Plot saved to /app/Examples/27_Segmented_Regression/segmented_plot_uncensored_ols.png
+Uncensored: Probability change occurred in 2010: 100.0%
 
 ```
 
@@ -184,6 +240,16 @@ Uncensored: Probability change occurred in 2010: 90.0%
 
 #### Scenario B: Uncensored Data
 ![Uncensored Plot](segmented_plot_uncensored.png)
+
+### Step 4: Visual Comparison (Bootstrap vs Standard OLS)
+
+To visualize the difference in uncertainty, here are the plots for the **Standard OLS** method (No Bagging). Notice how much narrower the confidence intervals for the breakpoints are compared to the Bootstrap method, especially for the censored data.
+
+#### Censored Data (Standard OLS)
+![Censored OLS Plot](segmented_plot_censored_ols.png)
+
+#### Uncensored Data (Standard OLS)
+![Uncensored OLS Plot](segmented_plot_uncensored_ols.png)
 
 ## Interpretation & Insights
 
