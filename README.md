@@ -15,7 +15,7 @@
 pip install mannks
 ```
 
-**Requirements:** Python 3.7+, NumPy, Pandas, SciPy, Matplotlib
+**Requirements:** Python 3.7+, NumPy, Pandas, SciPy, Matplotlib, Piecewise-Regression
 
 ---
 
@@ -37,6 +37,8 @@ Use this package when your data has:
 **NEW IN V0.3.0**: **Rolling Trend Analysis**. The `rolling_trend_test` function allows you to perform a rolling window analysis, calculating the Sen's slope, Mann-Kendall score, and confidence intervals over time. This enables the detection of when a trend started, stopped, or changed direction, rather than just providing a single global summary. The feature includes:
 *   Flexible window sizes (numeric or time-based, e.g., '10 years')
 *   `compare_periods` utility to statistically test for changes in trend between two time periods (e.g., before vs. after an intervention).
+
+**NEW IN V0.3.0**: **Segmented Trend Analysis**. The `segmented_trend_test` function performs a hybrid segmented regression analysis. It uses **Piecewise Regression** (OLS) to automatically identify structural breakpoints in the time series, followed by robust **Mann-Kendall / Sen's Slope** estimation on each identified segment. This allows you to detect distinct phases in a trend (e.g., "Stable" -> "Rapid Decrease" -> "Stable").
 
 **NEW IN V0.2.0**: The `trend_test` and `seasonal_trend_test` functions now support a **Block Bootstrap** method (`autocorr_method='block_bootstrap'`). This feature provides robust trend testing for data with serial correlation (autocorrelation) by resampling blocks of data rather than individual points, preserving the internal dependency structure.
 
@@ -107,6 +109,7 @@ Confidence: 98.47%
 - **Robust Methods**: ATS estimator for heavily censored data
 - **Flexible Testing**: Kendall's Tau-a or Tau-b, custom significance levels
 - **Rolling Trends** (New in v0.3.0): Analyze how trends evolve over time with `rolling_trend_test`. See [Example 30](./Examples/30_Rolling_Trend_Analysis).
+- **Segmented Trends** (New in v0.3.0): Automatically detect breakpoints and analyze trends in segments with `segmented_trend_test`.
 - **Block Bootstrap** (New in v0.2.0): Robust trend testing for autocorrelated data with automatic ACF-based block size selection. See [bootstrap.md](./bootstrap.md) for details and [Example 29](./Examples/29_Block_Bootstrap_Autocorrelation).
 
 
