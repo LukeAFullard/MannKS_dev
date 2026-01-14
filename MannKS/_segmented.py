@@ -304,9 +304,26 @@ class HybridSegmentedTrend:
                      col_samples = [bps[i] for bps in all_samples_structured if len(bps) > i]
 
                      if len(col_samples) > 0:
-                         low = np.percentile(col_samples, 2.5)
-                         high = np.percentile(col_samples, 97.5)
-                         best_bp_cis.append((low, high))
+                         # Filter outliers using IQR to avoid massive CIs from failed fits
+                         q1 = np.percentile(col_samples, 25)
+                         q3 = np.percentile(col_samples, 75)
+                         iqr = q3 - q1
+
+                         # Define acceptable range (1.5 * IQR is standard for outliers)
+                         lower_bound = q1 - 1.5 * iqr
+                         upper_bound = q3 + 1.5 * iqr
+
+                         filtered_samples = [s for s in col_samples if lower_bound <= s <= upper_bound]
+
+                         if len(filtered_samples) > 0:
+                             low = np.percentile(filtered_samples, 2.5)
+                             high = np.percentile(filtered_samples, 97.5)
+                             best_bp_cis.append((low, high))
+                         else:
+                             # Fallback if filtering removes everything (unlikely)
+                             low = np.percentile(col_samples, 2.5)
+                             high = np.percentile(col_samples, 97.5)
+                             best_bp_cis.append((low, high))
                      else:
                          best_bp_cis.append((np.nan, np.nan))
             else:

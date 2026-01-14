@@ -222,11 +222,11 @@ Best Model (Uncensored): 1 Breakpoints
 Plot saved to /app/Examples/27_Segmented_Regression/segmented_plot_uncensored.png
 
 --- CI Comparison: Bootstrap vs Standard OLS ---
-Censored (Bootstrap): 2010-05-16 18:29:15.925353765 (CI: 2005-03-04 13:10:48.055573225 to 2010-06-11 01:56:30.094152689)
+Censored (Bootstrap): 2010-05-16 18:29:15.925353765 (CI: 2010-04-30 07:25:27.472343922 to 2010-06-11 04:50:16.322888136)
 Censored (Standard OLS): 2010-05-25 01:55:24.474270582 (CI: 2010-05-03 16:04:51.965868235 to 2010-06-15 11:45:56.982672930)
 Standard OLS Censored Plot saved to /app/Examples/27_Segmented_Regression/segmented_plot_censored_ols.png
 
-Uncensored (Bootstrap): 2010-05-28 19:54:14.609125614 (CI: 2010-05-02 05:13:40.837299109 to 2010-06-10 14:16:06.407772303)
+Uncensored (Bootstrap): 2010-05-28 19:54:14.609125614 (CI: 2010-05-16 02:11:56.899489164 to 2010-06-10 15:01:24.963670015)
 Uncensored (Standard OLS): 2010-05-30 18:27:04.428439617 (CI: 2010-05-11 23:17:11.799438 to 2010-06-18 13:36:57.057441235)
 Standard OLS Uncensored Plot saved to /app/Examples/27_Segmented_Regression/segmented_plot_uncensored_ols.png
 Uncensored: Probability change occurred in 2010: 100.0%
