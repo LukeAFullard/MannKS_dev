@@ -123,3 +123,25 @@ def test_hicensor_logic():
 
     result = segmented_trend_test(df, t, n_breakpoints=0, hicensor=True)
     assert result.n_breakpoints == 0
+
+def test_criterion_parameter():
+    # Verify that criterion can be passed
+    t = np.arange(20)
+    x = t + np.random.normal(0, 0.1, 20)
+
+    # Check AIC
+    result_aic = segmented_trend_test(x, t, n_breakpoints=0, criterion='aic')
+    assert result_aic.bic != np.inf
+    assert result_aic.aic != np.inf
+
+    # Check BIC
+    result_bic = segmented_trend_test(x, t, n_breakpoints=0, criterion='bic')
+    assert result_bic.bic != np.inf
+    assert result_bic.aic != np.inf
+
+def test_dataframe_missing_value_column():
+    t = np.arange(10)
+    df = pd.DataFrame({'a': np.arange(10), 'b': np.arange(10)})
+
+    with pytest.raises(ValueError, match="must contain a 'value' column"):
+        segmented_trend_test(df, t)

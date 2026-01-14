@@ -24,7 +24,7 @@ def _prepare_data(x, t, hicensor=False):
                  df['censored'] = False
                  df['cen_type'] = 'none'
              else:
-                 pass
+                 raise ValueError("Input DataFrame must contain a 'value' column.")
         if 'censored' not in df.columns:
              df['censored'] = False
         if 'cen_type' not in df.columns:
@@ -87,7 +87,7 @@ def segmented_trend_test(
         max_breakpoints: Maximum number of breakpoints to search (if n_breakpoints is None).
         alpha: Significance level for confidence intervals.
         hicensor: High-censor rule flag.
-        criterion: 'bic' is used for model selection.
+        criterion: Model selection criterion ('bic' or 'aic').
         use_bagging: Use bootstrap aggregating for robust breakpoint location.
         n_bootstrap: Number of bootstrap iterations if bagging is enabled.
         slope_scaling: Unit to scale the slope to (e.g. 'year'). Only for datetime t.
@@ -119,7 +119,8 @@ def segmented_trend_test(
         max_breakpoints=max_breakpoints,
         n_breakpoints=n_breakpoints,
         use_bagging=use_bagging,
-        n_bootstrap=n_bootstrap
+        n_bootstrap=n_bootstrap,
+        criterion=criterion
     )
 
     # Extract kwargs relevant for estimation
