@@ -41,7 +41,9 @@ def _bootstrap_breakpoints(t, x, n_breakpoints, n_bootstrap=100, alpha_n=0.05):
 
         try:
             # We fix the number of breakpoints to what was requested/estimated
-            pw_fit = piecewise_regression.Fit(t_boot, x_boot, n_breakpoints=n_breakpoints, verbose=False)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", RuntimeWarning)
+                pw_fit = piecewise_regression.Fit(t_boot, x_boot, n_breakpoints=n_breakpoints, verbose=False)
 
             # Extract estimates
             estimates = None
@@ -56,6 +58,7 @@ def _bootstrap_breakpoints(t, x, n_breakpoints, n_bootstrap=100, alpha_n=0.05):
                     if key.startswith('breakpoint'):
                         current_iter_bps.append(val['estimate'])
 
+            current_iter_bps.sort()
             # Only append if we found something (or should we append empty list for failure?)
             # Appending empty list allows counting total attempts correctly.
             all_breakpoints.append(current_iter_bps)
