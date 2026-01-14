@@ -95,6 +95,13 @@ def segmented_trend_test(
 
     Returns:
         namedtuple: Segmented_Trend_Test result.
+
+    Note:
+        When `slope_scaling` is used, the `slope`, `lower_ci`, and `upper_ci` columns
+        in the returned `segments` DataFrame are scaled to the requested unit.
+        However, the `intercept` column corresponds to the unscaled time (seconds for datetime inputs)
+        and unscaled slope (units per second). If you wish to reconstruct the line using
+        the scaled slope, you must adjust the time variable accordingly.
     """
     # 1. Data Prep
     data_filtered, is_datetime = _prepare_data(x, t, hicensor)
