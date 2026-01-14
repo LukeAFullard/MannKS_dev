@@ -4,8 +4,15 @@ import pandas as pd
 
 def _is_datetime_like(x):
     """Checks if an array is datetime-like."""
-    return np.issubdtype(x.dtype, np.datetime64) or \
-           (x.dtype == 'O' and len(x) > 0 and hasattr(x[0], 'year'))
+    if np.issubdtype(x.dtype, np.datetime64):
+        return True
+    if x.dtype == 'O':
+        if x.ndim == 0:
+            return hasattr(x.item(), 'year')
+        elif len(x) > 0:
+            return hasattr(x[0], 'year')
+    return False
+
 
 def _to_numeric_time(t):
     """
@@ -13,6 +20,9 @@ def _to_numeric_time(t):
     Returns float array.
     """
     t_arr = np.asarray(t)
+    if t_arr.ndim == 0:
+        t_arr = t_arr.reshape(1)
+
     if _is_datetime_like(t_arr):
         # Handle numpy datetime64
         if np.issubdtype(t_arr.dtype, np.datetime64):
