@@ -4,6 +4,9 @@ import pandas as pd
 
 def _is_datetime_like(x):
     """Checks if an array is datetime-like."""
+    if not hasattr(x, 'dtype'):
+        x = np.asarray(x)
+
     if np.issubdtype(x.dtype, np.datetime64):
         return True
     if x.dtype == 'O':
