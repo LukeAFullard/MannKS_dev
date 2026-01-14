@@ -146,18 +146,20 @@ class HybridSegmentedTrend:
     identified segments to estimate robust slopes and confidence intervals.
     """
 
-    def __init__(self, max_breakpoints=5, n_breakpoints=None, use_bagging=False, n_bootstrap=100):
+    def __init__(self, max_breakpoints=5, n_breakpoints=None, use_bagging=False, n_bootstrap=100, criterion='bic'):
         """
         Args:
             max_breakpoints (int): Maximum number of breakpoints to search for (if n_breakpoints is None).
             n_breakpoints (int, optional): Fixed number of breakpoints to fit.
             use_bagging (bool): Use bootstrap aggregating for breakpoint location.
             n_bootstrap (int): Number of bootstrap samples if bagging is used.
+            criterion (str): Model selection criterion ('bic' or 'aic'). Default 'bic'.
         """
         self.max_breakpoints = max_breakpoints
         self.n_breakpoints = n_breakpoints
         self.use_bagging = use_bagging
         self.n_bootstrap = n_bootstrap
+        self.criterion = criterion.lower()
 
         self.breakpoints_ = None
         self.breakpoint_cis_ = None
@@ -192,6 +194,7 @@ class HybridSegmentedTrend:
         best_n = 0
         best_bps = []
         best_bp_cis = []
+        best_score = np.inf # Tracks best BIC or AIC
         best_bic = np.inf
         best_aic = np.inf
 
@@ -222,7 +225,9 @@ class HybridSegmentedTrend:
                     record['sar'] = rss
                     record['converged'] = True
 
-                    if bic < best_bic:
+                    score = bic if self.criterion == 'bic' else aic
+                    if score < best_score:
+                        best_score = score
                         best_bic = bic
                         best_aic = aic
                         best_n = 0
@@ -260,7 +265,9 @@ class HybridSegmentedTrend:
                     record['sar'] = rss
                     record['converged'] = True
 
-                    if current_bic < best_bic:
+                    score = current_bic if self.criterion == 'bic' else current_aic
+                    if score < best_score:
+                        best_score = score
                         best_bic = current_bic
                         best_aic = current_aic
                         best_n = k
@@ -382,7 +389,10 @@ class HybridSegmentedTrend:
                 dummy_type = np.full(len(x_seg), 'not', dtype=object)
                 s, var_s, _, _ = _mk_score_and_var_censored(x_seg, t_seg, dummy_cen, dummy_type)
 
-            slope = np.nanmedian(slopes)
+            if len(slopes) == 0 or np.all(np.isnan(slopes)):
+                slope = np.nan
+            else:
+                slope = np.nanmedian(slopes)
             lower_ci, upper_ci = _confidence_intervals(slopes, var_s, alpha=0.05)
 
             # Robust Intercept
