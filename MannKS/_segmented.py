@@ -170,7 +170,7 @@ class HybridSegmentedTrend:
         self.selection_summary_ = None
         self.bootstrap_samples_ = None
 
-    def fit(self, t, x, censored=None, cen_type=None, lt_mult=0.5, gt_mult=1.1):
+    def fit(self, t, x, censored=None, cen_type=None, lt_mult=0.5, gt_mult=1.1, alpha=0.05):
         t = np.asarray(t)
         x = np.asarray(x)
 
@@ -393,7 +393,7 @@ class HybridSegmentedTrend:
                 slope = np.nan
             else:
                 slope = np.nanmedian(slopes)
-            lower_ci, upper_ci = _confidence_intervals(slopes, var_s, alpha=0.05)
+            lower_ci, upper_ci = _confidence_intervals(slopes, var_s, alpha=alpha)
 
             # Robust Intercept
             if censored is not None:
