@@ -87,3 +87,39 @@ def test_datetime_support():
     result = segmented_trend_test(x, t, n_breakpoints=0)
     assert result.is_datetime
     assert isinstance(result.segments, pd.DataFrame)
+
+def test_slope_scaling():
+    # Linear trend: 1 unit per day
+    t = pd.date_range('2020-01-01', periods=10, freq='D')
+    x = np.arange(10, dtype=float)
+
+    result = segmented_trend_test(x, t, n_breakpoints=0, slope_scaling='year')
+
+    # Slope should be approx 365.25
+    slope = result.segments.iloc[0]['slope']
+    assert 360 < slope < 370
+    assert result.segments.iloc[0]['slope_units'] == "units per year"
+
+def test_hicensor_logic():
+    # Test that hicensor correctly modifies data
+    t = np.arange(10)
+    x = np.arange(10, dtype=float)
+
+    # Introduce one censored value at 8
+    df = pd.DataFrame({'value': x})
+    df['censored'] = False
+    df['cen_type'] = 'none'
+
+    df.loc[8, 'value'] = 8.0
+    df.loc[8, 'censored'] = True
+    df.loc[8, 'cen_type'] = 'lt'
+
+    # Without hicensor: Only index 8 is censored
+    # With hicensor=True: indices 0-7 (<8) become censored <8
+
+    # We can't easily inspect the internal DataFrame, but we can verify execution
+    # and maybe check if the slope result differs significantly if we use a different estimator
+    # For now, ensure it runs without error
+
+    result = segmented_trend_test(df, t, n_breakpoints=0, hicensor=True)
+    assert result.n_breakpoints == 0

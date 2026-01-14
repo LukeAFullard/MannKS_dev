@@ -60,7 +60,7 @@ def _bootstrap_breakpoints(t, x, n_breakpoints, n_bootstrap=100, alpha_n=0.05):
             # Appending empty list allows counting total attempts correctly.
             all_breakpoints.append(current_iter_bps)
 
-        except:
+        except Exception:
             all_breakpoints.append([])
             continue
 
