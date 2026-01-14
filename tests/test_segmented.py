@@ -145,3 +145,61 @@ def test_dataframe_missing_value_column():
 
     with pytest.raises(ValueError, match="must contain a 'value' column"):
         segmented_trend_test(df, t)
+
+def test_predict_method():
+    t = np.arange(20, dtype=float)
+    x = 2.0 * t + 5.0
+
+    result = segmented_trend_test(x, t, n_breakpoints=0)
+
+    # Predict at existing points
+    y_pred = result.predict(t)
+    assert np.allclose(y_pred, x, atol=1e-5)
+
+    # Predict at new points
+    t_new = np.array([20.0, 21.0])
+    x_expected = 2.0 * t_new + 5.0
+    y_pred_new = result.predict(t_new)
+    assert np.allclose(y_pred_new, x_expected, atol=1e-5)
+
+def test_predict_with_scaling():
+    # Date time t
+    t_start = pd.Timestamp('2020-01-01')
+    t = pd.date_range(start=t_start, periods=10, freq='D')
+    t_numeric = t.astype('int64') / 1e9
+
+    # Slope of 1 unit per day
+    slope_per_day = 1.0
+    slope_per_sec = slope_per_day / (24*3600)
+
+    x = slope_per_sec * (t_numeric - t_numeric[0]) + 10.0
+
+    # Fit with slope scaling
+    result = segmented_trend_test(x, t, n_breakpoints=0, slope_scaling='day')
+
+    # Predict
+    t_check = t[5]
+    y_pred = result.predict([t_check])[0]
+    y_true = x[5]
+
+    assert np.isclose(y_pred, y_true, atol=1e-5)
+
+def test_predict_with_breakpoints():
+    t = np.arange(20, dtype=float)
+    x = np.concatenate([t[:10], 10 - 0.5 * (t[10:] - 10)])
+
+    # Force 1 breakpoint (should be around 10)
+    result = segmented_trend_test(x, t, n_breakpoints=1)
+
+    assert result.n_breakpoints == 1
+
+    # Predict and compare with original data
+    # (Allow small error due to potential fitting differences, but should be close)
+    y_pred = result.predict(t)
+
+    # Use loose tolerance because OLS breakpoint finding might vary slightly
+    # and robust regression on segments might differ slightly from perfect OLS lines
+    # But for this clean data it should be quite close.
+    # The '10' point is the pivot.
+
+    assert np.allclose(y_pred, x, atol=1.0)
