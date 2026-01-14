@@ -2,7 +2,13 @@
 import pytest
 import numpy as np
 import pandas as pd
-from MannKS.segmented_trend_test import segmented_trend_test, HybridSegmentedTrend
+from MannKS.segmented_trend_test import segmented_trend_test, SegmentedTrendResult
+
+def test_result_type():
+    t = np.arange(10)
+    x = t
+    res = segmented_trend_test(x, t, n_breakpoints=0)
+    assert isinstance(res, SegmentedTrendResult)
 
 def test_segmented_trend_basic():
     # Linear data, no breakpoints

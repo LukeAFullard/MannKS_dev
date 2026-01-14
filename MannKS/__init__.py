@@ -17,7 +17,7 @@ from ._bootstrap import block_bootstrap_mann_kendall, block_bootstrap_confidence
 from .rolling_trend import rolling_trend_test, compare_periods
 from .segmented_trend_test import (
     segmented_trend_test,
-    HybridSegmentedTrend,
+    SegmentedTrendResult,
     find_best_segmentation,
     calculate_breakpoint_probability
 )
@@ -38,7 +38,7 @@ __all__ = [
     'rolling_trend_test',
     'compare_periods',
     'segmented_trend_test',
-    'HybridSegmentedTrend',
+    'SegmentedTrendResult',
     'find_best_segmentation',
     'calculate_breakpoint_probability'
 ]

@@ -5,9 +5,84 @@ import warnings
 from collections import namedtuple
 from typing import Union, Optional, List, Tuple
 
-from ._segmented import HybridSegmentedTrend
+from ._segmented import HybridSegmentedTrend as _HybridSegmentedTrend
 from ._datetime import _to_numeric_time, _is_datetime_like
 from ._helpers import _get_slope_scaling_factor
+
+_Segmented_Trend_Test_Tuple = namedtuple('Segmented_Trend_Test', [
+    'n_breakpoints', 'breakpoints', 'breakpoint_cis', 'segments',
+    'is_datetime', 'bic', 'aic', 'score', 'selection_summary', 'bootstrap_samples'
+])
+
+class SegmentedTrendResult(_Segmented_Trend_Test_Tuple):
+    def predict(self, t):
+        """
+        Predict values based on the segmented trend model.
+
+        Args:
+            t: Time vector (datetime or numeric).
+
+        Returns:
+            y_pred: Predicted values.
+        """
+        # Convert input time to numeric if needed
+        t_orig = t
+        if self.is_datetime:
+            t = _to_numeric_time(t)
+        t = np.asarray(t)
+
+        y_pred = np.zeros_like(t, dtype=float)
+        y_pred[:] = np.nan
+
+        if self.segments is None or self.segments.empty:
+            return y_pred
+
+        # Get breakpoints in numeric format
+        # self.breakpoints might be datetime. Convert back to numeric for logic.
+        bps = self.breakpoints
+        if self.is_datetime and len(bps) > 0:
+             bps = _to_numeric_time(bps)
+        bps = np.asarray(bps)
+
+        # We need to use the RAW slope (per second) and intercept for prediction
+        # because the intercept is always defined relative to the raw time axis.
+        # If slope_scaling was used, 'slope' column is scaled.
+        # We should look for 'slope_per_second' if it exists, otherwise 'slope'.
+
+        segs = self.segments
+
+        def get_params(idx):
+            row = segs.iloc[idx]
+            if 'slope_per_second' in row:
+                s = row['slope_per_second']
+            else:
+                s = row['slope']
+            i = row['intercept']
+            return s, i
+
+        if len(bps) == 0:
+             s, i = get_params(0)
+             return s * t + i
+
+        # Segment 0
+        mask = t < bps[0]
+        if np.any(mask):
+            s, i = get_params(0)
+            y_pred[mask] = s * t[mask] + i
+
+        for idx in range(len(bps) - 1):
+            mask = (t >= bps[idx]) & (t < bps[idx+1])
+            if np.any(mask):
+                s, i = get_params(idx+1)
+                y_pred[mask] = s * t[mask] + i
+
+        # Last Segment
+        mask = t >= bps[-1]
+        if np.any(mask):
+            s, i = get_params(-1)
+            y_pred[mask] = s * t[mask] + i
+
+        return y_pred
 
 def _prepare_data(x, t, hicensor=False):
     """
@@ -115,7 +190,7 @@ def segmented_trend_test(
         raise ValueError("Insufficient data for segmented analysis.")
 
     # 2. Fit Hybrid Model
-    hybrid_model = HybridSegmentedTrend(
+    hybrid_model = _HybridSegmentedTrend(
         max_breakpoints=max_breakpoints,
         n_breakpoints=n_breakpoints,
         use_bagging=use_bagging,
@@ -186,81 +261,6 @@ def segmented_trend_test(
          segments_list['lower_ci_per_second'] = segments_list['lower_ci']
          segments_list['upper_ci_per_second'] = segments_list['upper_ci']
          segments_list['slope_units'] = "units per second" if is_datetime else "units per time"
-
-    _Segmented_Trend_Test_Tuple = namedtuple('Segmented_Trend_Test', [
-        'n_breakpoints', 'breakpoints', 'breakpoint_cis', 'segments',
-        'is_datetime', 'bic', 'aic', 'score', 'selection_summary', 'bootstrap_samples'
-    ])
-
-    class SegmentedTrendResult(_Segmented_Trend_Test_Tuple):
-        def predict(self, t):
-            """
-            Predict values based on the segmented trend model.
-
-            Args:
-                t: Time vector (datetime or numeric).
-
-            Returns:
-                y_pred: Predicted values.
-            """
-            # Convert input time to numeric if needed
-            t_orig = t
-            if self.is_datetime:
-                t = _to_numeric_time(t)
-            t = np.asarray(t)
-
-            y_pred = np.zeros_like(t, dtype=float)
-            y_pred[:] = np.nan
-
-            if self.segments is None or self.segments.empty:
-                return y_pred
-
-            # Get breakpoints in numeric format
-            # self.breakpoints might be datetime. Convert back to numeric for logic.
-            bps = self.breakpoints
-            if self.is_datetime and len(bps) > 0:
-                 bps = _to_numeric_time(bps)
-            bps = np.asarray(bps)
-
-            # We need to use the RAW slope (per second) and intercept for prediction
-            # because the intercept is always defined relative to the raw time axis.
-            # If slope_scaling was used, 'slope' column is scaled.
-            # We should look for 'slope_per_second' if it exists, otherwise 'slope'.
-
-            segs = self.segments
-
-            def get_params(idx):
-                row = segs.iloc[idx]
-                if 'slope_per_second' in row:
-                    s = row['slope_per_second']
-                else:
-                    s = row['slope']
-                i = row['intercept']
-                return s, i
-
-            if len(bps) == 0:
-                 s, i = get_params(0)
-                 return s * t + i
-
-            # Segment 0
-            mask = t < bps[0]
-            if np.any(mask):
-                s, i = get_params(0)
-                y_pred[mask] = s * t[mask] + i
-
-            for idx in range(len(bps) - 1):
-                mask = (t >= bps[idx]) & (t < bps[idx+1])
-                if np.any(mask):
-                    s, i = get_params(idx+1)
-                    y_pred[mask] = s * t[mask] + i
-
-            # Last Segment
-            mask = t >= bps[-1]
-            if np.any(mask):
-                s, i = get_params(-1)
-                y_pred[mask] = s * t[mask] + i
-
-            return y_pred
 
     return SegmentedTrendResult(
         n_breakpoints=n_bp,
