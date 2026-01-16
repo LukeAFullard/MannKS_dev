@@ -193,7 +193,7 @@ def main():
 
     # Write README
     with open(readme_path, 'w') as readme:
-        readme.write("# Example 29: Block Bootstrap Validation\n\n")
+        readme.write("# Example 30: Block Bootstrap Validation\n\n")
         readme.write("This example validates the integration of the Block Bootstrap method with other package features.\n\n")
 
         readme.write("## Scenario 1: Aggregation + Bootstrap\n")

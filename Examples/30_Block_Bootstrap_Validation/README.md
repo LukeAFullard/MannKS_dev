@@ -1,4 +1,4 @@
-# Example 29: Block Bootstrap Validation
+# Example 30: Block Bootstrap Validation
 
 This example validates the integration of the Block Bootstrap method with other package features.
 
