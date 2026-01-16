@@ -88,4 +88,4 @@ When `use_bagging=True`, the result also includes **Confidence Intervals for the
 *   A wide CI (e.g., "2010 to 2014") indicates the exact timing of the change is uncertain, often due to a gradual transition or high noise.
 *   A narrow CI (e.g., "May 2010 to June 2010") indicates a sharp, sudden change.
 
-See **[Example 27](../27_Segmented_Regression/README.md)** for a detailed walkthrough of bagging and uncertainty.
+See **[Example 32](../32_Segmented_Regression/README.md)** for a detailed walkthrough of bagging and uncertainty.

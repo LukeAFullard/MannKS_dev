@@ -108,8 +108,8 @@ Confidence: 98.47%
 - **Data Quality Checks**: Automatic warnings for tied values, long runs, insufficient data
 - **Robust Methods**: ATS estimator for heavily censored data
 - **Flexible Testing**: Kendall's Tau-a or Tau-b, custom significance levels
-- **Rolling Trends** (New in v0.3.0): Analyze how trends evolve over time with `rolling_trend_test`. See [Example 30](./Examples/30_Rolling_Trend_Analysis).
-- **Segmented Trends** (New in v0.3.0): Automatically detect breakpoints and analyze trends in segments with `segmented_trend_test`.
+- **Rolling Trends** (New in v0.3.0): Analyze how trends evolve over time with `rolling_trend_test`. See [Example 31](./Examples/31_Rolling_Trend_Analysis).
+- **Segmented Trends** (New in v0.3.0): Automatically detect breakpoints and analyze trends in segments with `segmented_trend_test`. See [Example 32](./Examples/32_Segmented_Regression).
 - **Block Bootstrap** (New in v0.2.0): Robust trend testing for autocorrelated data with automatic ACF-based block size selection. See [bootstrap.md](./bootstrap.md) for details and [Example 29](./Examples/29_Block_Bootstrap_Autocorrelation).
 
 

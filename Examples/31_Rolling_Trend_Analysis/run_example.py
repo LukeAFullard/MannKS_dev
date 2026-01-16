@@ -1,5 +1,5 @@
 """
-Example 30: Rolling Trend Analysis
+Example 31: Rolling Trend Analysis
 
 This example demonstrates how to perform a rolling trend analysis to visualize
 how a trend evolves over time, and how to compare trends before and after a specific date.
@@ -112,7 +112,7 @@ print(f"Significant Change (Non-overlapping CIs): {comparison['significant_chang
 
 # Generate README
 readme_content = f"""
-# Example 30: Rolling Trend Analysis
+# Example 31: Rolling Trend Analysis
 
 This example demonstrates the `rolling_trend_test` feature, which applies the Mann-Kendall test and Sen's slope estimator over a moving window. This is crucial for non-stationary data where trends may start, stop, or reverse over time.
 

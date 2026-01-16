@@ -1,20 +1,13 @@
+import os
+import io
+import contextlib
+import numpy as np
+import pandas as pd
+import MannKS as mk
+import matplotlib.pyplot as plt
 
-# Example 27: Segmented Sen's Slope & Breakpoint Probability
-
-## The "Why": When Trends Change Direction
-Standard trend tests assume a monotonic trend. Segmented Regression allows us to find *where* the trend changes (the breakpoint) and analyze the slopes before and after.
-
-This example explores a synthetic "Policy Reform" scenario where pollutant levels rise until 2010, then fall.
-We compare two cases:
-1.  **Censored Data:** Simulating real-world limitations (detection limit < 1.0).
-2.  **Uncensored Data:** Simulating ideal measurement conditions.
-
-## The "How": Code Walkthrough
-
-We use `find_best_segmentation` to automatically select the optimal number of breakpoints (using BIC) for both scenarios.
-
-### Step 1: Python Code
-```python
+# --- 1. Define the Example Code as a String ---
+example_code = """
 import os
 import numpy as np
 import pandas as pd
@@ -82,9 +75,9 @@ result_censored, summary_censored = find_best_segmentation(
     slope_scaling='year'
 )
 
-print("\nModel Selection Summary (Censored):")
+print("\\nModel Selection Summary (Censored):")
 print(summary_censored.to_markdown(index=False))
-print(f"\nBest Model (Censored): {result_censored.n_breakpoints} Breakpoints")
+print(f"\\nBest Model (Censored): {result_censored.n_breakpoints} Breakpoints")
 
 # Visualize Censored
 plot_path_censored = os.path.join(os.path.dirname(__file__), 'segmented_plot_censored.png')
@@ -97,7 +90,7 @@ plot_segmented_trend(
 print(f"Plot saved to {plot_path_censored}")
 
 # --- SCENARIO B: Uncensored Data Analysis ---
-print("\n--- SCENARIO B: Uncensored Data Analysis (Hypothetical) ---")
+print("\\n--- SCENARIO B: Uncensored Data Analysis (Hypothetical) ---")
 # If we had better detection limits, the data would look like the raw 'values'.
 # We run the analysis on the raw numeric values.
 print("Running Model Selection (0-2 breakpoints) on Uncensored Data...")
@@ -111,9 +104,9 @@ result_uncensored, summary_uncensored = find_best_segmentation(
     slope_scaling='year'
 )
 
-print("\nModel Selection Summary (Uncensored):")
+print("\\nModel Selection Summary (Uncensored):")
 print(summary_uncensored.to_markdown(index=False))
-print(f"\nBest Model (Uncensored): {result_uncensored.n_breakpoints} Breakpoints")
+print(f"\\nBest Model (Uncensored): {result_uncensored.n_breakpoints} Breakpoints")
 
 # Visualize Uncensored
 plot_path_uncensored = os.path.join(os.path.dirname(__file__), 'segmented_plot_uncensored.png')
@@ -126,7 +119,7 @@ plot_segmented_trend(
 print(f"Plot saved to {plot_path_uncensored}")
 
 # Compare Breakpoints with Standard OLS (No Bagging) for Reference
-print("\n--- CI Comparison: Bootstrap vs Standard OLS ---")
+print("\\n--- CI Comparison: Bootstrap vs Standard OLS ---")
 
 # Re-run Censored without bagging to get Standard OLS CIs
 if result_censored.n_breakpoints > 0:
@@ -161,7 +154,7 @@ if result_uncensored.n_breakpoints > 0:
     # Bootstrap CI
     bp_uncens = result_uncensored.breakpoints[0]
     ci_uncens = result_uncensored.breakpoint_cis[0]
-    print(f"\nUncensored (Bootstrap): {bp_uncens} (CI: {ci_uncens[0]} to {ci_uncens[1]})")
+    print(f"\\nUncensored (Bootstrap): {bp_uncens} (CI: {ci_uncens[0]} to {ci_uncens[1]})")
 
     # Standard OLS CI
     res_uncens_std = mk.segmented_trend_test(
@@ -191,46 +184,46 @@ prob_uncens = calculate_breakpoint_probability(
     end_date='2011-01-01'
 )
 print(f"Uncensored: Probability change occurred in 2010: {prob_uncens:.1%}")
+"""
+
+# --- 2. Execute the Code and Capture Output ---
+output_buffer = io.StringIO()
+
+with contextlib.redirect_stdout(output_buffer):
+    local_scope = {}
+    try:
+        exec(example_code, globals(), local_scope)
+    except Exception as e:
+        print(f"Error executing example: {e}")
+        import traceback
+        traceback.print_exc()
+
+captured_output = output_buffer.getvalue()
+
+# --- 3. Generate the README.md ---
+readme_content = f"""
+# Example 32: Segmented Sen's Slope & Breakpoint Probability
+
+## The "Why": When Trends Change Direction
+Standard trend tests assume a monotonic trend. Segmented Regression allows us to find *where* the trend changes (the breakpoint) and analyze the slopes before and after.
+
+This example explores a synthetic "Policy Reform" scenario where pollutant levels rise until 2010, then fall.
+We compare two cases:
+1.  **Censored Data:** Simulating real-world limitations (detection limit < 1.0).
+2.  **Uncensored Data:** Simulating ideal measurement conditions.
+
+## The "How": Code Walkthrough
+
+We use `find_best_segmentation` to automatically select the optimal number of breakpoints (using BIC) for both scenarios.
+
+### Step 1: Python Code
+```python
+{example_code.strip()}
 ```
 
 ### Step 2: Text Output
 ```text
---- SCENARIO A: Censored Data Analysis ---
-Running Model Selection (0-2 breakpoints) on Censored Data...
-
-Model Selection Summary (Censored):
-|   n_breakpoints |      bic |      aic |       sar | converged   |
-|----------------:|---------:|---------:|----------:|:------------|
-|               0 |  652.065 |  645.104 | 3469.98   | True        |
-|               1 |  280.711 |  266.788 |  705.511  | True        |
-|               2 | -421.626 | -442.51  |   36.1201 | True        |
-
-Best Model (Censored): 2 Breakpoints
-Plot saved to /app/Examples/27_Segmented_Regression/segmented_plot_censored.png
-
---- SCENARIO B: Uncensored Data Analysis (Hypothetical) ---
-Running Model Selection (0-2 breakpoints) on Uncensored Data...
-
-Model Selection Summary (Uncensored):
-|   n_breakpoints |      bic |      aic |        sar | converged   |
-|----------------:|---------:|---------:|-----------:|:------------|
-|               0 |  940.669 |  933.708 | 11549.8    | True        |
-|               1 | -328.415 | -342.337 |    55.7513 | True        |
-|               2 | -322.515 | -343.398 |    54.5879 | True        |
-
-Best Model (Uncensored): 1 Breakpoints
-Plot saved to /app/Examples/27_Segmented_Regression/segmented_plot_uncensored.png
-
---- CI Comparison: Bootstrap vs Standard OLS ---
-Censored (Bootstrap): 2010-05-16 18:29:15.925353765 (CI: 2010-04-30 07:25:27.472343922 to 2010-06-11 04:50:16.322888136)
-Censored (Standard OLS): 2010-05-25 01:55:24.474270582 (CI: 2010-05-03 16:04:51.965868235 to 2010-06-15 11:45:56.982672930)
-Standard OLS Censored Plot saved to /app/Examples/27_Segmented_Regression/segmented_plot_censored_ols.png
-
-Uncensored (Bootstrap): 2010-05-28 19:54:14.609125614 (CI: 2010-05-16 02:11:56.899489164 to 2010-06-10 15:01:24.963670015)
-Uncensored (Standard OLS): 2010-05-30 18:27:04.428439617 (CI: 2010-05-11 23:17:11.799438 to 2010-06-18 13:36:57.057441235)
-Standard OLS Uncensored Plot saved to /app/Examples/27_Segmented_Regression/segmented_plot_uncensored_ols.png
-Uncensored: Probability change occurred in 2010: 100.0%
-
+{captured_output}
 ```
 
 ### Step 3: Visual Results
@@ -269,3 +262,9 @@ You may notice that the Confidence Interval (CI) for the breakpoint is sometimes
 
 ### 3. Conclusion
 The **Segmented Sen's Slope** method is robust enough to handle censored data, but censoring can introduce complexity (like artificial regimes). Comparing with uncensored data confirms that the primary structural break (Policy Reform in 2010) is consistently detected in both cases.
+"""
+
+with open(os.path.join(os.path.dirname(__file__), 'README.md'), 'w') as f:
+    f.write(readme_content)
+
+print("Example 32 generated successfully.")
