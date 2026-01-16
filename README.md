@@ -185,6 +185,8 @@ print(f"Regional trend: {regional.DT}, confidence: {regional.CT:.2%}")
 - **[Analysis Notes](./Examples/Detailed_Guides/analysis_notes_guide.md)** - Interpreting data quality warnings
 - **[Trend Classification](./Examples/Detailed_Guides/trend_classification_guide.md)** - Understanding confidence levels
 - **[Bootstrap Methodology](./bootstrap.md)** - Block bootstrap for autocorrelated data
+- **[Rolling Trend Analysis](./Examples/Detailed_Guides/rolling_trend_guide.md)** - Moving window analysis
+- **[Segmented Trend Analysis](./Examples/Detailed_Guides/segmented_trend_guide.md)** - Structural breakpoint detection
 
 ### Examples
 The [Examples](./Examples/README.md) folder contains step-by-step tutorials from basic to advanced usage.
