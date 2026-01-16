@@ -83,7 +83,10 @@ y_fitted = result.predict(dates)
 
 ## Advanced: Breakpoint Uncertainty
 
-When `use_bagging=True`, the result also includes **Confidence Intervals for the Breakpoints** (`result.breakpoint_cis`).
+The result always includes **Confidence Intervals for the Breakpoints** (`result.breakpoint_cis`), but their source depends on the method used:
+
+1.  **Standard OLS (`use_bagging=False`)**: The CIs are derived from the standard error of the Piecewise Regression model. These assume normality and are typically symmetric.
+2.  **Bootstrap Bagging (`use_bagging=True`)**: The CIs are derived non-parametrically from the bootstrap distribution of the breakpoints. These are more robust to noise and can handle asymmetric uncertainty (e.g., "the change happened *at least* by 2010, but possibly much earlier").
 
 *   A wide CI (e.g., "2010 to 2014") indicates the exact timing of the change is uncertain, often due to a gradual transition or high noise.
 *   A narrow CI (e.g., "May 2010 to June 2010") indicates a sharp, sudden change.
