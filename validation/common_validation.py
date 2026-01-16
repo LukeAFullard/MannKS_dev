@@ -7,10 +7,8 @@ import time
 import logging
 import warnings
 import piecewise_regression
-# Updated import: HybridSegmentedTrend is now internal _HybridSegmentedTrend
-# But we should use the public API segmented_trend_test for validation where possible,
-# or import the internal class if we need specific object attributes for this test suite.
-from MannKS._segmented import HybridSegmentedTrend
+# Updated import: Use public API for consistency with examples
+from MannKS import segmented_trend_test
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
@@ -195,16 +193,16 @@ def run_validation_suite(data_generator, output_dir, n_iterations=100):
                 if m_type == 'ols':
                     pred_n, pred_bps, pred_slopes = fit_piecewise_ols(t, x, max_breakpoints=2)
                 elif m_type == 'mannks_hybrid':
-                    # Hybrid Segmented Trend
-                    model = HybridSegmentedTrend(max_breakpoints=2)
-                    model.fit(t, x)
+                    # Hybrid Segmented Trend via Public API
+                    # Note: segmented_trend_test takes (x, t) order
+                    result = segmented_trend_test(x, t, max_breakpoints=2)
 
-                    pred_n = model.n_breakpoints_
-                    pred_bps = list(model.breakpoints_)
+                    pred_n = result.n_breakpoints
+                    pred_bps = list(result.breakpoints)
 
-                    # model.segments_ is a list of dicts in the new implementation
-                    if model.segments_:
-                        pred_slopes = [seg['slope'] for seg in model.segments_]
+                    # result.segments is a DataFrame in the public API
+                    if result.segments is not None and not result.segments.empty:
+                        pred_slopes = result.segments['slope'].tolist()
                     else:
                         pred_slopes = []
 
