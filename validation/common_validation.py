@@ -7,8 +7,10 @@ import time
 import logging
 import warnings
 import piecewise_regression
-# Updated import: HybridSegmentedTrend is now in MannKS (via __init__) or MannKS.segmented_trend_test
-from MannKS import HybridSegmentedTrend
+# Updated import: HybridSegmentedTrend is now internal _HybridSegmentedTrend
+# But we should use the public API segmented_trend_test for validation where possible,
+# or import the internal class if we need specific object attributes for this test suite.
+from MannKS._segmented import HybridSegmentedTrend
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
