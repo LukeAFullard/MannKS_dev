@@ -18,8 +18,7 @@ keywords = [
     "piecewise-regression",
     "breakpoint-detection",
     "rolling-trend",
-    "bootstrap",
-    "water-quality"
+    "bootstrap"
 ]
 
 packages = [{ include = "MannKS" }]
