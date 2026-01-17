@@ -191,6 +191,14 @@ prob_uncens = calculate_breakpoint_probability(
     end_date='2011-01-01'
 )
 print(f"Uncensored: Probability change occurred in 2010: {prob_uncens:.1%}")
+
+# Calculate Probability for Censored (since we used bagging there too)
+prob_cens = calculate_breakpoint_probability(
+    result_censored,
+    start_date='2010-01-01',
+    end_date='2011-01-01'
+)
+print(f"Censored: Probability change occurred in 2010: {prob_cens:.1%}")
 ```
 
 ### Step 2: Text Output
@@ -230,6 +238,7 @@ Uncensored (Bootstrap): 2010-05-28 19:54:14.609125614 (CI: 2010-05-16 02:11:56.8
 Uncensored (Standard OLS): 2010-05-30 18:27:04.428439617 (CI: 2010-05-11 23:17:11.799438 to 2010-06-18 13:36:57.057441235)
 Standard OLS Uncensored Plot saved to /app/Examples/32_Segmented_Regression/segmented_plot_uncensored_ols.png
 Uncensored: Probability change occurred in 2010: 100.0%
+Censored: Probability change occurred in 2010: 95.0%
 
 ```
 
