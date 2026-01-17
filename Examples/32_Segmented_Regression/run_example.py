@@ -184,6 +184,14 @@ prob_uncens = calculate_breakpoint_probability(
     end_date='2011-01-01'
 )
 print(f"Uncensored: Probability change occurred in 2010: {prob_uncens:.1%}")
+
+# Calculate Probability for Censored (since we used bagging there too)
+prob_cens = calculate_breakpoint_probability(
+    result_censored,
+    start_date='2010-01-01',
+    end_date='2011-01-01'
+)
+print(f"Censored: Probability change occurred in 2010: {prob_cens:.1%}")
 """
 
 # --- 2. Execute the Code and Capture Output ---
