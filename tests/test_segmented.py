@@ -2,7 +2,7 @@
 import pytest
 import numpy as np
 import pandas as pd
-from MannKS.segmented_trend_test import segmented_trend_test, SegmentedTrendResult
+from MannKS.segmented_trend_test import segmented_trend_test, SegmentedTrendResult, calculate_breakpoint_probability
 
 def test_result_type():
     t = np.arange(10)
@@ -209,3 +209,47 @@ def test_predict_with_breakpoints():
     # The '10' point is the pivot.
 
     assert np.allclose(y_pred, x, atol=1.0)
+
+def test_breakpoint_probability():
+    t = np.arange(50)
+    # Breakpoint at 25
+    x = np.concatenate([t[:25], 25 - (t[25:] - 25)]) + np.random.normal(0, 0.1, 50)
+
+    # Run with bagging
+    result = segmented_trend_test(x, t, n_breakpoints=1, use_bagging=True, n_bootstrap=20)
+
+    # Probability in window [20, 30] should be high
+    prob = calculate_breakpoint_probability(result, 20, 30)
+    assert prob > 0.8
+
+    # Probability in window [0, 10] should be low
+    prob_low = calculate_breakpoint_probability(result, 0, 10)
+    assert prob_low < 0.2
+
+def test_breakpoint_cis_format():
+    t = np.arange(30)
+    x = np.concatenate([t[:15], 15 - (t[15:] - 15)]) + np.random.normal(0, 0.1, 30)
+
+    # 1. Without bagging (OLS CIs)
+    result = segmented_trend_test(x, t, n_breakpoints=1, use_bagging=False)
+    assert len(result.breakpoint_cis) == 1
+    assert len(result.breakpoint_cis[0]) == 2
+    # OLS CIs might be nan if piecewise_regression fails to compute them, but usually they are floats
+
+    # 2. With bagging (Bootstrap CIs)
+    result_bag = segmented_trend_test(x, t, n_breakpoints=1, use_bagging=True, n_bootstrap=20)
+    assert len(result_bag.breakpoint_cis) == 1
+    assert len(result_bag.breakpoint_cis[0]) == 2
+    ci = result_bag.breakpoint_cis[0]
+    assert ci[0] <= ci[1]
+
+def test_bagging_zero_breakpoints():
+    t = np.arange(20)
+    x = t + np.random.normal(0, 0.1, 20)
+
+    # Force n=0
+    result = segmented_trend_test(x, t, n_breakpoints=0, use_bagging=True)
+    assert result.n_breakpoints == 0
+    assert len(result.breakpoints) == 0
+    assert len(result.breakpoint_cis) == 0
+    # Should not crash
