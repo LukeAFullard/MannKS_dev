@@ -13,7 +13,13 @@ keywords = [
     "sen-slope",
     "trend-analysis",
     "censored-data",
-    "time-series"
+    "time-series",
+    "segmented-regression",
+    "piecewise-regression",
+    "breakpoint-detection",
+    "rolling-trend",
+    "bootstrap",
+    "water-quality"
 ]
 
 packages = [{ include = "MannKS" }]
