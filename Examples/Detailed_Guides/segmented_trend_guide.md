@@ -91,4 +91,19 @@ The result always includes **Confidence Intervals for the Breakpoints** (`result
 *   A wide CI (e.g., "2010 to 2014") indicates the exact timing of the change is uncertain, often due to a gradual transition or high noise.
 *   A narrow CI (e.g., "May 2010 to June 2010") indicates a sharp, sudden change.
 
+### Calculating Probability of a Change
+If you used **bagging** (`use_bagging=True`), you can calculate the probability that a structural break occurred within a specific time window. This is not possible with standard OLS.
+
+```python
+from MannKS import calculate_breakpoint_probability
+
+# Calculate probability a change occurred in 2010
+prob = calculate_breakpoint_probability(
+    result,
+    start_date='2010-01-01',
+    end_date='2011-01-01'
+)
+print(f"Probability: {prob:.1%}")
+```
+
 See **[Example 32](../32_Segmented_Regression/README.md)** for a detailed walkthrough of bagging and uncertainty.
