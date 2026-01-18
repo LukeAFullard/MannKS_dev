@@ -30,8 +30,7 @@ def process_input_data(df, value_col, time_col, censored_col=None, censored_flag
         is_numeric = pd.api.types.is_numeric_dtype(raw_time)
 
         if is_numeric and not date_format:
-            # Check if it *looks* like it should be datetime (e.g. string numbers? No, is_numeric checks actual type)
-            # If user didn't specify format, assume they want the numbers (Year, Day index, etc.)
+            # If data is numeric and no format is specified, prefer numeric handling (e.g. Year, Day index).
             t_original = raw_time
         else:
             # Try to convert to datetime
@@ -149,8 +148,7 @@ def load_data_ui():
                 if processed_df is not None:
                     st.success("Data processed successfully!")
                     st.write("Preview of processed data for analysis:", processed_df.head())
-                    # Return or Store in session state?
-                    # Better to return, let main handle storage
+                    # Return the processed DataFrame for the main application to handle.
                     return processed_df
 
     return None

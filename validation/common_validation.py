@@ -120,7 +120,7 @@ def fit_piecewise_ols(t, y, max_breakpoints=2):
                     best_slopes = slopes
 
             else:
-                 # Fallback to standard get_results if best_muggeo fails (though it shouldn't)
+                 # Fallback to standard get_results if best_muggeo fails.
                  res = pw_fit.get_results()
                  current_bic = res.get('bic')
                  if current_bic is not None and current_bic < best_bic:

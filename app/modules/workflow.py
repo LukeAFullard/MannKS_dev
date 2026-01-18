@@ -28,9 +28,7 @@ def run_auto_analysis(data_df, alpha, period, season_type):
     try:
         # 1. Run Seasonality Check
         # We need to map simple inputs to check_seasonality params
-        # Note: Aggregation is 'none' by default for auto mode to keep it simple,
-        # unless we want to enforce it for robustness?
-        # Let's stick to simple defaults: no agg unless user sets it in advanced.
+        # Note: Aggregation is 'none' by default for auto mode to keep it simple.
 
         seasonality_res = check_seasonality(
             x_input,

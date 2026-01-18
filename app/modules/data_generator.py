@@ -24,8 +24,7 @@ def generate_synthetic_data(
     np.random.seed(seed)
 
     # 1. Generate Time Vector
-    # We'll create a base range and then maybe drop some
-    # We use a base integer range first for calculation
+    # Create the base index range for calculation.
     t_idx = np.arange(n_points)
 
     # 2. Calculate Trend Component
@@ -92,7 +91,7 @@ def generate_synthetic_data(
         'value': y_final,
         'censored': censored,
         'cen_type': cen_type,
-        'true_value': y_raw # Keep true value for reference/debugging
+        'true_value': y_raw # Store the true underlying value for validation.
     })
 
     # 9. Apply Gaps (Missing Data)
@@ -170,12 +169,9 @@ def generate_data_ui():
             ax.scatter(t_vals[censored_mask], y_vals[censored_mask],
                       c='red', marker='x', label='Censored', s=30)
 
-        # Add line to help visualize trend/seasonality, but make it thin so gaps are obvious
-        # For true visualization of gaps, we should NOT connect non-adjacent points if index is not continuous
-        # But here 't_original' is continuous time, but rows are dropped.
-        # matplotlib plot(x,y) connects points.
-        # To show gaps clearly, we rely on the scatter markers and the fact that
-        # a sparse line will look "jumpy".
+        # Add line to help visualize trend/seasonality, but make it thin so gaps are obvious.
+        # Note: Matplotlib connects adjacent points in the data array.
+        # To show gaps clearly, we rely on the scatter markers.
         ax.plot(t_vals, y_vals, c='gray', alpha=0.3, linewidth=1)
 
         ax.set_title("Data Preview (with Gaps/Censoring)")
