@@ -11,10 +11,12 @@ This example demonstrates how the `alpha` parameter impacts the Segmented Trend 
 Changing `alpha` allows you to adjust the trade-off between precision and certainty.
 
 ## The Data
-We simulate a time series with **2 breakpoints** (3 segments) and moderate noise:
+We simulate a time series with **2 breakpoints** (3 segments) and moderate noise (std=3.0):
 1.  **Rise** (Slope +0.5)
 2.  **Fall** (Slope -0.2)
 3.  **Rise** (Slope +0.3)
+
+We use **Bagging (Bootstrap Aggregating)** (`use_bagging=True`) to robustly identify the breakpoints despite the increased noise.
 
 ## Code & Output
 
@@ -43,7 +45,8 @@ trend = np.concatenate([
 ])
 
 # Add Moderate Noise
-noise_std = 2.0
+# Increased noise to test robustness with bagging
+noise_std = 3.0
 x = trend + np.random.normal(0, noise_std, n)
 
 # 2. Run Analysis with Varying Alpha Levels
@@ -55,7 +58,14 @@ for alpha in alphas:
     print(f"\n--- Analysis with Alpha = {alpha} ({int((1-alpha)*100)}% Confidence) ---")
 
     # We fix n_breakpoints=2 since we know the structure
-    result = segmented_trend_test(x, t, n_breakpoints=2, alpha=alpha)
+    # Use Bagging for robust breakpoint detection amidst higher noise
+    result = segmented_trend_test(
+        x, t,
+        n_breakpoints=2,
+        alpha=alpha,
+        use_bagging=True,
+        n_bootstrap=50
+    )
 
     # Print Segment details
     # Focus on the slope Confidence Intervals
@@ -80,27 +90,27 @@ Notice how the `lower_ci` and `upper_ci` values widen as we decrease alpha (incr
 Segment Results:
 |   slope |   lower_ci |   upper_ci |
 |--------:|-----------:|-----------:|
-|  0.4789 |     0.4538 |     0.5098 |
-| -0.2143 |    -0.2566 |    -0.1793 |
-|  0.3161 |     0.2905 |     0.3538 |
+|  0.4651 |     0.4278 |     0.5092 |
+| -0.2211 |    -0.2887 |    -0.1656 |
+|  0.3335 |     0.2946 |     0.3884 |
 Plot saved to segmented_plot_alpha_0.1.png
 
 --- Analysis with Alpha = 0.05 (95% Confidence) ---
 Segment Results:
 |   slope |   lower_ci |   upper_ci |
 |--------:|-----------:|-----------:|
-|  0.4789 |     0.4502 |     0.5185 |
-| -0.2143 |    -0.2627 |    -0.1743 |
-|  0.3161 |     0.2855 |     0.3606 |
+|  0.4684 |     0.4252 |     0.5277 |
+| -0.2184 |    -0.2926 |    -0.1533 |
+|  0.3335 |     0.2849 |     0.3980 |
 Plot saved to segmented_plot_alpha_0.05.png
 
 --- Analysis with Alpha = 0.01 (99% Confidence) ---
 Segment Results:
 |   slope |   lower_ci |   upper_ci |
 |--------:|-----------:|-----------:|
-|  0.4789 |     0.4358 |     0.5319 |
-| -0.2143 |    -0.2770 |    -0.1587 |
-|  0.3161 |     0.2706 |     0.3745 |
+|  0.4634 |     0.4050 |     0.5365 |
+| -0.2224 |    -0.3278 |    -0.1297 |
+|  0.3335 |     0.2657 |     0.4169 |
 Plot saved to segmented_plot_alpha_0.01.png
 
 ```

@@ -31,7 +31,8 @@ trend = np.concatenate([
 ])
 
 # Add Moderate Noise
-noise_std = 2.0
+# Increased noise to test robustness with bagging
+noise_std = 3.0
 x = trend + np.random.normal(0, noise_std, n)
 
 # 2. Run Analysis with Varying Alpha Levels
@@ -43,7 +44,14 @@ for alpha in alphas:
     print(f"\\n--- Analysis with Alpha = {alpha} ({int((1-alpha)*100)}% Confidence) ---")
 
     # We fix n_breakpoints=2 since we know the structure
-    result = segmented_trend_test(x, t, n_breakpoints=2, alpha=alpha)
+    # Use Bagging for robust breakpoint detection amidst higher noise
+    result = segmented_trend_test(
+        x, t,
+        n_breakpoints=2,
+        alpha=alpha,
+        use_bagging=True,
+        n_bootstrap=50
+    )
 
     # Print Segment details
     # Focus on the slope Confidence Intervals
@@ -88,10 +96,12 @@ This example demonstrates how the `alpha` parameter impacts the Segmented Trend 
 Changing `alpha` allows you to adjust the trade-off between precision and certainty.
 
 ## The Data
-We simulate a time series with **2 breakpoints** (3 segments) and moderate noise:
+We simulate a time series with **2 breakpoints** (3 segments) and moderate noise (std=3.0):
 1.  **Rise** (Slope +0.5)
 2.  **Fall** (Slope -0.2)
 3.  **Rise** (Slope +0.3)
+
+We use **Bagging (Bootstrap Aggregating)** (`use_bagging=True`) to robustly identify the breakpoints despite the increased noise.
 
 ## Code & Output
 
