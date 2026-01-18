@@ -30,8 +30,8 @@ result = segmented_trend_test(
 
 # 2. Inspect Results
 print(f"Detected {result.n_breakpoints} breakpoints.")
-for i, segment in enumerate(result.segments):
-    print(f"Segment {i+1}: Slope = {segment.slope:.2f}, Significance = {segment.h}")
+for i, segment in enumerate(result.segments.itertuples()):
+    print(f"Segment {i+1}: Slope = {segment.slope:.2f}, CI = ({segment.lower_ci:.2f}, {segment.upper_ci:.2f})")
 
 # 3. Visualize
 plot_segmented_trend(result, x_data=data, t_data=dates, save_path='segmented_plot.png')
@@ -45,6 +45,7 @@ plot_segmented_trend(result, x_data=data, t_data=dates, save_path='segmented_plo
 *   **`criterion`**: (str, default='bic') The metric used to select the best number of breakpoints.
     *   `'bic'`: Bayesian Information Criterion. Penalizes complexity more heavily. Better for finding strong, clear signals and avoiding false positives.
     *   `'aic'`: Akaike Information Criterion. Less penalizing. Better for prediction but may find "spurious" breakpoints in noisy data.
+*   **`slope_scaling`**: (str, optional) Scale the slope to a specific time unit (e.g., `'year'`). Only applicable if `t` contains datetime objects.
 
 ### Robustness via Bagging
 *   **`use_bagging`**: (bool, default=False)
@@ -67,7 +68,7 @@ The function returns a `SegmentedTrendResult` object containing:
 A list of timestamps (or numeric values) where the structural changes occur.
 
 ### `segments`
-A list of dictionaries, one for each period between breakpoints. Each contains:
+A pandas DataFrame, with one row for each period between breakpoints. Columns include:
 *   `slope`: Sen's slope for that segment.
 *   `intercept`: The intercept for the line equation $y = mx + c$.
 *   `lower_ci`, `upper_ci`: Confidence bounds for the slope.
