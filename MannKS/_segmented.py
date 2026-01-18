@@ -59,8 +59,7 @@ def _bootstrap_breakpoints(t, x, n_breakpoints, n_bootstrap=100, alpha_n=0.05):
                         current_iter_bps.append(val['estimate'])
 
             current_iter_bps.sort()
-            # Only append if we found something (or should we append empty list for failure?)
-            # Appending empty list allows counting total attempts correctly.
+            # We append an empty list on failure to ensure the bootstrap iteration count matches.
             all_breakpoints.append(current_iter_bps)
 
         except Exception:

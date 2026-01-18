@@ -158,7 +158,8 @@ def _get_theoretical_midpoint(datetime_series):
     first_date = datetime_series.iloc[0]
 
     # Determine the period (month, week, etc.)
-    # This is a simplification; a more robust version would take period as an arg
+    # Infer the period from the first date to determine start/end bounds.
+    # Note: Explicit period handling would be required for non-standard periods.
     if first_date.day == 1 and first_date.month != 2:
         # Likely start of a month, find end of month
         start_of_period = first_date.replace(day=1)
