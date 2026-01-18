@@ -53,9 +53,21 @@ for alpha in alphas:
         n_bootstrap=50
     )
 
+    # Print Breakpoint details
+    print("Breakpoint Results:")
+    if result.n_breakpoints > 0:
+        bp_df = pd.DataFrame({
+            'Breakpoint': result.breakpoints,
+            'Lower CI': [ci[0] for ci in result.breakpoint_cis],
+            'Upper CI': [ci[1] for ci in result.breakpoint_cis]
+        })
+        print(bp_df.to_markdown(index=False, floatfmt=".2f"))
+    else:
+        print("No breakpoints found.")
+
     # Print Segment details
     # Focus on the slope Confidence Intervals
-    print("Segment Results:")
+    print("\\nSegment Results:")
     cols = ['slope', 'lower_ci', 'upper_ci']
     print(result.segments[cols].to_markdown(index=False, floatfmt=".4f"))
 

@@ -67,9 +67,21 @@ for alpha in alphas:
         n_bootstrap=50
     )
 
+    # Print Breakpoint details
+    print("Breakpoint Results:")
+    if result.n_breakpoints > 0:
+        bp_df = pd.DataFrame({
+            'Breakpoint': result.breakpoints,
+            'Lower CI': [ci[0] for ci in result.breakpoint_cis],
+            'Upper CI': [ci[1] for ci in result.breakpoint_cis]
+        })
+        print(bp_df.to_markdown(index=False, floatfmt=".2f"))
+    else:
+        print("No breakpoints found.")
+
     # Print Segment details
     # Focus on the slope Confidence Intervals
-    print("Segment Results:")
+    print("\nSegment Results:")
     cols = ['slope', 'lower_ci', 'upper_ci']
     print(result.segments[cols].to_markdown(index=False, floatfmt=".4f"))
 
@@ -87,6 +99,12 @@ Notice how the `lower_ci` and `upper_ci` values widen as we decrease alpha (incr
 ```text
 
 --- Analysis with Alpha = 0.1 (90% Confidence) ---
+Breakpoint Results:
+|   Breakpoint |   Lower CI |   Upper CI |
+|-------------:|-----------:|-----------:|
+|        51.33 |      47.79 |      56.85 |
+|       100.89 |      97.02 |     102.99 |
+
 Segment Results:
 |   slope |   lower_ci |   upper_ci |
 |--------:|-----------:|-----------:|
@@ -96,6 +114,12 @@ Segment Results:
 Plot saved to segmented_plot_alpha_0.1.png
 
 --- Analysis with Alpha = 0.05 (95% Confidence) ---
+Breakpoint Results:
+|   Breakpoint |   Lower CI |   Upper CI |
+|-------------:|-----------:|-----------:|
+|        50.95 |      47.70 |      56.88 |
+|       100.43 |      96.24 |     102.93 |
+
 Segment Results:
 |   slope |   lower_ci |   upper_ci |
 |--------:|-----------:|-----------:|
@@ -105,6 +129,12 @@ Segment Results:
 Plot saved to segmented_plot_alpha_0.05.png
 
 --- Analysis with Alpha = 0.01 (99% Confidence) ---
+Breakpoint Results:
+|   Breakpoint |   Lower CI |   Upper CI |
+|-------------:|-----------:|-----------:|
+|        52.33 |      47.86 |      56.18 |
+|       100.00 |      95.77 |     102.60 |
+
 Segment Results:
 |   slope |   lower_ci |   upper_ci |
 |--------:|-----------:|-----------:|
