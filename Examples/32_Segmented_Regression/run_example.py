@@ -81,6 +81,7 @@ print("--- SCENARIO A: Censored Data Analysis ---")
 # - use_bagging=True: Use Bootstrap Aggregating to find robust breakpoint locations.
 #                     This is crucial for censored/noisy data to avoid local minima.
 # - slope_scaling='year': Report slopes in units per year (easier to interpret).
+# - random_state=42: Set seed for reproducibility of bootstrap results.
 print("Running Model Selection (0-2 breakpoints) on Censored Data...")
 result_censored, summary_censored = find_best_segmentation(
     x=df_censored,
@@ -89,7 +90,8 @@ result_censored, summary_censored = find_best_segmentation(
     use_bagging=True,
     n_bootstrap=20, # Use >=100 for production
     alpha=0.05,
-    slope_scaling='year'
+    slope_scaling='year',
+    random_state=42
 )
 
 print("\\nModel Selection Summary (Censored):")
@@ -121,7 +123,8 @@ result_uncensored, summary_uncensored = find_best_segmentation(
     use_bagging=True,
     n_bootstrap=20,
     alpha=0.05,
-    slope_scaling='year'
+    slope_scaling='year',
+    random_state=42
 )
 
 print("\\nModel Selection Summary (Uncensored):")

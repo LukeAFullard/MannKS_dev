@@ -59,7 +59,8 @@ def run_bagging():
             n_breakpoints=2, # We fix the number of breakpoints for this example
             alpha=alpha,
             use_bagging=True,
-            n_bootstrap=50 # Number of bootstrap iterations (higher is better for production)
+            n_bootstrap=50, # Number of bootstrap iterations (higher is better for production)
+            random_state=42 # Set seed for reproducibility
         )
 
         # Print Breakpoint details
