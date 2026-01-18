@@ -147,6 +147,7 @@ def segmented_trend_test(
     use_bagging: bool = False,
     n_bootstrap: int = 100,
     slope_scaling: Optional[str] = None,
+    random_state: Optional[int] = None,
     **kwargs
 ):
     """
@@ -167,6 +168,7 @@ def segmented_trend_test(
         use_bagging: Use bootstrap aggregating for robust breakpoint location.
         n_bootstrap: Number of bootstrap iterations if bagging is enabled.
         slope_scaling: Unit to scale the slope to (e.g. 'year'). Only for datetime t.
+        random_state: Seed for random number generator.
         **kwargs: Additional arguments for trend estimation (e.g. lt_mult, gt_mult).
 
     Returns:
@@ -196,7 +198,8 @@ def segmented_trend_test(
         n_breakpoints=n_breakpoints,
         use_bagging=use_bagging,
         n_bootstrap=n_bootstrap,
-        criterion=criterion
+        criterion=criterion,
+        random_state=random_state
     )
 
     # Extract kwargs relevant for estimation
@@ -278,7 +281,7 @@ def segmented_trend_test(
     )
 
 
-def find_best_segmentation(x, t, max_breakpoints=5, n_bootstrap=100, alpha=0.05, **kwargs):
+def find_best_segmentation(x, t, max_breakpoints=5, n_bootstrap=100, alpha=0.05, random_state=None, **kwargs):
     """
     Wrapper around segmented_trend_test to perform model selection and return summary.
 
@@ -288,6 +291,7 @@ def find_best_segmentation(x, t, max_breakpoints=5, n_bootstrap=100, alpha=0.05,
         max_breakpoints: Max breakpoints to check
         n_bootstrap: Number of bootstraps (if bagging enabled via kwargs)
         alpha: Significance level
+        random_state: Seed for random number generator.
         **kwargs: Passed to segmented_trend_test
 
     Returns:
@@ -299,6 +303,7 @@ def find_best_segmentation(x, t, max_breakpoints=5, n_bootstrap=100, alpha=0.05,
     kwargs['max_breakpoints'] = max_breakpoints
     kwargs['n_bootstrap'] = n_bootstrap
     kwargs['alpha'] = alpha
+    kwargs['random_state'] = random_state
 
     result = segmented_trend_test(x, t, **kwargs)
     return result, result.selection_summary
