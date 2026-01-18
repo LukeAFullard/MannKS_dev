@@ -329,14 +329,14 @@ class HybridSegmentedTrend:
                              high = np.percentile(filtered_samples, 97.5)
                              best_bp_cis.append((low, high))
                          else:
-                             # Fallback if filtering removes everything (unlikely)
+                             # Fallback if filtering excludes all samples
                              low = np.percentile(col_samples, 2.5)
                              high = np.percentile(col_samples, 97.5)
                              best_bp_cis.append((low, high))
                      else:
                          best_bp_cis.append((np.nan, np.nan))
             else:
-                 # If bagging returned different number of robust peaks than best_n (shouldn't happen with fixed N logic usually)
+                 # If bagging returned different number of robust peaks than best_n (unexpected with fixed N logic)
                  pass
 
         self.n_breakpoints_ = best_n

@@ -283,7 +283,7 @@ def find_best_segmentation(x, t, max_breakpoints=5, n_bootstrap=100, alpha=0.05,
     Args:
         x: Data
         t: Time
-        max_breakpoints: Max BPs to check
+        max_breakpoints: Max breakpoints to check
         n_bootstrap: Number of bootstraps (if bagging enabled via kwargs)
         alpha: Significance level
         **kwargs: Passed to segmented_trend_test
