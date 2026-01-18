@@ -26,22 +26,39 @@ from MannKS.segmented_trend_test import segmented_trend_test
 from MannKS.plotting import plot_segmented_trend
 
 def run_bagging():
+    # -------------------------------------------------------------------------
     # 1. Generate Synthetic Data
+    # -------------------------------------------------------------------------
+    # We create a time series with 3 segments (2 breakpoints).
+    # The slopes are relatively close (0.4, 0.1, 0.5) to make precise breakpoint
+    # detection challenging, highlighting the utility of robust methods.
     np.random.seed(101)
     n = 150
     t = np.arange(n)
 
-    # Define True Trend (Closer slopes)
+    # Define True Trend:
+    # - Seg 1 (0-50):   Slope 0.4
+    # - Seg 2 (50-100): Slope 0.1 (Flatter)
+    # - Seg 3 (100-150): Slope 0.5 (Steeper)
     trend = np.concatenate([
         0.4 * t[:50],
         0.4 * 50 + 0.1 * (t[50:100] - 50),
         0.4 * 50 + 0.1 * 50 + 0.5 * (t[100:] - 100)
     ])
 
-    # Moderate Noise
+    # Add Moderate Noise (Gaussian)
+    # With std=2.0, the signal-to-noise ratio is low enough to create
+    # uncertainty about the exact breakpoint location.
     noise_std = 2.0
     x = trend + np.random.normal(0, noise_std, n)
 
+    # -------------------------------------------------------------------------
+    # 2. Run Analysis with Varying Alpha Levels
+    # -------------------------------------------------------------------------
+    # We test three significance levels:
+    # - 0.10: 90% Confidence (Narrowest intervals)
+    # - 0.05: 95% Confidence (Standard)
+    # - 0.01: 99% Confidence (Widest intervals)
     alphas = [0.10, 0.05, 0.01]
 
     for alpha in alphas:
@@ -50,13 +67,19 @@ def run_bagging():
         print(f"Bagging Analysis with Alpha = {alpha} ({confidence_pct}% Confidence)")
         print(f"{'='*60}")
 
-        # Use Bagging
+        # Use Bagging (Bootstrap Aggregating)
+        # -----------------------------------
+        # Bagging improves robustness by resampling the data and re-fitting the
+        # breakpoint model multiple times (n_bootstrap).
+        # - The breakpoint location is estimated from the distribution of bootstrapped results.
+        # - The Confidence Intervals (CIs) are non-parametric (percentile-based),
+        #   often resulting in asymmetric intervals that better reflect reality.
         result = segmented_trend_test(
             x, t,
-            n_breakpoints=2,
+            n_breakpoints=2, # We fix the number of breakpoints for this example
             alpha=alpha,
             use_bagging=True,
-            n_bootstrap=10 # Reduced for timeout
+            n_bootstrap=50 # Number of bootstrap iterations (higher is better for production)
         )
 
         # Print Breakpoint details
@@ -72,11 +95,14 @@ def run_bagging():
             print("No breakpoints found.")
 
         # Print Segment details
+        # The slopes are calculated using the Sen's slope estimator on the
+        # identified segments. Their CIs also respect the 'alpha' parameter.
         print("\nSegment Results:")
         cols = ['slope', 'lower_ci', 'upper_ci']
         print(result.segments[cols].to_markdown(index=False, floatfmt=".4f"))
 
         # Visualize
+        # The plotting function automatically labels the CIs with the correct percentage.
         fname = f'segmented_plot_alpha_{alpha}_bagging.png'
         save_path = os.path.join(os.path.dirname(__file__), fname)
         plot_segmented_trend(result, x, t, save_path=save_path)
@@ -94,15 +120,15 @@ Bagging Analysis with Alpha = 0.1 (90% Confidence)
 Breakpoint Results:
 |   Breakpoint |   Lower CI |   Upper CI |
 |-------------:|-----------:|-----------:|
-|        52.98 |      46.20 |      58.98 |
-|       101.93 |      97.10 |     102.79 |
+|        53.66 |      47.05 |      59.38 |
+|       100.12 |      96.26 |     102.82 |
 
 Segment Results:
 |   slope |   lower_ci |   upper_ci |
 |--------:|-----------:|-----------:|
-|  0.3761 |     0.3537 |     0.4042 |
-|  0.0804 |     0.0363 |     0.1189 |
-|  0.5161 |     0.4905 |     0.5538 |
+|  0.3739 |     0.3503 |     0.4002 |
+|  0.0799 |     0.0322 |     0.1210 |
+|  0.5224 |     0.4964 |     0.5589 |
 Plot saved to segmented_plot_alpha_0.1_bagging.png
 
 ============================================================
@@ -111,8 +137,8 @@ Bagging Analysis with Alpha = 0.05 (95% Confidence)
 Breakpoint Results:
 |   Breakpoint |   Lower CI |   Upper CI |
 |-------------:|-----------:|-----------:|
-|        52.71 |      51.54 |      55.13 |
-|       100.04 |      97.63 |     103.10 |
+|        52.36 |      46.55 |      58.26 |
+|       100.33 |      97.55 |     102.77 |
 
 Segment Results:
 |   slope |   lower_ci |   upper_ci |
@@ -128,15 +154,15 @@ Bagging Analysis with Alpha = 0.01 (99% Confidence)
 Breakpoint Results:
 |   Breakpoint |   Lower CI |   Upper CI |
 |-------------:|-----------:|-----------:|
-|        53.89 |      47.03 |      57.43 |
-|       101.52 |     100.10 |     102.78 |
+|        53.06 |      47.64 |      57.74 |
+|       100.16 |      96.44 |     102.31 |
 
 Segment Results:
 |   slope |   lower_ci |   upper_ci |
 |--------:|-----------:|-----------:|
 |  0.3739 |     0.3337 |     0.4185 |
-|  0.0748 |     0.0061 |     0.1353 |
-|  0.5161 |     0.4706 |     0.5745 |
+|  0.0799 |     0.0062 |     0.1450 |
+|  0.5224 |     0.4771 |     0.5780 |
 Plot saved to segmented_plot_alpha_0.01_bagging.png
 ```
 
@@ -151,12 +177,19 @@ from MannKS.segmented_trend_test import segmented_trend_test
 from MannKS.plotting import plot_segmented_trend
 
 def run_ols():
-    # 1. Generate Synthetic Data (Same seed as bagging for comparison)
+    # -------------------------------------------------------------------------
+    # 1. Generate Synthetic Data
+    # -------------------------------------------------------------------------
+    # We use the exact same seed and data generation parameters as the bagging
+    # example to ensure a fair comparison.
     np.random.seed(101)
     n = 150
     t = np.arange(n)
 
-    # Define True Trend (Closer slopes)
+    # Define True Trend:
+    # - Seg 1 (0-50):   Slope 0.4
+    # - Seg 2 (50-100): Slope 0.1 (Flatter)
+    # - Seg 3 (100-150): Slope 0.5 (Steeper)
     trend = np.concatenate([
         0.4 * t[:50],
         0.4 * 50 + 0.1 * (t[50:100] - 50),
@@ -167,24 +200,35 @@ def run_ols():
     noise_std = 2.0
     x = trend + np.random.normal(0, noise_std, n)
 
+    # -------------------------------------------------------------------------
+    # 2. Run Analysis with Varying Alpha Levels
+    # -------------------------------------------------------------------------
     alphas = [0.10, 0.05, 0.01]
 
     for alpha in alphas:
         confidence_pct = int((1-alpha)*100)
         print(f"\n{'='*60}")
-        print(f"OLS Analysis with Alpha = {alpha} ({confidence_pct}% Confidence)")
+        print(f"Standard OLS Analysis with Alpha = {alpha} ({confidence_pct}% Confidence)")
         print(f"{'='*60}")
 
-        # Standard OLS (No Bagging)
+        # Use Standard OLS (Ordinary Least Squares)
+        # -----------------------------------------
+        # This method uses the `piecewise-regression` library directly without bagging.
+        # - It is much faster than bagging.
+        # - It assumes normally distributed errors for calculating Confidence Intervals.
+        # - Breakpoint CIs are often symmetric and may be narrower than reality
+        #   in noisy or complex data (like this example).
         result = segmented_trend_test(
             x, t,
             n_breakpoints=2,
             alpha=alpha,
-            use_bagging=False
+            use_bagging=False # Disable bagging for standard OLS
         )
 
         # Print Breakpoint details
         print("Breakpoint Results:")
+        # We manually calculate these CIs based on the standard error and t-distribution
+        # for the requested alpha (see `MannKS/_segmented.py`).
         if result.n_breakpoints > 0:
             bp_df = pd.DataFrame({
                 'Breakpoint': result.breakpoints,
@@ -213,7 +257,7 @@ if __name__ == "__main__":
 ### Output
 ```text
 ============================================================
-OLS Analysis with Alpha = 0.1 (90% Confidence)
+Standard OLS Analysis with Alpha = 0.1 (90% Confidence)
 ============================================================
 Breakpoint Results:
 |   Breakpoint |   Lower CI |   Upper CI |
@@ -230,7 +274,7 @@ Segment Results:
 Plot saved to segmented_plot_alpha_0.1_ols.png
 
 ============================================================
-OLS Analysis with Alpha = 0.05 (95% Confidence)
+Standard OLS Analysis with Alpha = 0.05 (95% Confidence)
 ============================================================
 Breakpoint Results:
 |   Breakpoint |   Lower CI |   Upper CI |
@@ -247,7 +291,7 @@ Segment Results:
 Plot saved to segmented_plot_alpha_0.05_ols.png
 
 ============================================================
-OLS Analysis with Alpha = 0.01 (99% Confidence)
+Standard OLS Analysis with Alpha = 0.01 (99% Confidence)
 ============================================================
 Breakpoint Results:
 |   Breakpoint |   Lower CI |   Upper CI |
