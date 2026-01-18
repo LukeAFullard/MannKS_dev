@@ -2,6 +2,7 @@
 import os
 import sys
 import numpy as np
+import argparse
 
 # Add parent dir to sys.path to import common_validation
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -54,7 +55,11 @@ def generate_data(seed=None):
     return t, y, n_bp, bps, slopes
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--iterations", type=int, default=30, help="Number of iterations")
+    args = parser.parse_args()
+
     # Just setup, don't run full suite
-    print("Script setup complete. Ready to run.")
+    print(f"Script setup complete. Ready to run with {args.iterations} iterations.")
     # Uncomment to run
-    run_validation_suite(generate_data, OUTPUT_DIR, n_iterations=30)
+    run_validation_suite(generate_data, OUTPUT_DIR, n_iterations=args.iterations)
