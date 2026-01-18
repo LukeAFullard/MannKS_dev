@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 import piecewise_regression
-from scipy.stats import gaussian_kde
+from scipy.stats import gaussian_kde, t as t_dist
 from scipy.signal import find_peaks
 import warnings
 
@@ -283,7 +283,25 @@ class HybridSegmentedTrend:
                             for key, val in estimates.items():
                                 if key.startswith('breakpoint'):
                                     est = val['estimate']
-                                    ci = val.get('confidence_interval')
+
+                                    # Manually calculate CI for requested alpha
+                                    # piecewise_regression defaults to 95%
+                                    se = val.get('se')
+                                    if se is not None and not np.isnan(se):
+                                        # df = n_samples - n_params
+                                        # n_params = 2 (const, beta1) + n_breakpoints (alphas) + n_breakpoints (bps)
+                                        # For muggeo: roughly 2 + 2*k
+                                        n_params = 2 + 2 * k
+                                        df = len(x) - n_params
+                                        if df > 0:
+                                            # t-statistic for two-tailed alpha
+                                            t_crit = t_dist.ppf(1 - alpha / 2, df)
+                                            ci = (est - t_crit * se, est + t_crit * se)
+                                        else:
+                                            ci = (np.nan, np.nan)
+                                    else:
+                                        ci = val.get('confidence_interval', (np.nan, np.nan))
+
                                     if ci is None: ci = (np.nan, np.nan)
                                     bps_data.append((est, ci))
 

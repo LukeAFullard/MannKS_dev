@@ -11,7 +11,8 @@ from ._helpers import _get_slope_scaling_factor
 
 _Segmented_Trend_Test_Tuple = namedtuple('Segmented_Trend_Test', [
     'n_breakpoints', 'breakpoints', 'breakpoint_cis', 'segments',
-    'is_datetime', 'bic', 'aic', 'score', 'selection_summary', 'bootstrap_samples'
+    'is_datetime', 'bic', 'aic', 'score', 'selection_summary', 'bootstrap_samples',
+    'alpha'
 ])
 
 class SegmentedTrendResult(_Segmented_Trend_Test_Tuple):
@@ -272,7 +273,8 @@ def segmented_trend_test(
         aic=hybrid_model.aic_,
         score=hybrid_model.bic_,
         selection_summary=hybrid_model.selection_summary_,
-        bootstrap_samples=hybrid_model.bootstrap_samples_
+        bootstrap_samples=hybrid_model.bootstrap_samples_,
+        alpha=alpha
     )
 
 
