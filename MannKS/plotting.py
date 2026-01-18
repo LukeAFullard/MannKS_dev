@@ -478,8 +478,7 @@ def plot_rolling_trend(rolling_results, data=None, time_col=None, value_col=None
             else:
                 x_plot_seg = [t_start, t_end]
 
-            # Use significant color or gray?
-            # If significant, maybe red line? Or just dark gray.
+            # Highlight significant trend lines in red.
             color = 'red' if (highlight_significant and row.get('h', False)) else 'black'
             alpha_line = 0.5 if (highlight_significant and row.get('h', False)) else 0.2
             width = 2 if (highlight_significant and row.get('h', False)) else 1
@@ -671,8 +670,8 @@ def plot_segmented_trend(result, x_data, t_data, save_path=None):
         if pd.isna(slope) or pd.isna(intercept):
             continue
 
-        # Define x-range for segment (extend slightly to meet breakpoint if continuous?
-        # But this is discontinuous Sen's slope, so better to respect bounds)
+        # Define x-range for segment.
+        # Segments are plotted individually to respect the discontinuous nature of the piecewise Sen's slope.
         x_seg_numeric = np.array([start, end])
         y_seg = slope * x_seg_numeric + intercept
 
@@ -685,25 +684,17 @@ def plot_segmented_trend(result, x_data, t_data, save_path=None):
 
         # Plot Slope CIs (if available)
         if hasattr(row, 'lower_ci_per_second') and pd.notna(row.lower_ci_per_second):
-            # Calculate CI band
-            # We pivot around the median of the segment data?
-            # Or simpler: y_lower = lower_slope * t + intercept_lower?
-            # trend_test results contain intercept. But CI lines have their own intercepts.
-            # trend_test computes: intercept_lower = ymed - lower_slope * tmed
-            # But we don't have ymed/tmed here easily without re-extracting data.
-            # However, we can approximate the band width using the slope error relative to the fitted line?
-            # Actually, `trend_test` calculates CIs on the *slope*.
-            # To plot the band, we need the pivot point (t_center, y_center).
-            # We can re-calculate the pivot point for the segment data.
+            # Calculate CI band.
+            # To plot the band correctly, we need the pivot point (t_center, y_center)
+            # of the segment data, as the intercepts are defined relative to this point.
+            # We re-calculate the pivot point for the segment data.
 
             mask = (t_numeric >= start) & (t_numeric < end)
             if np.sum(mask) > 0:
                 t_seg = t_numeric[mask]
                 x_seg = x_data[mask] if isinstance(x_data, np.ndarray) else x_data.iloc[mask]
 
-                # Check for censoring to be safe?
-                # If x_data has strings, we can't compute median.
-                # But x_data passed to plot should be numeric values (from df['value']).
+                # Ensure data is numeric for median calculation.
                 if np.issubdtype(np.asarray(x_seg).dtype, np.number):
                     t_center = np.median(t_seg)
                     x_center = np.nanmedian(x_seg)
