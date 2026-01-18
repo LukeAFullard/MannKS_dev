@@ -85,11 +85,7 @@ def run_scenario_2_hicensor():
         else:
             x_strings.append(val)
 
-    # Process data first (though trend_test does it internally if we pass strings? No, trend_test expects prepared data or numeric usually, but let's use prepared)
-    # Actually trend_test can take x, t directly. If x has strings, it fails?
-    # Let's check `trend_test` docstring: "x: a vector of data, or a DataFrame from prepare_censored_data."
-    # If x is strings, we MUST use prepare_censored_data first.
-
+    # Process data into the required format using prepare_censored_data.
     df_prep = mk.prepare_censored_data(x_strings)
 
     # Run test with hicensor=True and bootstrap
@@ -143,17 +139,7 @@ def run_scenario_4_ats():
     censored[::5] = True
     cen_type[::5] = 'lt'
 
-    # We need to construct a DataFrame or pass arrays manually if we want to bypass prepare_censored_data string parsing
-    # trend_test accepts arrays if we don't use strings. But wait, `trend_test` signature:
-    # x, t, ...
-    # Inside: `data_filtered, is_datetime = _prepare_data(x, t, hicensor)`
-    # If x is array, `_prepare_data` assumes it's numeric and uncensored unless we pass `censored`?
-    # No, `trend_test` does NOT take `censored` vector as arg! It expects a DataFrame from `prepare_censored_data` if censoring is present.
-    # Ah, checking `trend_test.py`:
-    # def trend_test(x, t, ...):
-    # It does not have `censored` arg.
-    # So we must pass a DataFrame if we have censoring.
-
+    # Construct a DataFrame manually to handle censored data without string parsing.
     df = pd.DataFrame({
         'value': x,
         'censored': censored,
