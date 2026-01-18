@@ -142,7 +142,7 @@ def segmented_trend_test(
     max_breakpoints: int = 5,
     alpha: float = 0.05,
     hicensor: Union[bool, float] = False,
-    criterion: str = 'bic', # Only BIC supported by Hybrid really, but keeps API
+    criterion: str = 'bic', # Only 'bic' is currently supported by the underlying implementation.
     use_bagging: bool = False,
     n_bootstrap: int = 100,
     slope_scaling: Optional[str] = None,

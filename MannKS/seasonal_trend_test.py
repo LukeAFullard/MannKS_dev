@@ -248,8 +248,8 @@ def seasonal_trend_test(
 
     valid_autocorr_methods = ['none', 'block_bootstrap']
     if autocorr_method not in valid_autocorr_methods:
-        # Note: 'auto' and 'yue_wang' not fully supported for seasonal yet in this simplified plan
-        # We focus on block bootstrap as requested.
+        # Note: 'auto' and 'yue_wang' methods are not fully supported for the seasonal test
+        # in this version. Block bootstrap is the recommended approach.
         raise ValueError(f"Invalid `autocorr_method` for seasonal test. Must be one of {valid_autocorr_methods}.")
 
     analysis_notes = []
@@ -405,19 +405,16 @@ def seasonal_trend_test(
         # Bootstrap
         s_boot_dist = np.zeros(n_bootstrap)
 
-        # Detrending is tricky for seasonal.
-        # Simple approach: Null hypothesis is "no trend".
-        # If we just shuffle years, we destroy trend but keep seasonality and within-year autocorr.
-        # But we need to keep "serial correlation between years".
-        # So we should use moving block bootstrap on the CYCLES.
+        # Strategy: Null hypothesis is "no trend".
+        # Shuffling whole cycles (years) destroys trend but preserves seasonality and
+        # within-year autocorrelation. To preserve serial correlation between years,
+        # moving block bootstrap on the CYCLES is used.
 
         # Sort data by cycle then season
         data_sorted = data_filtered.sort_values(['cycle', 'season'])
 
-        # We need to detrend the data to test H0.
-        # Calculate seasonal slopes first?
-        # Simplification: Global detrending or seasonal detrending.
-        # Let's use the observed seasonal slopes to detrend.
+        # Data must be detrended to test H0.
+        # Observed seasonal slopes are used for detrending.
 
         data_detrended = data_sorted.copy()
         for i in season_range:
@@ -471,15 +468,10 @@ def seasonal_trend_test(
             cycle_indices = np.arange(len(sorted_cycles))
             boot_indices = moving_block_bootstrap(cycle_indices, blk_len)
 
-            # Construct bootstrap sample
-            # We must preserve the *order* within the bootstrapped sequence to test MK?
-            # No, MK is rank based on TIME.
-            # So we construct a new dataset where the values from the bootstrapped years
-            # are assigned to the original time sequence?
-            # OR we just calculate S on the shuffled years assuming they occurred in that order?
-            # Standard bootstrap test H0: No trend.
-            # If we shuffle years (blocks), we break the trend.
-            # So we take the detrended data, shuffle blocks of years, and calculate S.
+            # Construct bootstrap sample.
+            # The bootstrap test for H0 (No trend) requires destroying the trend
+            # while preserving autocorrelation structure. This is achieved by
+            # resampling blocks of detrended data.
 
             # Reconstruct data
             boot_data_list = []
@@ -487,45 +479,17 @@ def seasonal_trend_test(
                 cycle_val = sorted_cycles[idx]
                 cycle_data = data_detrended[data_detrended['cycle'] == cycle_val].copy()
 
-                # We need to assign these values to the i-th cycle's timestamps?
-                # Actually, standard permutation test assigns values to fixed timepoints.
-                # So we take the values from year X and place them at year Y.
-                target_cycle_val = sorted_cycles[i]
-                target_times = data_sorted[data_sorted['cycle'] == target_cycle_val]
-
-                # This replacement is tricky if n_samples per cycle varies.
-                # Simplification: Just append the data, but we need to ensure "Trend" is tested against "Time".
-                # If we keep original times of the data chunks, we just scrambled the order.
-                # MK test checks rank(t) vs rank(x).
-                # If we concatenate the blocks:
-                # Block A (Values A, Times A), Block B (Values B, Times B)
-                # If we reorder to B, A...
-                # effectively we are testing (Values B, Values A) against (Times 1..N, Times N+1..M)
-
-                # So we treat the bootstrapped series as a new sequence in time.
-                # We can just reset the time coordinate to be monotonic increasing based on the new order.
-                # Or easier: Calculate S using the original timestamps of the *slots* we are filling.
-
-                # Given complexity of unequal spacing, let's just concatenate the values
-                # and generate synthetic timestamps that preserve the relative structure?
-                # Or simpler: Just sum the S scores of the permuted series assuming independent seasons?
-                # No, we need inter-seasonal structure.
-
-                # Let's just use the values from the bootstrapped blocks
-                # and assume they occur sequentially.
+                # Values from bootstrapped blocks are treated as a sequential time series.
+                # This effectively tests the permuted values against the original time order
+                # (represented by monotonic increase).
                 boot_data_list.append(cycle_data)
 
             boot_data = pd.concat(boot_data_list)
 
-            # Now we need to define "Time" for this bootstrap sample so MK works.
-            # We can't use the original 't' column because it's scrambled.
-            # We create a synthetic time that creates a monotonic sequence
-            # matching the block order.
-            # E.g. t_new = range(len(boot_data))
-            # But we must respect seasonality.
-            # S_total = sum(S_season).
-            # S_season only compares data within same season.
-            # So we just need to ensure the "Season" column is preserved and "Time" increases.
+            # Define "Time" for this bootstrap sample to ensure monotonic sequence
+            # matching the block order, required for the MK test.
+            # Seasonality must be preserved (which is inherent in the cycle_data),
+            # but 't' must increase monotonically.
 
             # Create synthetic time index
             boot_data['t_boot'] = np.arange(len(boot_data))

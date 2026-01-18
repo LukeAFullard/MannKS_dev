@@ -346,7 +346,7 @@ class HybridSegmentedTrend:
         self.aic_ = best_aic
 
         # --- Phase 2: Robust Estimation (MannKS) ---
-        # (Must import here to avoid circular import if _stats calls this, though it shouldn't)
+        # Import here to avoid potential circular dependencies.
         from ._stats import (
             _sens_estimator_unequal_spacing,
             _sens_estimator_censored,

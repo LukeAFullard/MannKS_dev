@@ -92,7 +92,7 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
         warnings.warn(
             f"Large sample size (n={n}) requires ~{mem_gb:.1f} GB memory "
             f"for pairwise calculations. Maximum safe n is {MAX_SAFE_N}. "
-            f"Consider using regional_test() for aggregating multiple smaller sites.",
+            f"Using `regional_test()` for aggregating multiple smaller sites is recommended.",
             UserWarning
         )
 
@@ -338,7 +338,7 @@ def _sens_estimator_unequal_spacing(x, t):
         warnings.warn(
             f"Large sample size (n={n}) requires ~{mem_gb:.1f} GB memory "
             f"for pairwise calculations. Maximum safe n is {MAX_SAFE_N}. "
-            f"Consider using regional_test() for aggregating multiple smaller sites.",
+            f"Using `regional_test()` for aggregating multiple smaller sites is recommended.",
             UserWarning
         )
 
@@ -419,7 +419,7 @@ def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_m
         warnings.warn(
             f"Large sample size (n={n}) requires ~{mem_gb:.1f} GB memory "
             f"for pairwise calculations. Maximum safe n is {MAX_SAFE_N}. "
-            f"Consider using regional_test() for aggregating multiple smaller sites.",
+            f"Using `regional_test()` for aggregating multiple smaller sites is recommended.",
             UserWarning
         )
 
