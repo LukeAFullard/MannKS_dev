@@ -234,6 +234,7 @@ def rolling_trend_test(
                 'slope_per_second': result.slope_per_second,
                 'lower_ci_per_second': result.lower_ci_per_second,
                 'upper_ci_per_second': result.upper_ci_per_second,
+                'warnings': result.warnings
             })
 
         except Exception as e:
@@ -245,7 +246,7 @@ def rolling_trend_test(
             'window_start', 'window_end', 'window_center', 'n_obs',
             'slope', 'lower_ci', 'upper_ci', 'p_value', 'h',
             'classification', 'C', 'Cd', 'tau', 's',
-            'intercept', 'slope_per_second', 'lower_ci_per_second', 'upper_ci_per_second'
+            'intercept', 'slope_per_second', 'lower_ci_per_second', 'upper_ci_per_second', 'warnings'
         ])
 
     return pd.DataFrame(results)
