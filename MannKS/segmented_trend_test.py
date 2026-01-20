@@ -190,7 +190,20 @@ def segmented_trend_test(
     cen_type = data_filtered['cen_type'].to_numpy()
 
     if len(x_val) < 2:
-        raise ValueError("Insufficient data for segmented analysis.")
+        warnings.warn("Insufficient data for segmented analysis.", UserWarning)
+        return SegmentedTrendResult(
+            n_breakpoints=0,
+            breakpoints=[],
+            breakpoint_cis=[],
+            segments=pd.DataFrame(),
+            is_datetime=is_datetime,
+            bic=np.nan,
+            aic=np.nan,
+            score=np.nan,
+            selection_summary=None,
+            bootstrap_samples=None,
+            alpha=alpha
+        )
 
     # 2. Fit Hybrid Model
     hybrid_model = _HybridSegmentedTrend(

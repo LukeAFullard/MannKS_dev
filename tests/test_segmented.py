@@ -68,8 +68,10 @@ def test_bagging_with_dataframe_input():
 def test_insufficient_data():
     t = np.arange(1)
     x = np.array([1])
-    with pytest.raises(ValueError, match="Insufficient data"):
-        segmented_trend_test(x, t)
+    with pytest.warns(UserWarning, match="Insufficient data for segmented analysis"):
+        res = segmented_trend_test(x, t)
+        assert res.n_breakpoints == 0
+        assert res.segments.empty
 
 def test_dataframe_input():
     t = np.arange(20)

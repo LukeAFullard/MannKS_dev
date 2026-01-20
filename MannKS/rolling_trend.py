@@ -278,7 +278,8 @@ def _generate_windows(t_series, window_size, step_size, is_datetime):
             windows.append((current, win_end))
 
             if len(windows) > 10000:
-                raise ValueError("Too many windows generated. Check window/step sizes.")
+                warnings.warn("Too many windows generated. Check window/step sizes.", UserWarning)
+                return []
     else:
         # Datetime uses Timedelta/Offset which is robust to accumulation usually
         # because it operates on calendar logic or fixed integers (nanoseconds)
@@ -289,7 +290,8 @@ def _generate_windows(t_series, window_size, step_size, is_datetime):
             current += step_size
 
             if len(windows) > 10000:
-                raise ValueError("Too many windows generated. Check window/step sizes.")
+                warnings.warn("Too many windows generated. Check window/step sizes.", UserWarning)
+                return []
 
     return windows
 
