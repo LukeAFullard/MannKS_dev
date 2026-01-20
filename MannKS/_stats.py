@@ -365,7 +365,7 @@ def _sens_estimator_unequal_spacing(x, t):
     return x_diff[valid_mask] / t_diff[valid_mask]
 
 
-def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_mult=DEFAULT_GT_MULTIPLIER, method='nan'):
+def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_mult=DEFAULT_GT_MULTIPLIER, method='unbiased'):
     """
     Computes Sen's slope for censored, unequally spaced data.
 
@@ -380,10 +380,10 @@ def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_m
         lt_mult (float): Multiplier for left-censored data.
         gt_mult (float): Multiplier for right-censored data.
         method (str): The method to use for handling ambiguous slopes.
-            - 'lwp' (default): Sets ambiguous slopes to 0, mimicking the
+            - 'lwp': Sets ambiguous slopes to 0, mimicking the
               LWP-TRENDS R script.
-            - 'nan': Sets ambiguous slopes to np.nan, which is a more
-              statistically neutral approach.
+            - 'unbiased' (default): Sets ambiguous slopes to np.nan, which is a more
+              statistically neutral approach. (Formerly 'nan').
 
     Returns:
         np.array: An array of calculated slopes.
@@ -403,10 +403,10 @@ def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_m
     3.  **Handling of Ambiguous Slopes**: The method acknowledges that the
         slope between certain pairs of points (e.g., two left-censored values)
         is ambiguous. The `method` parameter determines how these are handled:
-        -   `'lwp'` (default): Sets ambiguous slopes to 0. This is a
+        -   `'lwp'`: Sets ambiguous slopes to 0. This is a
             conservative choice that reduces the magnitude of the overall
             median slope but may not be statistically neutral.
-        -   `'nan'`: Sets ambiguous slopes to NaN, effectively removing them
+        -   `'unbiased'` (or `'nan'`): Sets ambiguous slopes to NaN, effectively removing them
             from the median calculation. This is a more statistically neutral
             approach, as it does not bias the slope towards zero.
     """
@@ -465,6 +465,7 @@ def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_m
     slopes_final = slopes_mod.copy()
 
     # Determine the value to assign to ambiguous slopes based on the method
+    # 'lwp' uses 0, 'unbiased' (and 'nan') uses np.nan
     ambiguous_slope_value = 0 if method == 'lwp' else np.nan
 
     # Rule 1: No slope between two censored values of the same type.
