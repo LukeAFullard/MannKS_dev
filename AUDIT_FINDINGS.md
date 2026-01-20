@@ -64,7 +64,7 @@ The Python default is a more statistically standard and robust method. The `'lwp
 This is a subtle but important distinction in how ambiguous slopes are handled.
 
 -   **LWP-TRENDS (R):** When calculating the slope between pairs of points where the direction is ambiguous (e.g., between two left-censored values, or between a non-censored value and a left-censored value that is higher), the script sets the slope for that pair to **0**.
--   **MannKS (Python):** This "set to 0" behavior is replicated only when the user specifies `sens_slope_method='lwp'`. The default Python behavior (`sens_slope_method='nan'`) is to set these ambiguous slopes to `np.nan`, effectively removing them from the median calculation.
+-   **MannKS (Python):** This "set to 0" behavior is replicated only when the user specifies `sens_slope_method='lwp'`. The default Python behavior (`sens_slope_method='unbiased'`) is to set these ambiguous slopes to `np.nan`, effectively removing them from the median calculation.
 
 **Reason & Impact:**
 The Python default (`'nan'`) is more statistically neutral, as it does not bias the median slope towards zero. The `'lwp'` method is provided for backward compatibility. If a user has censored data and does not set `sens_slope_method='lwp'`, the final `slope` will likely differ from the R script.

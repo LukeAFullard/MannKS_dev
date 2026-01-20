@@ -53,7 +53,7 @@ def run_auto_analysis(data_df, alpha, period, season_type):
                 season_type=season_type,
                 plot_path=plot_buffer,
                 mk_test_method='robust', # robust default
-                sens_slope_method='nan', # safe default
+                sens_slope_method='unbiased', # safe default
                 ci_method='direct',
                 tau_method='b'
             )
@@ -69,7 +69,7 @@ def run_auto_analysis(data_df, alpha, period, season_type):
                 alpha=alpha,
                 plot_path=plot_buffer,
                 mk_test_method='robust',
-                sens_slope_method='nan',
+                sens_slope_method='unbiased',
                 ci_method='direct',
                 tau_method='b'
             )
