@@ -81,11 +81,13 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
     # Add a hard limit to prevent integer overflow on large n*n arrays
     MAX_SAFE_N = 46340
     if n > MAX_SAFE_N:
-        raise ValueError(
+        warnings.warn(
             f"Sample size n={n} exceeds maximum safe size of {MAX_SAFE_N}. "
             f"This would cause an integer overflow during pairwise calculations. "
-            f"Consider using the regional_test() function for aggregation or subsampling your data."
+            f"Consider using the regional_test() function for aggregation or subsampling your data.",
+            UserWarning
         )
+        return np.nan, np.nan, np.nan, np.nan
 
     if n > 5000:
         mem_gb = (n**2 * 8 / 1e9)
@@ -259,6 +261,9 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
 
 
 def _z_score(s, var_s):
+    if np.isnan(s) or np.isnan(var_s):
+        return np.nan
+
     if var_s < EPSILON:
         warnings.warn("Variance near zero, Z-score may be unreliable", UserWarning)
         return 0
@@ -327,11 +332,13 @@ def _sens_estimator_unequal_spacing(x, t):
     # Add a hard limit to prevent integer overflow on large n*n arrays
     MAX_SAFE_N = 46340
     if n > MAX_SAFE_N:
-        raise ValueError(
+        warnings.warn(
             f"Sample size n={n} exceeds maximum safe size of {MAX_SAFE_N}. "
             f"This would cause an integer overflow during pairwise calculations. "
-            f"Consider using the regional_test() function for aggregation or subsampling your data."
+            f"Consider using the regional_test() function for aggregation or subsampling your data.",
+            UserWarning
         )
+        return np.array([])
 
     if n > 5000:
         mem_gb = (n**2 * 8 / 1e9)
@@ -408,11 +415,13 @@ def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_m
     # Add a hard limit to prevent integer overflow on large n*n arrays
     MAX_SAFE_N = 46340
     if n > MAX_SAFE_N:
-        raise ValueError(
+        warnings.warn(
             f"Sample size n={n} exceeds maximum safe size of {MAX_SAFE_N}. "
             f"This would cause an integer overflow during pairwise calculations. "
-            f"Consider using the regional_test() function for aggregation or subsampling your data."
+            f"Consider using the regional_test() function for aggregation or subsampling your data.",
+            UserWarning
         )
+        return np.array([])
 
     if n > 5000:
         mem_gb = (n**2 * 8 / 1e9)
