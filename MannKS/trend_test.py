@@ -29,7 +29,7 @@ def trend_test(
     residual_plot_path: Optional[str] = None,
     lt_mult: float = 0.5,
     gt_mult: float = 1.1,
-    sens_slope_method: str = 'nan',
+    sens_slope_method: str = 'unbiased',
     tau_method: str = 'b',
     agg_method: str = 'none',
     agg_period: Optional[str] = None,
@@ -67,7 +67,7 @@ def trend_test(
     ])
 
     # --- Method String Validation ---
-    valid_sens_slope_methods = ['nan', 'lwp', 'ats']
+    valid_sens_slope_methods = ['unbiased', 'nan', 'lwp', 'ats']
     if sens_slope_method not in valid_sens_slope_methods:
         raise ValueError(f"Invalid `sens_slope_method`. Must be one of {valid_sens_slope_methods}.")
 
@@ -340,7 +340,7 @@ def trend_test(
                 lower_ci, upper_ci = _confidence_intervals(slopes, var_s_ci, alpha, method=ci_method)
                 sen_prob, sen_prob_max, sen_prob_min = _sen_probability(slopes, var_s_ci)
 
-        else: # Existing 'lwp' or 'nan' methods
+        else: # Existing 'lwp' or 'unbiased' (nan) methods
             if np.any(censored_filtered):
                 slopes = _sens_estimator_censored(
                     x_filtered, t_filtered, cen_type_filtered,

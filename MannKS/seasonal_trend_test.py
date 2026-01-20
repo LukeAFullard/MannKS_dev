@@ -36,7 +36,7 @@ def seasonal_trend_test(
     residual_plot_path: Optional[str] = None,
     lt_mult: float = 0.5,
     gt_mult: float = 1.1,
-    sens_slope_method: str = 'nan',
+    sens_slope_method: str = 'unbiased',
     tau_method: str = 'b',
     min_size_per_season: Optional[int] = 5,
     mk_test_method: str = 'robust',
@@ -75,7 +75,7 @@ def seasonal_trend_test(
     if agg_method not in valid_agg_methods:
         raise ValueError(f"Invalid `agg_method`. Must be one of {valid_agg_methods}.")
 
-    valid_sens_slope_methods = ['nan', 'lwp', 'ats']
+    valid_sens_slope_methods = ['unbiased', 'nan', 'lwp', 'ats']
     if sens_slope_method not in valid_sens_slope_methods:
         raise ValueError(f"Invalid `sens_slope_method`. Must be one of {valid_sens_slope_methods}.")
 
@@ -459,7 +459,7 @@ def seasonal_trend_test(
             if overall_ats.get('notes'):
                 sens_slope_notes.update(overall_ats['notes'])
 
-        else: # For 'lwp' or 'nan' methods
+        else: # For 'lwp' or 'unbiased' (nan) methods
             all_slopes = []
             sens_slope_notes = set()
             for i in season_range:
