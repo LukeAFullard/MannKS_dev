@@ -81,10 +81,10 @@ def trend_test(
     ----------
     large_dataset_mode : str, default 'auto'
         Controls algorithm selection for large datasets:
-        - 'auto': Automatic based on sample size (recommended)
-        - 'full': Force exact calculations (may be slow/crash for large n)
-        - 'fast': Force fast approximations
-        - 'aggregate': Force aggregation workflow
+        - 'auto': Automatic based on sample size (recommended).
+        - 'full': Force exact calculations (may be slow/crash for large n).
+        - 'fast': Force fast approximations.
+        - 'aggregate': Force aggregation workflow.
 
     max_pairs : int, optional
         Maximum number of pairs to sample in fast mode. Default is 100,000.
