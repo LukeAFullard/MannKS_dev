@@ -495,6 +495,7 @@ def seasonal_trend_test(
             tau_weighted_sum = 0
             denom_sum = 0
             sens_slope_notes = set()
+            total_possible_pairs = 0
 
             for i in season_range:
                 season_mask = data_filtered['season'] == i
@@ -511,6 +512,9 @@ def seasonal_trend_test(
                     if d_season > 0:
                         tau_weighted_sum += tau_season * d_season
                         denom_sum += d_season
+
+                    # Accumulate total pairs for CI scaling
+                    total_possible_pairs += n * (n - 1) // 2
 
         # Sen's slope calculation (Same as before)
         slope_data = data_filtered
@@ -595,20 +599,19 @@ def seasonal_trend_test(
                 slope = np.nanmedian(all_slopes_arr)
                 intercept = np.nanmedian(data_filtered['value']) - np.nanmedian(data_filtered['t']) * slope if pd.notna(slope) else np.nan
 
-                # We need to scale the variance of S for confidence intervals if we are using subsampled slopes
-                # However, seasonal slope is median of ALL slopes across all seasons.
-                # If we subsampled, the variance of S (which comes from MK test, not slope estimation)
-                # might not directly apply if n is huge.
-                # But here var_s is calculated from the MK test which is O(n^2) but runs per season.
-                # If per-season n < 5000, MK is exact.
-                # If we subsampled for slope estimation, we still use the MK var_s for CIs.
-                # The issue is that _confidence_intervals maps ranks to values.
-                # If we have subsampled slopes, the total number of slopes is smaller.
-                # We should pass total_pairs if possible, or just rely on the subsample distribution.
-                # For seasonal, total_pairs is sum of pairs per season.
+                # Pass total_possible_pairs (accumulated from seasons) to correctly scale ranks
+                # when all_slopes_arr contains a subsample of slopes.
+                # If block_bootstrap was used, total_possible_pairs is not calculated above,
+                # but this block is under `else` of block_bootstrap (or inside it but we are in the main else block here).
+                # Wait, the total_possible_pairs calculation was inside the `else` (Standard Analytic) block.
+                # So it is available here.
 
-                lower_ci, upper_ci = _confidence_intervals(all_slopes_arr, var_s_for_ci, alpha, method=ci_method)
-                sen_prob, sen_prob_max, sen_prob_min = _sen_probability(all_slopes_arr, var_s_for_ci)
+                lower_ci, upper_ci = _confidence_intervals(
+                    all_slopes_arr, var_s_for_ci, alpha, method=ci_method, total_pairs=total_possible_pairs
+                )
+                sen_prob, sen_prob_max, sen_prob_min = _sen_probability(
+                    all_slopes_arr, var_s_for_ci, total_pairs=total_possible_pairs
+                )
 
         if sens_slope_notes:
             analysis_notes.extend(list(sens_slope_notes))

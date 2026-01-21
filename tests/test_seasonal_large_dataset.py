@@ -50,6 +50,12 @@ def test_seasonal_large_dataset_stratification():
     # 24 seasons * (50 * 49 / 2) = 29400
     assert result.pairs_used == 29400
 
+    # Check Confidence Intervals are valid
+    assert not np.isnan(result.lower_ci), "Lower CI should not be NaN"
+    assert not np.isnan(result.upper_ci), "Upper CI should not be NaN"
+    assert result.lower_ci < result.upper_ci, "Lower CI should be less than Upper CI"
+    assert result.lower_ci > 0, "Lower CI should be positive for increasing trend"
+
 def test_seasonal_large_dataset_no_stratification_needed():
     """
     Test that seasonal_trend_test does NOT use stratified sampling
@@ -79,3 +85,7 @@ def test_seasonal_large_dataset_no_stratification_needed():
     # But should NOT have stratified sampling note because n < 10000
     strat_note_found = any("stratified sampling" in note for note in result.analysis_notes)
     assert not strat_note_found, "Should not use stratified sampling for small datasets"
+
+    # Check Confidence Intervals are valid
+    assert not np.isnan(result.lower_ci)
+    assert not np.isnan(result.upper_ci)

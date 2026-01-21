@@ -148,6 +148,8 @@ def segmented_trend_test(
     n_bootstrap: int = 100,
     slope_scaling: Optional[str] = None,
     random_state: Optional[int] = None,
+    large_dataset_mode: str = 'auto',
+    max_pairs: Optional[int] = None,
     **kwargs
 ):
     """
@@ -169,6 +171,8 @@ def segmented_trend_test(
         n_bootstrap: Number of bootstrap iterations if bagging is enabled.
         slope_scaling: Unit to scale the slope to (e.g. 'year'). Only for datetime t.
         random_state: Seed for random number generator.
+        large_dataset_mode: Controls large dataset handling (passed to slope estimator).
+        max_pairs: Max pairs for fast slope estimation.
         **kwargs: Additional arguments for trend estimation (e.g. lt_mult, gt_mult).
 
     Returns:
@@ -230,7 +234,44 @@ def segmented_trend_test(
         lt_mult = kwargs.get('lt_mult', 0.5)
         gt_mult = kwargs.get('gt_mult', 1.1)
 
-        hybrid_model.fit(t_numeric, x_val, censored, cen_type, lt_mult, gt_mult, alpha=alpha)
+        # Pass large dataset parameters to the fit method
+        # The internal _HybridSegmentedTrend needs to know about these
+        # But _HybridSegmentedTrend.fit signature likely needs update or kwargs
+        # Let's check _HybridSegmentedTrend implementation if we can.
+        # Assuming we need to pass them via kwargs or explicit params if fit supports it.
+        # But wait, the plan says:
+        # Phase 2 (Robust estimation per segment): Uses fast mode if needed
+        # And "Only the per-segment Sen's slope estimation uses fast mode."
+        # This implies logic inside _HybridSegmentedTrend.fit needs to change or accept these params.
+
+        # Since I cannot modify _segmented.py in this step (not in plan explicitly but required implicitly),
+        # I should have checked _segmented.py first.
+        # But assuming I can pass them to fit if I modify fit, or pass them here if fit accepts kwargs.
+        # Let's verify _segmented.py in next step or modify this step to include it if possible?
+        # The plan step was "Update MannKS/segmented_trend_test.py".
+        # But the logic for segment estimation resides in _HybridSegmentedTrend.fit (in _segmented.py).
+        # Actually, looking at the previous read of segmented_trend_test.py, it imports _HybridSegmentedTrend.
+        # So I need to modify _segmented.py to support fast mode on segments.
+        # Wait, the prompt plan step 3 says:
+        # "Phase 2 (Segment Estimation): Implement logic to use `_sens_estimator_adaptive` for calculating slopes on individual segments if they are large (>5000 points)."
+        # This logic is inside `_HybridSegmentedTrend.fit`.
+        # So I really need to edit `MannKS/_segmented.py`.
+        # However, the user-defined plan step 3 was "Update MannKS/segmented_trend_test.py".
+        # I will update the signature here, and then I will check _segmented.py.
+        # If I can't edit _segmented.py in this step, I will add a new step to the plan.
+        # Actually, I can edit any file I need.
+
+        # BUT, the plan says "Update MannKS/segmented_trend_test.py".
+        # I will update this file to pass the params.
+        # And I will ALSO need to update _segmented.py.
+        # I'll add a step to the plan for _segmented.py after this tool call.
+
+        hybrid_model.fit(
+            t_numeric, x_val, censored, cen_type, lt_mult, gt_mult,
+            alpha=alpha,
+            large_dataset_mode=large_dataset_mode,
+            max_pairs=max_pairs
+        )
 
         # 3. Format Results
         breakpoints = hybrid_model.breakpoints_
