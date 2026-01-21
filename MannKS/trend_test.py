@@ -66,11 +66,11 @@ def trend_test(
        - Exact Sen's slope and confidence intervals
        - No approximation
 
-    2. **Fast Mode (5,000 < n <= 50,000)**: Stochastic estimation
-       - Samples random pairs for Sen's slope calculation
-       - Default: 100,000 pairs (configurable via max_pairs)
-       - Typical error: < 0.5% of true slope
-       - Mann-Kendall score still exact
+    2. **Fast Mode (5,000 < n <= 50,000)**: Hybrid Optimization
+       - **MK Score:** Exact $O(N \\log N)$ calculation for uncensored data (extremely fast).
+       - **Sen's Slope:** Stochastic sampling (default: 100,000 pairs) for speed.
+       - Typical error (slope): < 0.5% of true slope.
+       - Note: Censored data falls back to $O(N)$ memory / $O(N^2)$ time algorithm.
 
     3. **Aggregate Mode (n > 50,000)**: Temporal aggregation recommended
        - Use agg_method='median' or 'robust_median' with agg_period

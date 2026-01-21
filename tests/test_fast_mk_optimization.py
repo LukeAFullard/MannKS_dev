@@ -36,7 +36,17 @@ def test_fast_mk_optimization_correctness():
     print(f"\nFast Path Time: {time_fast:.4f}s")
     print(f"Slow Path Time: {time_slow:.4f}s")
 
+    # Verify S score
     assert s_fast == s_slow, f"Fast S ({s_fast}) != Slow S ({s_slow})"
+
+    # Verify Variance (var_s) is also identical
+    # Since fast path reuses the existing robust variance calculation code,
+    # it should match exactly if inputs (dupx, dupy) are set up correctly.
+    # Note: _mk_score_and_var_censored returns (kenS, varS, D, Tau)
+    var_fast = _mk_score_and_var_censored(x, t, np.zeros(n, bool), np.full(n, 'not'))[1]
+    var_slow = _mk_score_and_var_censored(x, t, np.zeros(n, bool), np.full(n, 'not'),
+                                          mk_test_method='lwp', tie_break_method='robust')[1]
+    assert var_fast == var_slow, f"Fast Var ({var_fast}) != Slow Var ({var_slow})"
 
     # Expect significant speedup (e.g. > 10x)
     # N=6000: Fast ~0.01s, Slow ~20s.

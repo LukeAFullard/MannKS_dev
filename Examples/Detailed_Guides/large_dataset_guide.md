@@ -15,18 +15,18 @@
 - You need exact results for publication
 - Computational time is not a concern
 
-### 2. Fast Mode (Approximate)
+### 2. Fast Mode (Hybrid Optimized)
 **When:** 5,000 < n ≤ 50,000 (automatic)
 
 **What it does:**
-- Samples random pairs (default: 100,000)
-- Estimates Sen's slope via sampled median
-- Maintains statistical validity
+- **MK Score:** Uses an optimized $O(N \log N)$ algorithm for exact calculation (uncensored data only).
+- **Sen's Slope:** Samples random pairs (default: 100,000) to estimate the median slope.
+- Maintains statistical validity with massive performance gains.
 
 **Accuracy:**
-- Typical error: < 0.5% of true slope
-- 95% CI covers true value in >99% of cases
-- Error decreases as √(max_pairs)
+- **MK Score:** Exact (no approximation).
+- **Sen's Slope:** Typical error < 0.5% of true slope.
+- 95% CI covers true value in >99% of cases.
 
 **Use when:**
 - Dataset is medium-large
