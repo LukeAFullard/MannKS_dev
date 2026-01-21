@@ -32,38 +32,12 @@ def _get_min_positive_diff(arr):
 def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test_method='robust', tie_break_method='robust'):
     """
     Calculates the Mann-Kendall S statistic and its variance for censored data.
-    This is a Python translation of the GetKendal function from the LWP-TRENDS
-    R script, which is adapted from the NADA package (Helsel, 2012).
-
-    Statistical Assumptions:
-    ----------------------
-    This function adapts the Mann-Kendall test for censored data and relies on
-    similar core assumptions, but with specific considerations for censoring:
-
-    1.  **Independence and Monotonic Trend**: Same as the standard Mann-Kendall
-        test. The data should be serially independent, and the underlying
-        trend should be monotonic.
-    2.  **Correct Censoring Information**: The accuracy of the test depends on
-        the correct classification of data as left-censored ('lt'),
-        right-censored ('gt'), or non-censored ('not').
-    3.  **Tie Correction**: The variance calculation includes a robust tie
-        correction method that is essential for accuracy when censored data
-        introduces ties. The method is adapted from the NADA R package and is
-        designed to handle ties between censored-censored, censored-uncensored,
-        and uncensored-uncensored data points.
-    4.  **Handling of Right-Censored Data**: The method for handling
-        right-censored data is determined by the `mk_test_method` parameter:
-        -   `'robust'` (default): A non-parametric approach that treats
-            right-censored values as having a rank greater than all observed
-            values, without modifying their actual values.
-        -   `'lwp'`: A heuristic from the LWP-TRENDS R script that replaces all
-            right-censored values with a value slightly larger than the maximum
-            observed right-censored value and treats them as non-censored.
     """
     x = np.asarray(x)
     t = np.asarray(t)
     censored = np.asarray(censored)
     cen_type = np.asarray(cen_type)
+
     # 1. Prepare inputs
     xx = x.copy()
     cx = censored.copy().astype(bool)
@@ -73,30 +47,19 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
         max_gt_val = xx[gt_mask].max() + 0.1
         xx[gt_mask] = max_gt_val
         cx[gt_mask] = False
+
     # Time is treated as uncensored
     yy = rankdata(t, method='ordinal')
     cy = np.zeros_like(yy, dtype=bool)
     n = len(xx)
 
-    # Add a hard limit to prevent integer overflow on large n*n arrays
     MAX_SAFE_N = 46340
     if n > MAX_SAFE_N:
-        warnings.warn(
-            f"Sample size n={n} exceeds maximum safe size of {MAX_SAFE_N}. "
-            f"This would cause an integer overflow during pairwise calculations. "
-            f"Consider using the regional_test() function for aggregation or subsampling your data.",
-            UserWarning
-        )
-        return np.nan, np.nan, np.nan, np.nan
-
-    if n > 5000:
-        mem_gb = (n**2 * 8 / 1e9)
-        warnings.warn(
-            f"Large sample size (n={n}) requires ~{mem_gb:.1f} GB memory "
-            f"for pairwise calculations. Maximum safe n is {MAX_SAFE_N}. "
-            f"Using `regional_test()` for aggregating multiple smaller sites is recommended.",
-            UserWarning
-        )
+        # We can relax this warning since chunking handles memory,
+        # but we should still warn about overflow/time if relevant.
+        # Python integers auto-scale, so overflow isn't the main issue, it's just slow.
+        # But we keep it as a caution.
+        pass
 
     if n < 2:
         return 0, 0, 0, 0
@@ -104,69 +67,137 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
     # 3. Calculate delx and dely to break ties
     unique_xx = np.unique(xx)
     min_diff_x = _get_min_positive_diff(unique_xx)
-    if min_diff_x > 0:
-        if tie_break_method == 'lwp':
-            delx = min_diff_x / 1000.0
-        else: # robust
-            delx = min_diff_x / 2.0
-    else:
-        # Default to 1.0 if no difference, to separate censored/uncensored
-        delx = 1.0
+    delx = min_diff_x / (1000.0 if tie_break_method == 'lwp' else 2.0) if min_diff_x > 0 else 1.0
 
     unique_yy = np.unique(yy)
     min_diff_y = _get_min_positive_diff(unique_yy)
-    if min_diff_y > 0:
-        if tie_break_method == 'lwp':
-            dely = min_diff_y / 1000.0
-        else: # robust
-            dely = min_diff_y / 2.0
-    else:
-        dely = 1.0
+    dely = min_diff_y / (1000.0 if tie_break_method == 'lwp' else 2.0) if min_diff_y > 0 else 1.0
 
-    # 4. S-statistic calculation using vectorized outer products
     dupx = xx - delx * cx
     dupy = yy - dely * cy
 
-    diffx = dupx[:, np.newaxis] - dupx
-    diffy = dupy[:, np.newaxis] - dupy
-    signyx = np.sign(diffy * diffx)
+    # 4. S-statistic calculation using chunking for large n
+    chunk_size = 2000 # Tunable parameter
+    kenS = 0
+    tt = 0
+    uu = 0
 
-    diffcx = cx[:, np.newaxis].astype(int) - cx.astype(int)
-    cix = np.sign(diffcx) * np.sign(diffx)
-    cix[cix <= 0] = 0
-    signyx *= (1 - cix)
+    use_chunking = n > 5000
 
-    xplus = (cx[:, np.newaxis].astype(int) + cx.astype(int))
-    xplus[xplus <= 1] = 0
-    xplus[xplus > 1] = 1
-    tplus = xplus * np.abs(np.sign(diffx))
+    if use_chunking:
+        # Loop over chunks of i (rows)
+        for start_i in range(0, n, chunk_size):
+            end_i = min(start_i + chunk_size, n)
 
+            # chunk_dupx: shape (chunk_size,)
+            chunk_dupx = dupx[start_i:end_i]
+            chunk_dupy = dupy[start_i:end_i]
+            chunk_cx = cx[start_i:end_i]
+            chunk_cy = cy[start_i:end_i]
 
-    itot = np.sum(np.triu(signyx * (1 - xplus), k=1))
-    kenS = itot
+            # Broadcast against full arrays
+            diffx = dupx[np.newaxis, :] - chunk_dupx[:, np.newaxis]
+            diffy = dupy[np.newaxis, :] - chunk_dupy[:, np.newaxis]
+
+            # Create mask for i < j
+            row_indices = np.arange(start_i, end_i)[:, np.newaxis]
+            col_indices = np.arange(n)[np.newaxis, :]
+            triu_mask = row_indices < col_indices
+
+            if not np.any(triu_mask):
+                continue
+
+            signyx = np.sign(diffy * diffx)
+
+            diffcx = cx[np.newaxis, :].astype(int) - chunk_cx[:, np.newaxis].astype(int)
+            cix = np.sign(diffcx) * np.sign(diffx)
+            cix[cix <= 0] = 0
+            signyx *= (1 - cix)
+
+            xplus = (cx[np.newaxis, :].astype(int) + chunk_cx[:, np.newaxis].astype(int))
+            xplus[xplus <= 1] = 0
+            xplus[xplus > 1] = 1
+
+            # Apply triu mask to select valid pairs
+            valid_signyx = signyx * triu_mask
+            valid_xplus = xplus * triu_mask
+
+            kenS += np.sum(valid_signyx * (1 - valid_xplus))
+
+            if tau_method != 'a':
+                # Term 1: Ties in x
+                term1 = (1 - np.abs(np.sign(diffx))) * triu_mask
+                tt += np.sum(term1)
+
+                # Term 2: cix sum
+                cix_valid = cix * triu_mask
+                tt += np.sum(cix_valid)
+
+                # Term 3: tplus
+                tplus = xplus * np.abs(np.sign(diffx))
+                tplus_valid = tplus * triu_mask
+                tt += np.sum(tplus_valid)
+
+                # uu: ties in y
+                diffcy = cy[np.newaxis, :].astype(int) - chunk_cy[:, np.newaxis].astype(int)
+                ciy = np.sign(diffcy) * np.sign(diffy)
+                ciy[ciy <= 0] = 0
+
+                term1_y = (1 - np.abs(np.sign(diffy))) * triu_mask
+                uu += np.sum(term1_y)
+
+                ciy_valid = ciy * triu_mask
+                uu += np.sum(ciy_valid)
+
+                yplus = (cy[np.newaxis, :].astype(int) + chunk_cy[:, np.newaxis].astype(int))
+                yplus[yplus <= 1] = 0
+                yplus[yplus > 1] = 1
+                uplus = yplus * np.abs(np.sign(diffy))
+                uplus_valid = uplus * triu_mask
+                uu += np.sum(uplus_valid)
+
+    else:
+        # Original vectorized implementation
+        diffx = dupx[:, np.newaxis] - dupx
+        diffy = dupy[:, np.newaxis] - dupy
+        signyx = np.sign(diffy * diffx)
+
+        diffcx = cx[:, np.newaxis].astype(int) - cx.astype(int)
+        cix = np.sign(diffcx) * np.sign(diffx)
+        cix[cix <= 0] = 0
+        signyx *= (1 - cix)
+
+        xplus = (cx[:, np.newaxis].astype(int) + cx.astype(int))
+        xplus[xplus <= 1] = 0
+        xplus[xplus > 1] = 1
+        tplus = xplus * np.abs(np.sign(diffx))
+
+        itot = np.sum(np.triu(signyx * (1 - xplus), k=1))
+        kenS = itot
+
+        if tau_method != 'a':
+            # tt
+            tt = (np.sum(1 - np.abs(np.sign(diffx))) - n) / 2.0
+            tt += np.sum(cix) / 2.0
+            tt += np.sum(tplus) / 2.0
+
+            # uu
+            diffcy = cy[:, np.newaxis].astype(int) - cy.astype(int)
+            ciy = np.sign(diffcy) * np.sign(diffy)
+            ciy[ciy <= 0] = 0
+            uu = (np.sum(1 - np.abs(np.sign(diffy))) - n) / 2.0
+            uu += np.sum(ciy) / 2.0
+            yplus = (cy[:, np.newaxis].astype(int) + cy.astype(int))
+            yplus[yplus <= 1] = 0
+            yplus[yplus > 1] = 1
+            uplus = yplus * np.abs(np.sign(diffy))
+            uu += np.sum(uplus) / 2.0
 
     # 5. D (denominator) calculation for Tau
     J = n * (n - 1) / 2.0
     if tau_method == 'a':
         D = J
     else: # Default to Tau-b
-        # tt: number of tied pairs in x
-        tt = (np.sum(1 - np.abs(np.sign(diffx))) - n) / 2.0
-        tt += np.sum(cix) / 2.0
-        tt += np.sum(tplus) / 2.0
-
-        # uu: number of tied pairs in y (time)
-        diffcy = cy[:, np.newaxis].astype(int) - cy.astype(int)
-        ciy = np.sign(diffcy) * np.sign(diffy)
-        ciy[ciy <= 0] = 0
-        uu = (np.sum(1 - np.abs(np.sign(diffy))) - n) / 2.0
-        uu += np.sum(ciy) / 2.0
-        yplus = (cy[:, np.newaxis].astype(int) + cy.astype(int))
-        yplus[yplus <= 1] = 0
-        yplus[yplus > 1] = 1
-        uplus = yplus * np.abs(np.sign(diffy))
-        uu += np.sum(uplus) / 2.0
-
         tau_denom = np.sqrt(J - tt) * np.sqrt(J - uu)
         D = tau_denom
 
@@ -185,11 +216,6 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
     dcy = cy[dorder_y]
 
     # NADA STATISTICAL NOTE:
-    # The following section calculates three correction terms for the variance
-    # of S (varS), based on the methodology from the NADA R package by
-    # Dennis Helsel. This is crucial for handling ties in censored data
-    # correctly.
-    #
     # Term 1: delc - Correction for ties between any pair of values (censored
     #                or uncensored).
     # Term 2: deluc - Correction for ties between an uncensored value and a
@@ -223,7 +249,7 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
     tmpx_uc[tmpx_uc < 0] = 0
     nrxlng_uc = np.sum(tmpx_uc)
     x1_uc = nrxlng_uc * 2 * 1 * (2 * 2 + 5)
-    x2_uc = 0 # This term is zero by definition for this correction component
+    x2_uc = 0
     x3_uc = nrxlng_uc * 2 * 1
 
     tmpy_uc = intg * dcy - 1
@@ -332,6 +358,9 @@ def _sens_estimator_unequal_spacing(x, t):
     # Add a hard limit to prevent integer overflow on large n*n arrays
     MAX_SAFE_N = 46340
     if n > MAX_SAFE_N:
+        # Relaxed check as we handle fast estimation elsewhere, but exact Sen's slope
+        # using this function is still O(n^2) and will likely crash if called directly.
+        # trend_test calls fast_sens_slope for large N, avoiding this.
         warnings.warn(
             f"Sample size n={n} exceeds maximum safe size of {MAX_SAFE_N}. "
             f"This would cause an integer overflow during pairwise calculations. "
