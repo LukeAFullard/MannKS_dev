@@ -15,7 +15,7 @@
 - [x] **Phase 3: Seasonal Test Integration** (Implemented `stratified_seasonal_sampling` and updated `seasonal_trend_test.py` with CI correction)
 - [x] **Phase 4: Special Handling for Other Functions** (Updated `rolling_trend.py` and `segmented_trend_test.py`)
 - [x] **Phase 5: Testing & Validation** (Complete: new tests added, benchmarks verified, seasonal bootstrap bug fixed)
-- [ ] **Phase 6: Documentation** (Pending: README update, new guide)
+- [x] **Phase 6: Documentation** (Complete: README updated, large dataset guide created)
 - [ ] **Phase 7: Migration & Release** (Pending: pyproject.toml update)
 
 ---
