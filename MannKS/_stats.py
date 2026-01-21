@@ -365,6 +365,29 @@ def _sens_estimator_unequal_spacing(x, t):
     return x_diff[valid_mask] / t_diff[valid_mask]
 
 
+def _sens_estimator_adaptive(x, t, max_pairs=None, random_state=None):
+    """
+    Adaptive Sen's slope: automatic or fast based on size.
+
+    Args:
+        max_pairs: None for automatic, or specific limit
+        random_state: For reproducibility in fast mode
+    """
+    n = len(x)
+
+    if max_pairs is None:
+        # Automatic
+        if n * (n - 1) // 2 <= 100000:
+            return _sens_estimator_unequal_spacing(x, t)
+        else:
+            from ._large_dataset import fast_sens_slope
+            return fast_sens_slope(x, t, random_state=random_state)
+    else:
+        # User specified limit
+        from ._large_dataset import fast_sens_slope
+        return fast_sens_slope(x, t, max_pairs=max_pairs, random_state=random_state)
+
+
 def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_mult=DEFAULT_GT_MULTIPLIER, method='unbiased'):
     """
     Computes Sen's slope for censored, unequally spaced data.
@@ -485,87 +508,141 @@ def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_m
 
     return slopes_final
 
-def _confidence_intervals(slopes, var_s, alpha, method='direct'):
+
+def _sens_estimator_censored_adaptive(x, t, cen_type,
+                                      lt_mult=DEFAULT_LT_MULTIPLIER, gt_mult=DEFAULT_GT_MULTIPLIER,
+                                      method='unbiased',
+                                      max_pairs=None,
+                                      random_state=None):
+    """Adaptive censored Sen's slope."""
+    n = len(x)
+
+    if max_pairs is None:
+        if n * (n - 1) // 2 <= 100000:
+            return _sens_estimator_censored(
+                x, t, cen_type, lt_mult, gt_mult, method
+            )
+        else:
+            from ._large_dataset import fast_sens_slope_censored
+            return fast_sens_slope_censored(
+                x, t, cen_type,
+                lt_mult=lt_mult, gt_mult=gt_mult,
+                method=method,
+                random_state=random_state
+            )
+    else:
+        from ._large_dataset import fast_sens_slope_censored
+        return fast_sens_slope_censored(
+            x, t, cen_type,
+            max_pairs=max_pairs,
+            lt_mult=lt_mult, gt_mult=gt_mult,
+            method=method,
+            random_state=random_state
+        )
+
+
+def _confidence_intervals(slopes, var_s, alpha, method='direct', total_pairs=None):
     """
     Computes the confidence intervals for Sen's slope.
+
+    Args:
+        slopes: Array of slopes (sample or full population)
+        var_s: Variance of S statistic (corresponds to total_pairs)
+        alpha: Significance level
+        method: 'direct' or 'lwp'
+        total_pairs: Total number of possible pairs. If None, assumes slopes
+                     contains all pairs. Used for scaling when slopes is a sample.
     """
     # Filter out NaN values, which can occur with the 'nan' method for
     # censored slopes.
     valid_slopes = slopes[~np.isnan(slopes)]
-    n = len(valid_slopes)
+    n_sample = len(valid_slopes)
 
-    if n == 0 or var_s < EPSILON:
+    if n_sample == 0 or var_s < EPSILON:
         return np.nan, np.nan
+
+    if total_pairs is None:
+        total_pairs = n_sample
 
     # For a two-sided confidence interval
     Z = norm.ppf(1 - alpha / 2)
 
-    # Ranks of the lower and upper confidence limits (1-based)
+    # Calculate limits in terms of the total population ranks
     C = Z * np.sqrt(var_s)
-    M1 = (n - C) / 2
-    M2 = (n + C) / 2
+    M1 = (total_pairs - C) / 2
+    M2 = (total_pairs + C) / 2
+
+    # Convert to quantiles
+    q1 = M1 / total_pairs
+    q2 = M2 / total_pairs
+
+    # Map to ranks in the sample
+    rank1 = q1 * n_sample
+    rank2 = q2 * n_sample
 
     sorted_slopes = np.sort(valid_slopes)
 
     if method == 'lwp':
         # LWP-TRENDS R script method (interpolation)
-        ranks = np.arange(1, n + 1)
-        lower_ci, upper_ci = np.interp([M1, M2], ranks, sorted_slopes)
+        # Note: 1-based ranks for interpolation
+        ranks = np.arange(1, n_sample + 1)
+        lower_ci, upper_ci = np.interp([rank1, rank2], ranks, sorted_slopes)
     else:
         # Default method (direct indexing)
-        # Note: np.round uses "round half to even" which may differ from other
-        # statistical software. This is a deliberate choice for consistency
-        # with a standard, well-defined rounding method.
-        lower_idx = int(np.round(M1 - 1))
-        upper_idx = int(np.round(M2 - 1))
+        # q1 is fraction of data. q1 * n gives float index.
+        # We target the index corresponding to that rank.
+        # rank 1 -> index 0
+
+        lower_idx = int(np.round(rank1 - 1))
+        upper_idx = int(np.round(rank2 - 1))
 
         # Ensure indices are within bounds
-        if 0 <= lower_idx < n and 0 <= upper_idx < n:
-            lower_ci = sorted_slopes[lower_idx]
-            upper_ci = sorted_slopes[upper_idx]
-        else:
-            warnings.warn(
-                f"Confidence interval calculation failed: calculated indices "
-                f"({lower_idx}, {upper_idx}) were out of bounds for the {n} valid slopes. "
-                f"This is typically due to insufficient data or extremely high variance.",
-                UserWarning
-            )
-            lower_ci, upper_ci = np.nan, np.nan
+        lower_idx = np.clip(lower_idx, 0, n_sample - 1)
+        upper_idx = np.clip(upper_idx, 0, n_sample - 1)
+
+        lower_ci = sorted_slopes[lower_idx]
+        upper_ci = sorted_slopes[upper_idx]
 
     return lower_ci, upper_ci
 
 
-def _sen_probability(slopes, var_s):
+def _sen_probability(slopes, var_s, total_pairs=None):
     """
     Calculates the probability that the Sen's slope is > 0.
     """
     # Filter out NaN values from slopes
     valid_slopes = slopes[~np.isnan(slopes)]
-    n_slopes = len(valid_slopes)
+    n_sample = len(valid_slopes)
 
-    if n_slopes == 0 or var_s < EPSILON:
+    if n_sample == 0 or var_s < EPSILON:
         return np.nan, np.nan, np.nan
 
+    if total_pairs is None:
+        total_pairs = n_sample
+
     sorted_slopes = np.sort(valid_slopes)
-    ranks = np.arange(1, n_slopes + 1)
+    ranks = np.arange(1, n_sample + 1)
 
     # Replicate R's approx function with different tie methods
     R0_median = np.interp(0, sorted_slopes, ranks)
-    R0_max = np.interp(0, sorted_slopes, ranks, right=n_slopes) # ties='max'
+    R0_max = np.interp(0, sorted_slopes, ranks, right=n_sample) # ties='max'
     R0_min = np.interp(0, sorted_slopes, ranks, left=1) # ties='min
 
     # Handle edge cases where all slopes are on one side of zero
     if np.all(valid_slopes < 0):
-        R0_median = R0_max = n_slopes
+        R0_median = R0_max = n_sample
         R0_min = 1 # R behavior is complex here, this is a simplification
     elif np.all(valid_slopes > 0):
         R0_median = R0_min = 1
-        R0_max = n_slopes # R behavior
+        R0_max = n_sample # R behavior
 
     # Calculate probabilities
-    z_median = (2 * R0_median - n_slopes) / np.sqrt(var_s) if var_s > 0 else 0
-    z_max = (2 * R0_max - n_slopes) / np.sqrt(var_s) if var_s > 0 else 0
-    z_min = (2 * R0_min - n_slopes) / np.sqrt(var_s) if var_s > 0 else 0
+    # Scale the sample statistic to the population scale
+    scaling = total_pairs / n_sample
+
+    z_median = ((2 * R0_median - n_sample) * scaling) / np.sqrt(var_s) if var_s > 0 else 0
+    z_max = ((2 * R0_max - n_sample) * scaling) / np.sqrt(var_s) if var_s > 0 else 0
+    z_min = ((2 * R0_min - n_sample) * scaling) / np.sqrt(var_s) if var_s > 0 else 0
 
     sen_prob = norm.cdf(z_median)
     sen_prob_max = norm.cdf(z_max)
