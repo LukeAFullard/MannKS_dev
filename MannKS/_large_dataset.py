@@ -6,6 +6,7 @@ statistical validity.
 """
 
 import numpy as np
+import pandas as pd
 import warnings
 from typing import Tuple, Optional, Union, Dict
 
@@ -248,3 +249,47 @@ def fast_sens_slope_censored(x: np.ndarray,
     slopes_final[(slopes_raw < 0) & (cen_type_pairs == 'gt not')] = ambiguous_value
 
     return slopes_final
+
+
+def stratified_seasonal_sampling(data: pd.DataFrame,
+                                 season_col: str,
+                                 max_per_season: int = 1000,
+                                 random_state: Optional[int] = None) -> pd.DataFrame:
+    """
+    Sample data while maintaining seasonal balance.
+
+    Critical for seasonal trend tests where we need equal representation
+    from all seasons.
+
+    Args:
+        data: DataFrame with season column
+        season_col: Column name for seasons
+        max_per_season: Target samples per season
+        random_state: For reproducibility
+
+    Returns:
+        Stratified sample maintaining season proportions
+
+    Theory:
+        Seasonal Mann-Kendall requires S = Σ S_i where S_i is the score
+        for season i. Random sampling could deplete some seasons, biasing
+        the result. Stratified sampling ensures each season contributes
+        proportionally.
+    """
+    rng = np.random.default_rng(random_state)
+
+    sampled_groups = []
+    for season, group in data.groupby(season_col):
+        n_season = len(group)
+        if n_season <= max_per_season:
+            sampled_groups.append(group)
+        else:
+            # Sample without replacement
+            sample_idx = rng.choice(
+                group.index,
+                size=max_per_season,
+                replace=False
+            )
+            sampled_groups.append(group.loc[sample_idx])
+
+    return pd.concat(sampled_groups).sort_values('t')
