@@ -1,6 +1,6 @@
 import numpy as np
 import warnings
-from scipy.stats import norm, rankdata
+from scipy.stats import norm, rankdata, kendalltau
 
 # --- Module-level Constants ---
 DEFAULT_LT_MULTIPLIER = 0.5  # Half detection limit for left-censored
@@ -82,9 +82,45 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
     tt = 0
     uu = 0
 
-    use_chunking = n > 5000
+    use_fast_path = (n > 5000 and not np.any(cx) and mk_test_method != 'lwp')
+    use_chunking = n > 5000 and not use_fast_path
 
-    if use_chunking:
+    if use_fast_path:
+        # FAST PATH: Uncensored large data using O(N log N) algorithm
+        # We rely on scipy.stats.kendalltau which is O(N log N).
+        # To replicate the existing behavior for tied timestamps (treating them as
+        # ordinal/sequential based on array order), we sort x by t stable-ly
+        # and compare against an ordinal time vector (0..N-1).
+
+        # 1. Sort x by t (stable)
+        # Note: yy is rankdata(t, 'ordinal') which is effectively 1..N permutation
+        # matching the sort order. So sorting by yy is equivalent to sorting by t.
+        sort_idx = np.argsort(yy, kind='stable')
+        x_sorted = xx[sort_idx]
+        t_ordinal = np.arange(n)
+
+        # 2. Calculate Tau-b
+        res = kendalltau(x_sorted, t_ordinal)
+        tau_b = res.statistic
+        if np.isnan(tau_b): tau_b = 0
+
+        # 3. Recover S from Tau-b
+        # Calculate ties in x
+        _, c_x = np.unique(x_sorted, return_counts=True)
+        tt = np.sum(c_x * (c_x - 1)) // 2
+
+        # Ties in t_ordinal are 0 (by definition of ordinal ranking)
+        uu = 0
+
+        n_pairs = n * (n - 1) // 2
+
+        # For Tau-b, denom = sqrt((pairs-tt)(pairs-uu))
+        # Since uu=0, denom = sqrt((pairs-tt)*pairs)
+        denom_b = np.sqrt(float(n_pairs - tt) * float(n_pairs))
+
+        kenS = int(round(tau_b * denom_b))
+
+    elif use_chunking:
         # Loop over chunks of i (rows)
         for start_i in range(0, n, chunk_size):
             end_i = min(start_i + chunk_size, n)
