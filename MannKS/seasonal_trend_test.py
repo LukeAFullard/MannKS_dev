@@ -322,6 +322,8 @@ def seasonal_trend_test(
 
         # --- Bootstrap Logic for Seasonality ---
         block_size_used = None
+        total_possible_pairs = 0
+
         if autocorr_method == 'block_bootstrap':
             # Bootstrap approach:
             # 1. Identify unique cycles (e.g. years)
@@ -337,12 +339,14 @@ def seasonal_trend_test(
             for i in season_range:
                 season_mask = data_filtered['season'] == i
                 season_data = data_filtered[season_mask]
-                if len(season_data) > 1:
+                n = len(season_data)
+                if n > 1:
                     s_i, _, _, _ = _mk_score_and_var_censored(
                         season_data['value'], season_data['t'], season_data['censored'],
                         season_data['cen_type'], tau_method=tau_method, mk_test_method=mk_test_method
                     )
                     s_obs += s_i
+                    total_possible_pairs += n * (n - 1) // 2
 
             # Bootstrap
             s_boot_dist = np.zeros(n_bootstrap)
