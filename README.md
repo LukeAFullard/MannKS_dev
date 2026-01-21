@@ -54,6 +54,19 @@ See [Statistical Methodology: Bootstrap](./bootstrap.md) for a detailed explanat
 *   **Hypothesis Testing (P-values)**: Uses *Detrended Residual Block Bootstrap* to generate a null distribution while preserving autocorrelation.
 *   **Confidence Intervals (Sen's Slope)**: Uses *Pairs Block Bootstrap* to avoid bias when "reconstructing" censored data values from residuals.
 
+### Performance (v0.5.0)
+
+| Dataset Size | Mode | Time | Accuracy |
+|--------------|------|------|----------|
+| 1,000 | Full | 0.1s | Exact |
+| 5,000 | Full | 2s | Exact |
+| 10,000 | Fast | 3s | ±0.5% |
+| 50,000 | Fast | 5s | ±0.5% |
+| 100,000 | Aggregate* | 10s | Depends** |
+
+\* Aggregate to ~1000 points first
+\** Accuracy depends on aggregation method and trend pattern
+
 ---
 
 ## 🚀 Quick Start

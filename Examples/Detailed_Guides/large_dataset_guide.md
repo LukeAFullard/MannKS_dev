@@ -3,48 +3,47 @@
 ## Understanding the Three Modes
 
 ### 1. Full Mode (Exact)
-**When:** $n \le 5,000$ (automatic) or `large_dataset_mode='full'`
+**When:** n ≤ 5,000 (automatic) or `large_dataset_mode='full'`
 
 **What it does:**
-- Calculates ALL $n \times (n-1)/2$ pairwise slopes.
-- Exact median, exact confidence intervals.
-- No approximation error.
+- Calculates ALL n×(n-1)/2 pairwise slopes
+- Exact median, exact confidence intervals
+- No approximation error
 
 **Use when:**
-- Dataset is small enough.
-- You need exact results for publication.
-- Computational time is not a concern.
+- Dataset is small enough
+- You need exact results for publication
+- Computational time is not a concern
 
 ### 2. Fast Mode (Approximate)
-**When:** $5,000 < n \le 50,000$ (automatic)
+**When:** 5,000 < n ≤ 50,000 (automatic)
 
 **What it does:**
-- Samples random pairs (default: 100,000) for Sen's slope estimation.
-- Estimates Sen's slope via sampled median.
-- Calculates Mann-Kendall score ($S$) exactly using memory-optimized chunking.
-- Maintains statistical validity.
+- Samples random pairs (default: 100,000)
+- Estimates Sen's slope via sampled median
+- Maintains statistical validity
 
 **Accuracy:**
-- Typical error: < 0.5% of true slope.
-- 95% CI covers true value in >99% of cases.
-- Error decreases as $\sqrt{max\_pairs}$.
+- Typical error: < 0.5% of true slope
+- 95% CI covers true value in >99% of cases
+- Error decreases as √(max_pairs)
 
 **Use when:**
-- Dataset is medium-large.
-- You need fast results.
-- Small approximation error is acceptable.
+- Dataset is medium-large
+- You need fast results
+- Small approximation error is acceptable
 
 ### 3. Aggregate Mode (Recommended for Very Large Data)
-**When:** $n > 50,000$
+**When:** n > 50,000
 
 **What it does:**
-- First aggregate to coarser time resolution.
-- Then apply full or fast mode on aggregated data.
+- First aggregate to coarser time resolution
+- Then apply full or fast mode on aggregated data
 
 **Use when:**
-- Dataset is very large.
-- High-frequency data with long-term trend.
-- Reducing noise is beneficial.
+- Dataset is very large
+- High-frequency data with long-term trend
+- Reducing noise is beneficial
 
 ## Statistical Theory
 
@@ -52,29 +51,21 @@
 
 Sen's slope is the **median** of all pairwise slopes. By the Central Limit Theorem:
 
-- Median estimator has SE $\approx IQR / \sqrt{K}$.
-- $K$ = number of samples (e.g., 100,000 pairs).
-- For $K = 100,000$: SE $\approx$ 0.5% of slope magnitude.
+- Median estimator has SE ≈ IQR / √K
+- K = number of samples (e.g., 100,000 pairs)
+- For K = 100,000: SE ≈ 0.5% of slope magnitude
 
-**Bias:** Negligible (< 0.1%) with uniform random sampling.
+**Bias:** Negligible (< 0.1%) with uniform random sampling
 
 ### Seasonal Data Special Handling
 
 Seasonal tests require **stratified sampling**:
 
-1. Group observations by season.
-2. Sample up to `max_per_season` from each season.
-3. Maintains seasonal balance: $S = \sum S_i$.
+1. Group observations by season
+2. Sample up to `max_per_season` from each season
+3. Maintains seasonal balance: S = Σ Sᵢ
 
-This ensures no season is over/under-represented, preventing bias in the seasonal trend detection.
-
-### Mann-Kendall Score Memory Optimization
-
-The Mann-Kendall S statistic normally requires an $O(n^2)$ matrix to compare all pairs. For $n=12,000$, this would require ~1.2GB RAM.
-
-MannKS v0.5.0 implements a **chunked calculation strategy**:
-- It processes comparisons in batches (chunks) of rows.
-- This reduces memory usage to $O(chunk\_size \times n)$, allowing exact calculation on standard hardware without crashes.
+This ensures no season is over/under-represented.
 
 ## Practical Guidelines
 
@@ -82,14 +73,14 @@ MannKS v0.5.0 implements a **chunked calculation strategy**:
 
 | max_pairs | Speed | Accuracy | Use Case |
 |-----------|-------|----------|----------|
-| 50,000 | Very Fast | $\pm 1\%$ | Exploratory analysis |
-| 100,000 | Fast | $\pm 0.5\%$ | **Default, balanced** |
-| 500,000 | Medium | $\pm 0.2\%$ | High accuracy needs |
-| 1,000,000+ | Slow | $\pm 0.1\%$ | Publication-quality |
+| 50,000 | Very Fast | ±1% | Exploratory analysis |
+| 100,000 | Fast | ±0.5% | **Default, balanced** |
+| 500,000 | Medium | ±0.2% | High accuracy needs |
+| 1,000,000+ | Slow | ±0.1% | Publication-quality |
 
 ### Aggregation Strategies
 
-For $n > 50,000$:
+For n > 50,000:
 
 **High-frequency data (e.g., hourly):**
 ```python
@@ -164,8 +155,8 @@ print(f"Difference: {abs(result_full.slope - result_fast.slope):.6f}")
 ## Validation
 
 All fast mode results are validated against exact calculations in the test suite:
-- 1000+ test cases across different data patterns.
-- Error bounds verified empirically.
-- Seasonal stratification tested for balance.
+- 1000+ test cases across different data patterns
+- Error bounds verified empirically
+- Seasonal stratification tested for balance
 
 See `tests/test_large_dataset.py` for details.
