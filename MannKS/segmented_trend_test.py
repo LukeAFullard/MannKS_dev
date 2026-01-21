@@ -12,7 +12,7 @@ from ._helpers import _get_slope_scaling_factor
 _Segmented_Trend_Test_Tuple = namedtuple('Segmented_Trend_Test', [
     'n_breakpoints', 'breakpoints', 'breakpoint_cis', 'segments',
     'is_datetime', 'bic', 'aic', 'score', 'selection_summary', 'bootstrap_samples',
-    'alpha', 'warnings'
+    'alpha', 'warnings', 'computation_mode'
 ])
 
 class SegmentedTrendResult(_Segmented_Trend_Test_Tuple):
@@ -148,6 +148,8 @@ def segmented_trend_test(
     n_bootstrap: int = 100,
     slope_scaling: Optional[str] = None,
     random_state: Optional[int] = None,
+    large_dataset_mode: str = 'auto',
+    max_pairs: Optional[int] = None,
     **kwargs
 ):
     """
@@ -169,6 +171,8 @@ def segmented_trend_test(
         n_bootstrap: Number of bootstrap iterations if bagging is enabled.
         slope_scaling: Unit to scale the slope to (e.g. 'year'). Only for datetime t.
         random_state: Seed for random number generator.
+        large_dataset_mode: Controls large dataset handling (passed to slope estimator).
+        max_pairs: Max pairs for fast slope estimation.
         **kwargs: Additional arguments for trend estimation (e.g. lt_mult, gt_mult).
 
     Returns:
@@ -213,7 +217,8 @@ def segmented_trend_test(
                 selection_summary=None,
                 bootstrap_samples=None,
                 alpha=alpha,
-                warnings=captured_warnings
+                warnings=captured_warnings,
+                computation_mode='insufficient'
             )
 
         # 2. Fit Hybrid Model
@@ -230,7 +235,12 @@ def segmented_trend_test(
         lt_mult = kwargs.get('lt_mult', 0.5)
         gt_mult = kwargs.get('gt_mult', 1.1)
 
-        hybrid_model.fit(t_numeric, x_val, censored, cen_type, lt_mult, gt_mult, alpha=alpha)
+        hybrid_model.fit(
+            t_numeric, x_val, censored, cen_type, lt_mult, gt_mult,
+            alpha=alpha,
+            large_dataset_mode=large_dataset_mode,
+            max_pairs=max_pairs
+        )
 
         # 3. Format Results
         breakpoints = hybrid_model.breakpoints_
@@ -310,7 +320,8 @@ def segmented_trend_test(
         selection_summary=hybrid_model.selection_summary_,
         bootstrap_samples=hybrid_model.bootstrap_samples_,
         alpha=alpha,
-        warnings=captured_warnings
+        warnings=captured_warnings,
+        computation_mode='hybrid'
     )
 
 

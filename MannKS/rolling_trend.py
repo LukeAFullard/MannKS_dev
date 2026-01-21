@@ -28,6 +28,9 @@ def rolling_trend_test(
     slope_scaling: Optional[str] = None,
     x_unit: str = "units",
     continuous_confidence: bool = True,
+    large_dataset_mode: str = 'auto',
+    max_pairs: Optional[int] = None,
+    random_state: Optional[int] = None,
     **kwargs
 ) -> pd.DataFrame:
     """
@@ -57,6 +60,16 @@ def rolling_trend_test(
         x_unit: Unit of measurement for x (e.g., 'mg/L').
         continuous_confidence: If True (default for rolling), uses continuous confidence (C)
                                interpretation. If False, uses classical p-value testing.
+        large_dataset_mode : str, default 'auto'
+            Controls algorithm selection for large datasets:
+            - 'auto': Automatic based on sample size (recommended)
+            - 'full': Force exact calculations (may be slow/crash for large n)
+            - 'fast': Force fast approximations
+            - 'aggregate': Force aggregation workflow
+        max_pairs : int, optional
+            Maximum number of pairs to sample in fast mode.
+        random_state : int, optional
+            Random seed for reproducible results in fast mode.
         **kwargs: Additional arguments passed to `trend_test` or `seasonal_trend_test`.
 
     Returns:
@@ -183,6 +196,9 @@ def rolling_trend_test(
                 'slope_scaling': slope_scaling,
                 'x_unit': x_unit,
                 'continuous_confidence': continuous_confidence,
+                'large_dataset_mode': large_dataset_mode,
+                'max_pairs': max_pairs,
+                'random_state': random_state,
                 **kwargs
             }
 
