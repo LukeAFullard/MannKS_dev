@@ -6,7 +6,6 @@ from collections import namedtuple
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
-from collections import namedtuple
 import warnings
 from scipy.stats import norm
 from ._stats import (_z_score, _p_value,
