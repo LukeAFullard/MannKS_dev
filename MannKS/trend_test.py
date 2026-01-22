@@ -436,8 +436,12 @@ def trend_test(
                 )
 
             slope = np.nanmedian(slopes) if len(slopes) > 0 else np.nan
-            note = get_sens_slope_analysis_note(slopes, t_filtered, cen_type_filtered)
-            analysis_notes.append(note)
+
+            # Skip analysis note for fast/aggregate mode to avoid memory explosion (O(N^2) pair reconstruction)
+            # We skip if strategy is 'fast' or 'aggregate', OR if N is simply too large
+            if tier_info_filtered['strategy'] not in ['fast', 'aggregate'] and len(t_filtered) <= 5000:
+                note = get_sens_slope_analysis_note(slopes, t_filtered, cen_type_filtered)
+                analysis_notes.append(note)
 
             if not np.isnan(slope):
                 intercept = np.nanmedian(x_filtered) - np.nanmedian(t_filtered) * slope
