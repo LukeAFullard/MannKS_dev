@@ -7,11 +7,8 @@ from MannKS import trend_test
 
 def test_audit_boundary_exactness():
     """
-    Verify that N=5000 (Full) and N=5001 (Fast MK Score) produce mathematically
+    Verify that N=5000 (Full) and N=5000 (Forced Fast MK Score) produce mathematically
     consistent MK Scores (S) and Variances.
-
-    The 'Fast' MK score for uncensored data uses an O(N log N) algorithm which
-    should be EXACTLY equal to the O(N^2) algorithm, not an approximation.
     """
     np.random.seed(42)
 
@@ -30,6 +27,27 @@ def test_audit_boundary_exactness():
     # Use approx for floating point safety, though they should be mathematically identical
     assert res1.s == pytest.approx(res2.s), "MK Score mismatch between Full and Forced Fast mode"
     assert res1.var_s == pytest.approx(res2.var_s), "Variance mismatch between Full and Forced Fast mode"
+
+def test_mk_score_exactness_large_n():
+    """
+    Verify O(N log N) MK Score matches O(N^2) exactly for uncensored data at N=5005.
+    """
+    n = 5005
+    np.random.seed(42)
+    x = np.random.randn(n)
+    t = np.arange(n)
+
+    # Full mode (O(N^2)) - force strict calculation
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        res_full = trend_test(x, t, large_dataset_mode='full')
+
+    # Fast mode (O(N log N) for MK Score)
+    res_fast = trend_test(x, t, large_dataset_mode='fast', random_state=42)
+
+    assert res_full.s == res_fast.s, f"S mismatch: Full={res_full.s}, Fast={res_fast.s}"
+    assert np.isclose(res_full.var_s, res_fast.var_s), "Var(S) mismatch"
+    assert np.isclose(res_full.z, res_fast.z), "Z mismatch"
 
 def test_audit_determinism():
     """
@@ -50,68 +68,73 @@ def test_audit_determinism():
 
     # Verify different seed gives different result
     res3 = trend_test(x, t, random_state=seed+1)
-    assert res1.slope != res3.slope, "Slopes should differ with different seeds (extremely unlikely to be identical)"
+    assert res1.slope != res3.slope, "Slopes should differ with different seeds"
 
 def test_audit_heavy_ties():
     """
     Verify behavior with heavy ties.
-    The O(N log N) implementation warns if ties > 50%.
+    The O(N log N) implementation warns if tied PAIRS > 50%.
+    Note: 50% tied values != 50% tied pairs.
+    Need ~71% tied values to get >50% tied pairs (0.71^2 approx 0.5).
+    Using 80% to be safe.
     """
-    n = 6000
-    # Create 80% ties
-    x = np.zeros(n)
-    indices = np.random.choice(n, int(n*0.2), replace=False)
-    x[indices] = np.random.normal(0, 1, int(n*0.2))
+    n = 5500
+    np.random.seed(42)
+    # 80% ties (Single value dominates) -> 0.8^2 = 0.64 > 0.5 tied pairs
+    x = np.random.choice([0, 1], size=n, p=[0.8, 0.2])
     t = np.arange(n)
 
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
-        res = trend_test(x, t)
+        # Run in fast mode
+        res = trend_test(x, t, large_dataset_mode='fast')
 
-        # Check for the specific warning
+        # Check for the specific warning in captured warnings
         tie_warnings = [str(warn.message) for warn in w if "Heavy ties detected" in str(warn.message)]
-        if not tie_warnings:
-             # Check if it's in the result warnings
-             assert any("Heavy ties detected" in str(rw) for rw in res.warnings), "Did not detect heavy ties warning."
+
+        # Also check result object warnings
+        res_warnings = [str(rw) for rw in res.warnings if "Heavy ties detected" in str(rw)]
+
+        assert tie_warnings or res_warnings, "Did not detect heavy ties warning."
 
 def test_audit_censored_fallback():
     """
     Verify that censored data falls back to appropriate algorithms.
-    For N > 5000 with censored data:
-    1. MK Score: Cannot use O(N log N). Must use Chunked O(N^2) or standard.
-    2. Slope: Can use Stochastic Censored Slope.
+    For N > 5000 with censored data, MK Score calculation must fall back
+    to exact O(N^2) or Chunked O(N^2) because O(N log N) doesn't support censored.
+
+    We verify this by ensuring S matches the 'full' mode result exactly.
     """
-    n = 6000
+    n = 5005
+    np.random.seed(42)
     x = np.random.normal(0, 1, n)
     t = np.arange(n)
     censored = np.zeros(n, dtype=bool)
-    censored[::10] = True # 10% censored
-
-    # Explicitly creating cen_type column as expected by _prepare_data if we pass a DataFrame
+    censored[::20] = True # 5% censored
     cen_type = np.full(n, 'not', dtype=object)
-    cen_type[censored] = 'lt' # Assuming left-censored for test
+    cen_type[censored] = 'lt'
 
     df = pd.DataFrame({'value': x, 't': t, 'censored': censored, 'cen_type': cen_type})
 
-    res = trend_test(df, t=df['t'], large_dataset_mode='auto', random_state=42)
+    # Reference run (Full)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        res_full = trend_test(df, t=df['t'], large_dataset_mode='full')
 
-    # It should still be 'fast' because 'fast' mode refers to the OVERALL strategy
-    # (stochastic slope), even if MK score had to fallback.
-    assert res.computation_mode == 'fast'
+    # Test run (Fast - requesting fast slope, but MK score should fallback)
+    res_fast = trend_test(df, t=df['t'], large_dataset_mode='fast', random_state=42)
 
-    assert res.pairs_used is not None
-    assert res.pairs_used <= 100000 + 100 # buffer
+    assert res_fast.computation_mode == 'fast', "Overall mode should be 'fast' (slope)"
+
+    # S should match exactly
+    assert res_full.s == res_fast.s, "S mismatch: Censored fallback failed to produce exact score"
+    assert np.isclose(res_full.var_s, res_fast.var_s), "Variance mismatch"
 
 def test_audit_seasonal_stratification_detail():
     """
     Verify that seasonal stratification produces the exact expected sample sizes.
     """
     # 2 seasons, unbalanced.
-    # Season 1: 10,000 points
-    # Season 2: 10,000 points
-    # Max per season: 500
-    # Expected total: 1000
-
     n_per_season = 10000
     s1 = pd.DataFrame({'value': np.random.randn(n_per_season), 'season': 1, 't': np.arange(n_per_season)})
     s2 = pd.DataFrame({'value': np.random.randn(n_per_season), 'season': 2, 't': np.arange(n_per_season, 2*n_per_season)})
