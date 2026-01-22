@@ -115,6 +115,15 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
 
         n_pairs = n * (n - 1) // 2
 
+        # Audit validation for heavy ties
+        if n_pairs > 0 and (float(tt) / float(n_pairs)) > 0.5:
+            warnings.warn(
+                "Heavy ties detected (>50% tied pairs). Fast MK score approximation "
+                "may have minor rounding errors. Consider using large_dataset_mode='full' "
+                "for exact results.",
+                UserWarning
+            )
+
         # For Tau-b, denom = sqrt((pairs-tt)(pairs-uu))
         # Since uu=0, denom = sqrt((pairs-tt)*pairs)
         denom_b = np.sqrt(float(n_pairs - tt) * float(n_pairs))
