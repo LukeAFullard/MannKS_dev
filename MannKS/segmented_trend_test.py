@@ -150,6 +150,8 @@ def segmented_trend_test(
     random_state: Optional[int] = None,
     large_dataset_mode: str = 'auto',
     max_pairs: Optional[int] = None,
+    aggregation_threshold: int = 10000,
+    aggregation_target: int = 2500,
     **kwargs
 ):
     """
@@ -173,6 +175,8 @@ def segmented_trend_test(
         random_state: Seed for random number generator.
         large_dataset_mode: Controls large dataset handling (passed to slope estimator).
         max_pairs: Max pairs for fast slope estimation.
+        aggregation_threshold: Minimum sample size to trigger aggregation for breakpoint detection (default 10000).
+        aggregation_target: Number of bins to aggregate data into for fast detection (default 2500).
         **kwargs: Additional arguments for trend estimation (e.g. lt_mult, gt_mult).
 
     Returns:
@@ -239,7 +243,9 @@ def segmented_trend_test(
             t_numeric, x_val, censored, cen_type, lt_mult, gt_mult,
             alpha=alpha,
             large_dataset_mode=large_dataset_mode,
-            max_pairs=max_pairs
+            max_pairs=max_pairs,
+            aggregation_threshold=aggregation_threshold,
+            aggregation_target=aggregation_target
         )
 
         # 3. Format Results
