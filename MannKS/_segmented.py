@@ -177,7 +177,7 @@ class HybridSegmentedTrend:
         self.bootstrap_samples_ = None
 
     def fit(self, t, x, censored=None, cen_type=None, lt_mult=0.5, gt_mult=1.1, alpha=0.05,
-            large_dataset_mode='auto', max_pairs=None):
+            large_dataset_mode='auto', max_pairs=None, aggregation_threshold=10000, aggregation_target=2500):
         t = np.asarray(t)
         x = np.asarray(x)
 
@@ -197,6 +197,31 @@ class HybridSegmentedTrend:
             x_ols = x
 
         # --- Phase 1: Structure Discovery ---
+        t_phase1 = t
+        x_phase1 = x_ols
+        n_phase1 = len(t)
+        use_aggregation = False
+
+        # Optimization: Use aggregation for large datasets to speed up breakpoint detection
+        if large_dataset_mode == 'aggregate' or \
+           (large_dataset_mode in ['auto', 'fast'] and n_phase1 > aggregation_threshold):
+            use_aggregation = True
+            n_target = aggregation_target
+
+            # Simple binning (mean aggregation)
+            bins = np.linspace(t.min(), t.max(), n_target + 1)
+            bin_indices = np.digitize(t, bins)
+
+            df_temp = pd.DataFrame({'t': t, 'x': x_ols, 'bin': bin_indices})
+            df_agg = df_temp.groupby('bin').mean()
+
+            t_phase1 = df_agg['t'].to_numpy()
+            x_phase1 = df_agg['x'].to_numpy()
+
+            if len(t_phase1) < 10: # Safety fallback if aggregation fails excessively
+                 t_phase1 = t
+                 x_phase1 = x_ols
+                 use_aggregation = False
 
         best_n = 0
         best_bps = []
@@ -218,10 +243,10 @@ class HybridSegmentedTrend:
             try:
                 if k == 0:
                     # Linear Fit BIC
-                    p = np.polyfit(t, x_ols, 1)
-                    y_pred = np.polyval(p, t)
-                    rss = np.sum((x_ols - y_pred)**2)
-                    n_samples = len(x)
+                    p = np.polyfit(t_phase1, x_phase1, 1)
+                    y_pred = np.polyval(p, t_phase1)
+                    rss = np.sum((x_phase1 - y_pred)**2)
+                    n_samples = len(x_phase1)
                     if rss <= 1e-10: rss = 1e-10
                     # k_params = 2 (slope, intercept)
                     bic = n_samples * np.log(rss/n_samples) + 2 * np.log(n_samples)
@@ -241,7 +266,7 @@ class HybridSegmentedTrend:
                         best_bps = []
                         best_bp_cis = []
                 else:
-                    pw_fit = piecewise_regression.Fit(t, x_ols, n_breakpoints=k, verbose=False)
+                    pw_fit = piecewise_regression.Fit(t_phase1, x_phase1, n_breakpoints=k, verbose=False)
                     # Check BIC
                     current_bic = np.inf
                     current_aic = np.inf
@@ -255,7 +280,7 @@ class HybridSegmentedTrend:
                         # Calculate AIC if possible
                         if current_bic != np.inf:
                             k_params = 2 * k + 2
-                            n_samples = len(x)
+                            n_samples = len(x_phase1)
                             current_aic = current_bic - k_params * np.log(n_samples) + 2 * k_params
                         else:
                             current_aic = np.inf
@@ -300,7 +325,7 @@ class HybridSegmentedTrend:
                                         # n_params = 2 (const, beta1) + n_breakpoints (alphas) + n_breakpoints (bps)
                                         # For muggeo: roughly 2 + 2*k
                                         n_params = 2 + 2 * k
-                                        df = len(x) - n_params
+                                        df = len(x_phase1) - n_params
                                         if df > 0:
                                             # t-statistic for two-tailed alpha
                                             t_crit = t_dist.ppf(1 - alpha / 2, df)
@@ -326,7 +351,8 @@ class HybridSegmentedTrend:
 
         # 2. Refine Locations with Bagging (if enabled and N > 0)
         if self.use_bagging and best_n > 0:
-            robust_bps, all_samples_structured = find_bagged_breakpoints(t, x_ols, best_n, self.n_bootstrap, random_state=self.random_state)
+            # Use aggregated data for bagging if it was used for detection
+            robust_bps, all_samples_structured = find_bagged_breakpoints(t_phase1, x_phase1, best_n, self.n_bootstrap, random_state=self.random_state)
             self.bootstrap_samples_ = all_samples_structured
 
             if len(robust_bps) == best_n:
