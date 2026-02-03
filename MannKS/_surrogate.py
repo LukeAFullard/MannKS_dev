@@ -130,6 +130,15 @@ def _lomb_scargle_surrogates(
     else:
         x_centered = x
 
+    # Warn about performance for large computations
+    if n * n_surrogates > 2000000:
+         warnings.warn(
+            f"Lomb-Scargle surrogate generation is computationally expensive for N={n} "
+            f"and n_surrogates={n_surrogates}. Expect significant runtime. "
+            "Consider reducing n_surrogates or aggregating data.",
+            UserWarning
+        )
+
     # 1. Compute Lomb-Scargle Periodogram
     ls = LombScargle(t, x_centered, dy=dy, fit_mean=fit_mean, center_data=False) # centering handled above or by fit_mean
 
