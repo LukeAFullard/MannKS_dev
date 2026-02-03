@@ -49,6 +49,16 @@ def _iaaft_surrogates(
     Suitable for EVENLY spaced data.
 
     Ref: Schreiber, T., & Schmitz, A. (1996). Improved surrogate data for nonlinearity tests.
+
+    Args:
+        x (np.ndarray): Input time series.
+        n_surrogates (int): Number of surrogates to generate.
+        max_iter (int): Maximum iterations for IAAFT convergence.
+        tol (float): Convergence tolerance.
+        random_state (Optional[int]): Seed for reproducibility.
+
+    Returns:
+        np.ndarray: Array of surrogate time series (shape: n_surrogates x n).
     """
     rng = np.random.default_rng(random_state)
     n = len(x)
@@ -117,6 +127,20 @@ def _lomb_scargle_surrogates(
     3. Reconstruct time series at original time points t:
        x_surr(t) = sum( sqrt(P(f)) * cos(2*pi*f*t + phi) )
     4. Rank-adjust to match original value distribution (Gaussianization correction).
+
+    Args:
+        x (np.ndarray): Input data values.
+        t (np.ndarray): Input time values.
+        dy (Optional[np.ndarray]): Measurement uncertainties.
+        n_surrogates (int): Number of surrogates to generate.
+        freq_method (str): 'auto' or 'log' for frequency grid selection.
+        normalization (str): Periodogram normalization ('standard', 'model', 'log', 'psd').
+        fit_mean (bool): Whether to fit a floating mean during periodogram calculation.
+        center_data (bool): Whether to center data before analysis.
+        random_state (Optional[int]): Seed for reproducibility.
+
+    Returns:
+        np.ndarray: Array of surrogate time series.
     """
     if not HAS_ASTROPY:
         raise ImportError("`astropy` is required for Lomb-Scargle surrogates. Install it via `pip install astropy`.")
@@ -246,35 +270,24 @@ def surrogate_test(
     generated from surrogate time series that preserve the data's autocorrelation
     (power spectrum) and amplitude distribution.
 
-    Parameters
-    ----------
-    x : array-like
-        Data values.
-    t : array-like
-        Time values.
-    dy : array-like, optional
-        Measurement uncertainties (used only for Lomb-Scargle method).
-    method : str, default 'auto'
-        - 'auto': Selects 'iaaft' if time steps are uniform, 'lomb_scargle' otherwise.
-        - 'iaaft': Iterated Amplitude Adjusted Fourier Transform (requires even sampling).
-        - 'lomb_scargle': Spectral synthesis via Astropy (handles uneven sampling).
-    n_surrogates : int, default 1000
-        Number of surrogate datasets to generate.
-    random_state : int, optional
-        Seed for reproducibility.
-    freq_method : str, default 'auto'
-        (Lomb-Scargle only) 'auto' or 'log'.
-    normalization : str, default 'standard'
-        (Lomb-Scargle only) Periodogram normalization.
-    fit_mean : bool, default True
-        (Lomb-Scargle only) Fit a floating mean during periodogram calculation.
-    center_data : bool, default True
-        (Lomb-Scargle only) Center data before analysis.
+    Args:
+        x (Union[np.ndarray, pd.DataFrame]): Data values.
+        t (np.ndarray): Time values.
+        dy (Optional[np.ndarray]): Measurement uncertainties (used only for Lomb-Scargle method).
+        method (str): Surrogate generation method ('auto', 'iaaft', 'lomb_scargle').
+            - 'auto': Selects 'iaaft' if time steps are uniform, 'lomb_scargle' otherwise.
+            - 'iaaft': Iterated Amplitude Adjusted Fourier Transform (requires even sampling).
+            - 'lomb_scargle': Spectral synthesis via Astropy (handles uneven sampling).
+        n_surrogates (int): Number of surrogate datasets to generate.
+        random_state (Optional[int]): Seed for reproducibility.
+        freq_method (str): (Lomb-Scargle only) 'auto' or 'log'.
+        normalization (str): (Lomb-Scargle only) Periodogram normalization.
+        fit_mean (bool): (Lomb-Scargle only) Fit a floating mean during periodogram calculation.
+        center_data (bool): (Lomb-Scargle only) Center data before analysis.
+        **kwargs: Additional arguments passed to the underlying surrogate generator.
 
-    Returns
-    -------
-    SurrogateResult
-        Named tuple containing p-value, z-score, and details.
+    Returns:
+        SurrogateResult: Named tuple containing p-value, z-score, and details.
     """
     x_arr = np.asarray(x).flatten()
     t_arr = np.asarray(t).flatten()

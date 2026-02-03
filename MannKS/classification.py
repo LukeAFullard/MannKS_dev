@@ -23,8 +23,8 @@ def classify_trend(result: NamedTuple, category_map: Optional[Dict[float, str]] 
     confidence levels, but a custom mapping can be provided.
 
     Args:
-        result: The namedtuple returned by a trend test function.
-        category_map (dict, optional): A dictionary mapping confidence
+        result (NamedTuple): The namedtuple returned by a trend test function.
+        category_map (Dict[float, str], optional): A dictionary mapping confidence
             thresholds (float) to descriptive category labels (str).
             If None, a default IPCC-style map is used.
 

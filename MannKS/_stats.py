@@ -10,7 +10,14 @@ EPSILON = 1e-10
 def _rle_lengths(a):
     """
     Calculates the lengths of runs of equal values in an array.
+
     Equivalent to R's `rle(x)$lengths`.
+
+    Args:
+        a (array-like): Input array.
+
+    Returns:
+        np.ndarray: Array of run lengths.
     """
     if len(a) == 0:
         return np.array([], dtype=int)
@@ -20,7 +27,15 @@ def _rle_lengths(a):
 
 
 def _get_min_positive_diff(arr):
-    """Calculates the minimum positive difference between unique sorted values."""
+    """
+    Calculates the minimum positive difference between unique sorted values.
+
+    Args:
+        arr (np.ndarray): Sorted unique array.
+
+    Returns:
+        float: Minimum positive difference, or 0.0 if not applicable.
+    """
     # Ensure array is unique and sorted, which is a prerequisite.
     if len(arr) <= 1:
         return 0.0
@@ -32,6 +47,22 @@ def _get_min_positive_diff(arr):
 def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test_method='robust', tie_break_method='robust'):
     """
     Calculates the Mann-Kendall S statistic and its variance for censored data.
+
+    Args:
+        x (np.ndarray): Data values.
+        t (np.ndarray): Time values.
+        censored (np.ndarray): Boolean array indicating censoring.
+        cen_type (np.ndarray): Array of censoring types ('lt', 'gt', 'not').
+        tau_method (str): 'a' or 'b' for Kendall's Tau.
+        mk_test_method (str): 'robust' or 'lwp'.
+        tie_break_method (str): 'robust' or 'lwp' for handling ties in timestamps.
+
+    Returns:
+        tuple: (kenS, varS, D, Tau)
+            - kenS (float): Mann-Kendall S statistic.
+            - varS (float): Variance of S.
+            - D (float): Denominator for Tau.
+            - Tau (float): Kendall's Tau.
     """
     x = np.asarray(x)
     t = np.asarray(t)
@@ -377,6 +408,15 @@ def _p_value(z, alpha, continuous_confidence=False):
 def _mk_probability(p, s):
     """
     Computes the Mann-Kendall probability.
+
+    Args:
+        p (float): Two-tailed p-value.
+        s (float): S statistic.
+
+    Returns:
+        tuple: (C, Cd)
+            - C (float): 1 - p/2.
+            - Cd (float): C if s <= 0, else p/2.
     """
     # Ensure p is a scalar to prevent array issues downstream
     p_scalar = np.mean(p)
@@ -387,6 +427,13 @@ def _mk_probability(p, s):
 def _sens_estimator_unequal_spacing(x, t):
     """
     Computes Sen's slope for unequally spaced data using a vectorized approach.
+
+    Args:
+        x (np.ndarray): Data values.
+        t (np.ndarray): Time values.
+
+    Returns:
+        np.ndarray: Array of all pairwise slopes.
 
     Statistical Assumptions:
     ----------------------
@@ -445,8 +492,13 @@ def _sens_estimator_adaptive(x, t, max_pairs=None, random_state=None):
     Adaptive Sen's slope: automatic or fast based on size.
 
     Args:
-        max_pairs: None for automatic, or specific limit
-        random_state: For reproducibility in fast mode
+        x (np.ndarray): Data values.
+        t (np.ndarray): Time values.
+        max_pairs (int or None): Maximum pairs limit.
+        random_state (int or None): Seed for reproducibility.
+
+    Returns:
+        np.ndarray: Array of slopes (exact or sampled).
     """
     n = len(x)
 
@@ -589,7 +641,22 @@ def _sens_estimator_censored_adaptive(x, t, cen_type,
                                       method='unbiased',
                                       max_pairs=None,
                                       random_state=None):
-    """Adaptive censored Sen's slope."""
+    """
+    Adaptive censored Sen's slope: automatic or fast based on size.
+
+    Args:
+        x (np.ndarray): Data values.
+        t (np.ndarray): Time values.
+        cen_type (np.ndarray): Censor types.
+        lt_mult (float): Left censor multiplier.
+        gt_mult (float): Right censor multiplier.
+        method (str): 'lwp' or 'unbiased'.
+        max_pairs (int or None): Maximum pairs limit.
+        random_state (int or None): Seed for reproducibility.
+
+    Returns:
+        np.ndarray: Array of slopes (exact or sampled).
+    """
     n = len(x)
 
     if max_pairs is None:
@@ -684,6 +751,17 @@ def _confidence_intervals(slopes, var_s, alpha, method='direct', total_pairs=Non
 def _sen_probability(slopes, var_s, total_pairs=None):
     """
     Calculates the probability that the Sen's slope is > 0.
+
+    Args:
+        slopes (np.ndarray): Array of calculated slopes.
+        var_s (float): Variance of the S statistic.
+        total_pairs (int or None): Total number of pairs (if slopes is a subsample).
+
+    Returns:
+        tuple: (prob, prob_max, prob_min)
+            - prob (float): Median probability.
+            - prob_max (float): Max probability (ties handled conservatively).
+            - prob_min (float): Min probability.
     """
     # Filter out NaN values from slopes
     valid_slopes = slopes[~np.isnan(slopes)]

@@ -6,6 +6,17 @@ from ._datetime import _is_datetime_like
 
 
 def _preprocessing(x):
+    """
+    Standardize input data to a 1D float array.
+
+    Args:
+        x (array-like): Input data.
+
+    Returns:
+        tuple: (x_processed, n_columns)
+            - x_processed (np.ndarray): Flattened float array.
+            - n_columns (int): Number of columns (1 for 1D).
+    """
     x = np.asarray(x)
 
     # Convert datetime objects to numeric timestamps if necessary
@@ -24,6 +35,18 @@ def _preprocessing(x):
     return x, (1 if x.ndim == 1 else x.shape[1])
 
 def _missing_values_analysis(x, method='skip'):
+    """
+    Handle missing values in the input data.
+
+    Args:
+        x (np.ndarray): Input data.
+        method (str): Method to handle missing values ('skip' is currently the only option).
+
+    Returns:
+        tuple: (x_clean, n_clean)
+            - x_clean (np.ndarray): Data with missing values removed.
+            - n_clean (int): Number of valid observations.
+    """
     if method.lower() == 'skip':
         if x.ndim == 1:
             x = x[~np.isnan(x)]
@@ -185,6 +208,14 @@ def _value_for_time_increment(df: DataFrame, group_key: pd.Series, period: str) 
 def _aggregate_by_group(group, agg_method, is_datetime):
     """
     Aggregates a group of data points using the specified method.
+
+    Args:
+        group (pd.DataFrame): Data group to aggregate.
+        agg_method (str): Aggregation method ('median', 'robust_median', 'middle', 'middle_lwp').
+        is_datetime (bool): Whether the time column is datetime-like.
+
+    Returns:
+        pd.DataFrame: Aggregated group (single row).
     """
     if len(group) <= 1:
         return group

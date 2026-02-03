@@ -14,14 +14,15 @@ def plot_seasonal_distribution(x, t, period=12, season_type='month', plot_path='
     Generates and saves a box plot to visualize the distribution of values
     across different seasons.
 
-    Input:
-        x: a vector of data
-        t: a vector of timestamps
-        period: seasonal cycle (default 12)
-        season_type: For datetime inputs, specifies the type of seasonality.
-        plot_path: The file path to save the plot.
-    Output:
-        The file path where the plot was saved.
+    Args:
+        x (array-like): Data vector.
+        t (array-like): Timestamps vector.
+        period (int, optional): Seasonal cycle length. Defaults to 12.
+        season_type (str, optional): Type of seasonality for datetime inputs. Defaults to 'month'.
+        plot_path (str, optional): The file path to save the plot. Defaults to 'seasonal_distribution.png'.
+
+    Returns:
+        str or None: The file path where the plot was saved, or None if insufficient data.
     """
     x_raw = np.asarray(x)
     t_raw = np.asarray(t)
@@ -67,6 +68,17 @@ def plot_seasonal_distribution(x, t, period=12, season_type='month', plot_path='
 def plot_inspection_data(data, plot_path, value_col, time_col, time_increment, increment_map):
     """
     Creates and saves a 2x2 grid of data inspection plots.
+
+    Args:
+        data (pd.DataFrame): Input dataframe.
+        plot_path (str): Path to save the plot.
+        value_col (str): Name of the value column.
+        time_col (str): Name of the time column.
+        time_increment (str): Selected time increment (e.g., 'monthly').
+        increment_map (dict): Mapping of increments to dataframe columns.
+
+    Returns:
+        str: Plot path.
     """
     # 1. Validate data
     if 'censored' not in data.columns:
@@ -168,7 +180,7 @@ def plot_trend(data, results, save_path, alpha, seasonal_coloring=False):
     """
     Generates and saves a plot of the data with the calculated trend line.
 
-    Input:
+    Args:
         data (pd.DataFrame): The DataFrame containing the data, including 'value',
                              'censored', 't', and optionally 't_original'.
         results (namedtuple): The results from original_test or seasonal_test.
@@ -329,6 +341,7 @@ def plot_trend(data, results, save_path, alpha, seasonal_coloring=False):
 def plot_residuals(data, results, save_path):
     """
     Generates and saves diagnostic plots for the residuals of the trend analysis.
+
     The figure contains two subplots:
     1. Residuals vs. Time (to check for patterns/autocorrelation)
     2. Histogram of Residuals (to check distribution)
@@ -337,7 +350,7 @@ def plot_residuals(data, results, save_path):
     Residual = Observed Value - (Slope * Time + Intercept)
     where Intercept is defined as median(Observed Value - Slope * Time).
 
-    Input:
+    Args:
         data (pd.DataFrame): The DataFrame containing the data ('value', 't', 'censored').
         results (namedtuple): The results from the trend test.
         save_path (str): The file path to save the plot.

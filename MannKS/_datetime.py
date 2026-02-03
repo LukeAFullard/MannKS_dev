@@ -3,7 +3,15 @@ import pandas as pd
 
 
 def _is_datetime_like(x):
-    """Checks if an array is datetime-like."""
+    """
+    Checks if an array is datetime-like.
+
+    Args:
+        x (array-like): Input array.
+
+    Returns:
+        bool: True if x contains datetime objects, False otherwise.
+    """
     if not hasattr(x, 'dtype'):
         x = np.asarray(x)
 
@@ -20,7 +28,12 @@ def _is_datetime_like(x):
 def _to_numeric_time(t):
     """
     Converts a time vector to numeric (Unix timestamp) if it is datetime-like.
-    Returns float array.
+
+    Args:
+        t (array-like): Time vector.
+
+    Returns:
+        np.ndarray: Array of floats (timestamps or original values).
     """
     t_arr = np.asarray(t)
     if t_arr.ndim == 0:
@@ -74,7 +87,12 @@ _SEASON_SPECS = {
 def _infer_period(season_type):
     """
     Attempts to infer the period from the season_type.
-    Returns the period if it is a fixed integer, otherwise None.
+
+    Args:
+        season_type (str): Type of seasonality (e.g., 'month', 'year').
+
+    Returns:
+        int or None: The period if it is a fixed integer, otherwise None.
     """
     if season_type not in _SEASON_SPECS:
         return None
@@ -91,6 +109,13 @@ def _get_season_func(season_type, period=None):
     """
     Returns a function to extract seasonal data based on the season_type,
     and validates the period if provided.
+
+    Args:
+        season_type (str): Type of seasonality.
+        period (int, optional): Expected period to validate against.
+
+    Returns:
+        callable: Function taking a datetime series and returning season identifiers.
     """
     if season_type not in _SEASON_SPECS:
         raise ValueError(f"Unknown season_type: '{season_type}'. Must be one of {list(_SEASON_SPECS.keys())}")
@@ -110,6 +135,13 @@ def _get_cycle_identifier(dt_series, season_type):
     """
     Returns a numeric series that uniquely identifies the larger time cycle
     for each timestamp, used for aggregation.
+
+    Args:
+        dt_series (pd.Series or pd.DatetimeIndex): Datetime series.
+        season_type (str): Type of seasonality.
+
+    Returns:
+        np.ndarray: Cycle identifiers.
     """
     dt_accessor = dt_series.dt if isinstance(dt_series, pd.Series) else dt_series
 
@@ -133,7 +165,16 @@ def _get_cycle_identifier(dt_series, season_type):
 
 
 def _get_time_ranks(t_values, cycles):
-    """Convert timestamps to cycle-based ranks matching R implementation."""
+    """
+    Convert timestamps to cycle-based ranks matching R implementation.
+
+    Args:
+        t_values (array-like): Timestamps.
+        cycles (array-like): Cycle identifiers.
+
+    Returns:
+        np.ndarray: Array of cycle-based ranks.
+    """
     # Create unique cycle identifiers and sort them to ensure rank order
     unique_cycles = np.unique(cycles)
     ranks = np.zeros_like(t_values, dtype=float)
@@ -149,7 +190,14 @@ def _get_time_ranks(t_values, cycles):
 def _get_theoretical_midpoint(datetime_series):
     """
     Calculates the theoretical midpoint of a time period for a series of datetimes.
+
     This is used for the 'middle_lwp' aggregation method to replicate R's logic.
+
+    Args:
+        datetime_series (pd.Series): Series of datetimes.
+
+    Returns:
+        pd.Timestamp: Midpoint datetime.
     """
     if not isinstance(datetime_series, pd.Series):
         datetime_series = pd.Series(datetime_series)
@@ -176,6 +224,12 @@ def _get_agg_func(agg_period: str):
     """
     Returns a function to extract aggregation period identifiers from a
     datetime series.
+
+    Args:
+        agg_period (str): Aggregation period (e.g., 'month', 'year').
+
+    Returns:
+        callable: Function taking a datetime series and returning period identifiers.
     """
     def get_dt_prop(dt, prop):
         return getattr(dt.dt, prop) if isinstance(dt, pd.Series) else getattr(dt, prop)

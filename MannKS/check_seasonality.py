@@ -35,7 +35,7 @@ def check_seasonality(
     conclusions.
 
     Args:
-        x (np.ndarray): A vector of data, which can be numeric or a pandas
+        x (Union[np.ndarray, pd.DataFrame]): A vector of data, which can be numeric or a pandas
             DataFrame from `prepare_censored_data`.
         t (np.ndarray): A vector of corresponding timestamps, which can be
             numeric or datetime-like.

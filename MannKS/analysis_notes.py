@@ -18,6 +18,9 @@ def get_analysis_note(data, values_col='value', censored_col='censored',
     """
     Performs data quality checks and returns an analysis note.
 
+    Based on the LWP-TRENDS R script checks for unique values, non-censored
+    values, and run lengths.
+
     Args:
         data (pd.DataFrame): The input data.
         values_col (str): The name of the column with data values.
@@ -89,10 +92,13 @@ def get_sens_slope_analysis_note(slopes, t, cen_type):
     """
     Provides warnings about censored values used in the derivation of the Sen's Slope.
 
+    Detects if the median slope is determined by pairs of censored values, which
+    can indicate reliability issues.
+
     Args:
-        slopes (np.array): Array of calculated slopes.
-        t (np.array): Array of timestamps.
-        cen_type (np.array): Array of censor types ('lt', 'gt', 'not').
+        slopes (np.ndarray): Array of calculated slopes.
+        t (np.ndarray): Array of timestamps.
+        cen_type (np.ndarray): Array of censor types ('lt', 'gt', 'not').
 
     Returns:
         str: An analysis note string. "ok" if no issues are found.

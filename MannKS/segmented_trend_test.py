@@ -16,15 +16,18 @@ _Segmented_Trend_Test_Tuple = namedtuple('Segmented_Trend_Test', [
 ])
 
 class SegmentedTrendResult(_Segmented_Trend_Test_Tuple):
+    """
+    Result container for segmented trend analysis.
+    """
     def predict(self, t):
         """
         Predict values based on the segmented trend model.
 
         Args:
-            t: Time vector (datetime or numeric).
+            t (array-like): Time vector (datetime or numeric).
 
         Returns:
-            y_pred: Predicted values.
+            np.ndarray: Predicted values.
         """
         # Convert input time to numeric if needed
         t_orig = t
@@ -88,6 +91,16 @@ class SegmentedTrendResult(_Segmented_Trend_Test_Tuple):
 def _prepare_data(x, t, hicensor=False):
     """
     Internal helper to prepare data for segmented analysis.
+
+    Args:
+        x (Union[np.ndarray, pd.DataFrame]): Input data.
+        t (np.ndarray): Time vector.
+        hicensor (Union[bool, float]): High-censor threshold.
+
+    Returns:
+        tuple: (df, is_dt)
+            - df (pd.DataFrame): Prepared dataframe.
+            - is_dt (bool): Whether input time was datetime.
     """
     is_dt = _is_datetime_like(t)
     t_num = _to_numeric_time(t)
@@ -162,25 +175,25 @@ def segmented_trend_test(
     2. Robust Mann-Kendall / Sen's slope estimation on the identified segments.
 
     Args:
-        x: Data vector or DataFrame.
-        t: Time vector.
-        n_breakpoints: Fixed number of breakpoints. If None, optimal number is searched.
-        max_breakpoints: Maximum number of breakpoints to search (if n_breakpoints is None).
-        alpha: Significance level for confidence intervals.
-        hicensor: High-censor rule flag.
-        criterion: Model selection criterion ('bic' or 'aic').
-        use_bagging: Use bootstrap aggregating for robust breakpoint location.
-        n_bootstrap: Number of bootstrap iterations if bagging is enabled.
-        slope_scaling: Unit to scale the slope to (e.g. 'year'). Only for datetime t.
-        random_state: Seed for random number generator.
-        large_dataset_mode: Controls large dataset handling (passed to slope estimator).
-        max_pairs: Max pairs for fast slope estimation.
-        aggregation_threshold: Minimum sample size to trigger aggregation for breakpoint detection (default 10000).
-        aggregation_target: Number of bins to aggregate data into for fast detection (default 2500).
+        x (Union[np.ndarray, pd.DataFrame]): Data vector or DataFrame.
+        t (np.ndarray): Time vector.
+        n_breakpoints (int, optional): Fixed number of breakpoints. If None, optimal number is searched.
+        max_breakpoints (int): Maximum number of breakpoints to search (if n_breakpoints is None).
+        alpha (float): Significance level for confidence intervals.
+        hicensor (Union[bool, float]): High-censor rule flag.
+        criterion (str): Model selection criterion ('bic' or 'aic').
+        use_bagging (bool): Use bootstrap aggregating for robust breakpoint location.
+        n_bootstrap (int): Number of bootstrap iterations if bagging is enabled.
+        slope_scaling (str, optional): Unit to scale the slope to (e.g. 'year'). Only for datetime t.
+        random_state (int, optional): Seed for random number generator.
+        large_dataset_mode (str): Controls large dataset handling (passed to slope estimator).
+        max_pairs (int, optional): Max pairs for fast slope estimation.
+        aggregation_threshold (int): Minimum sample size to trigger aggregation for breakpoint detection (default 10000).
+        aggregation_target (int): Number of bins to aggregate data into for fast detection (default 2500).
         **kwargs: Additional arguments for trend estimation (e.g. lt_mult, gt_mult).
 
     Returns:
-        namedtuple: Segmented_Trend_Test result.
+        SegmentedTrendResult: Named tuple containing breakpoints, segments, and fit statistics.
 
     Note:
         When `slope_scaling` is used, the `slope`, `lower_ci`, and `upper_ci` columns
@@ -336,17 +349,18 @@ def find_best_segmentation(x, t, max_breakpoints=5, n_bootstrap=100, alpha=0.05,
     Wrapper around segmented_trend_test to perform model selection and return summary.
 
     Args:
-        x: Data
-        t: Time
-        max_breakpoints: Max breakpoints to check
-        n_bootstrap: Number of bootstraps (if bagging enabled via kwargs)
-        alpha: Significance level
-        random_state: Seed for random number generator.
-        **kwargs: Passed to segmented_trend_test
+        x (Union[np.ndarray, pd.DataFrame]): Data vector or DataFrame.
+        t (np.ndarray): Time vector.
+        max_breakpoints (int): Max breakpoints to check.
+        n_bootstrap (int): Number of bootstraps (if bagging enabled via kwargs).
+        alpha (float): Significance level.
+        random_state (int, optional): Seed for random number generator.
+        **kwargs: Passed to `segmented_trend_test`.
 
     Returns:
-        best_result: The optimal Segmented_Trend_Test result
-        summary: DataFrame of model selection metrics (BIC, AIC, etc.)
+        tuple: (best_result, summary)
+            - best_result (SegmentedTrendResult): The optimal result object.
+            - summary (pd.DataFrame): DataFrame of model selection metrics (BIC, AIC, etc.).
     """
     # Ensure n_breakpoints is None to trigger search
     kwargs['n_breakpoints'] = None
@@ -361,15 +375,16 @@ def find_best_segmentation(x, t, max_breakpoints=5, n_bootstrap=100, alpha=0.05,
 def calculate_breakpoint_probability(result, start_date, end_date):
     """
     Calculate the probability that a breakpoint occurred within a specific time window.
+
     Requires that `use_bagging=True` was used in the test.
 
     Args:
-        result: The result from segmented_trend_test
-        start_date: Start of the window (datetime or numeric)
-        end_date: End of the window (datetime or numeric)
+        result (SegmentedTrendResult): The result from segmented_trend_test.
+        start_date (Union[float, pd.Timestamp, str]): Start of the window.
+        end_date (Union[float, pd.Timestamp, str]): End of the window.
 
     Returns:
-        prob: Probability (0.0 to 1.0)
+        float: Probability (0.0 to 1.0).
     """
     if result.bootstrap_samples is None or len(result.bootstrap_samples) == 0:
         warnings.warn("No bootstrap samples available. Run with use_bagging=True.", UserWarning)
