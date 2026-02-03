@@ -42,6 +42,7 @@ def seasonal_trend_test(
     min_size_per_season: Optional[int] = 5,
     mk_test_method: str = 'lwp',
     ci_method: str = 'lwp',
+    tie_break_method: str = 'lwp',
     category_map: Optional[dict] = None,
     continuous_confidence: bool = True,
     x_unit: str = "units",
@@ -130,6 +131,10 @@ def seasonal_trend_test(
     valid_ci_methods = ['direct', 'lwp']
     if ci_method not in valid_ci_methods:
         raise ValueError(f"Invalid `ci_method`. Must be one of {valid_ci_methods}.")
+
+    valid_tie_break_methods = ['robust', 'lwp']
+    if tie_break_method not in valid_tie_break_methods:
+        raise ValueError(f"Invalid `tie_break_method`. Must be one of {valid_tie_break_methods}.")
 
     valid_autocorr_methods = ['none', 'block_bootstrap']
     if autocorr_method not in valid_autocorr_methods:
@@ -342,7 +347,8 @@ def seasonal_trend_test(
                 if n > 1:
                     s_i, _, _, _ = _mk_score_and_var_censored(
                         season_data['value'], season_data['t'], season_data['censored'],
-                        season_data['cen_type'], tau_method=tau_method, mk_test_method=mk_test_method
+                        season_data['cen_type'], tau_method=tau_method, mk_test_method=mk_test_method,
+                        tie_break_method=tie_break_method
                     )
                     s_obs += s_i
                     total_possible_pairs += n * (n - 1) // 2
@@ -452,7 +458,8 @@ def seasonal_trend_test(
                     if len(subset) > 1:
                         s_i, _, _, _ = _mk_score_and_var_censored(
                             subset['value'], subset['t_boot'], subset['censored'],
-                            subset['cen_type'], tau_method=tau_method, mk_test_method=mk_test_method
+                            subset['cen_type'], tau_method=tau_method, mk_test_method=mk_test_method,
+                            tie_break_method=tie_break_method
                         )
                         s_b += s_i
                 s_boot_dist[b] = s_b
@@ -483,7 +490,8 @@ def seasonal_trend_test(
                 if n > 1:
                     _, var_s_season, d_season, tau_season = _mk_score_and_var_censored(
                         season_data['value'], season_data['t'], season_data['censored'],
-                        season_data['cen_type'], tau_method=tau_method, mk_test_method=mk_test_method
+                        season_data['cen_type'], tau_method=tau_method, mk_test_method=mk_test_method,
+                        tie_break_method=tie_break_method
                     )
                     var_s_analytic += var_s_season
                     if d_season > 0:
@@ -508,7 +516,8 @@ def seasonal_trend_test(
                 if n > 1:
                     s_season, var_s_season, d_season, tau_season = _mk_score_and_var_censored(
                         season_data['value'], season_data['t'], season_data['censored'],
-                        season_data['cen_type'], tau_method=tau_method, mk_test_method=mk_test_method
+                        season_data['cen_type'], tau_method=tau_method, mk_test_method=mk_test_method,
+                        tie_break_method=tie_break_method
                     )
                     s += s_season
                     var_s += var_s_season
@@ -536,7 +545,8 @@ def seasonal_trend_test(
 
                     _, var_s_unc, _, _ = _mk_score_and_var_censored(
                         season_data['value'], season_data['t'], season_censored,
-                        season_cen_type, tau_method=tau_method, mk_test_method=mk_test_method
+                        season_cen_type, tau_method=tau_method, mk_test_method=mk_test_method,
+                        tie_break_method=tie_break_method
                     )
                     var_s_ci_accum += var_s_unc
             var_s_for_ci = var_s_ci_accum
