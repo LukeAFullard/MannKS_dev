@@ -1,0 +1,6 @@
+Validates the effectiveness of surrogate data methods (IAAFT and Lomb-Scargle) in distinguishing deterministic trends from stochastic red noise (AR(1) processes).
+
+Scenarios:
+1. Pure Red Noise: Verifies that surrogate testing correctly identifies the lack of a deterministic trend (high p-value) even when standard MK might show significance due to serial correlation.
+2. Red Noise + Trend: Verifies that surrogate testing correctly detects a true trend (low p-value) buried in red noise.
+3. Uneven Sampling: Verifies that the Lomb-Scargle method works correctly for irregularly sampled data with a trend.

@@ -21,6 +21,7 @@ from .segmented_trend_test import (
     find_best_segmentation,
     calculate_breakpoint_probability
 )
+from ._surrogate import surrogate_test
 
 __all__ = [
     'trend_test',
@@ -40,7 +41,8 @@ __all__ = [
     'segmented_trend_test',
     'SegmentedTrendResult',
     'find_best_segmentation',
-    'calculate_breakpoint_probability'
+    'calculate_breakpoint_probability',
+    'surrogate_test'
 ]
 
 __version__ = "0.5.0"
