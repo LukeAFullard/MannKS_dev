@@ -538,7 +538,10 @@ def trend_test(
         # --- Surrogate Test Integration ---
         surrogate_result = None
         if surrogate_method != 'none':
-            kwargs = surrogate_kwargs or {}
+            # Sanitize kwargs to prevent collision with explicit arguments
+            kwargs = (surrogate_kwargs or {}).copy()
+            for key in ['method', 'n_surrogates', 'random_state']:
+                kwargs.pop(key, None)
 
             # If large dataset mode is triggered and we have filtered data (aggregated or not),
             # we run surrogate test on the filtered data to match the MK test being performed.
