@@ -14,15 +14,21 @@ We propose adding a `surrogate_test` function and integrating it into the main `
 
 ### 1. `surrogate_test` Function
 
-A new standalone function to generate surrogates and compute significance.
+A new standalone function to generate surrogates and compute significance. It will leverage `astropy` for robust spectral analysis.
 
 ```python
 def surrogate_test(
     x: Union[np.ndarray, pd.DataFrame],
     t: np.ndarray,
+    dy: Optional[np.ndarray] = None,
     method: str = 'auto',
     n_surrogates: int = 1000,
     random_state: Optional[int] = None,
+    # Advanced Astropy Parameters (Sensible defaults provided)
+    freq_method: str = 'auto',
+    normalization: str = 'standard',
+    fit_mean: bool = True,
+    center_data: bool = True,
     **kwargs
 ) -> SurrogateResult:
     """
@@ -33,8 +39,18 @@ def surrogate_test(
     method : str
         'auto': Selects based on sampling regularity.
         'iaaft': Iterated Amplitude Adjusted Fourier Transform (for even sampling).
-        'lomb_scargle': Spectral synthesis using Lomb-Scargle periodogram (for uneven sampling).
+        'lomb_scargle': Spectral synthesis using Astropy's Lomb-Scargle periodogram (for uneven sampling).
         'car1': Parametric Continuous AutoRegressive (1) model (faster for simple red noise).
+    dy : np.ndarray, optional
+        Measurement uncertainties for weighted periodograms (Lomb-Scargle only).
+    freq_method : str, default 'auto'
+        Method for determining frequency grid ('auto', 'log', or custom array).
+    normalization : str, default 'standard'
+        Normalization of the periodogram ('standard', 'model', 'log', 'psd').
+    fit_mean : bool, default True
+        Whether to fit a floating mean (Generalized Lomb-Scargle). Critical for trend analysis.
+    center_data : bool, default True
+        Whether to center the data before analysis.
     n_surrogates : int
         Number of surrogate series to generate.
     ...
@@ -44,14 +60,18 @@ def surrogate_test(
 ### 2. Algorithms
 
 #### A. Lomb-Scargle Surrogates (For Uneven Sampling)
+*   **Engine:** `astropy.timeseries.LombScargle`.
 *   **Methodology:**
-    1.  Compute the Lomb-Scargle periodogram (PSD) of the detrended data.
+    1.  Compute the Generalized Lomb-Scargle periodogram (PSD) of the detrended data. This handles floating means and measurement uncertainties (`dy`) correctly.
     2.  Generate random phases $\phi \sim U[0, 2\pi)$.
-    3.  Reconstruct the time series at the **original** irregular time points $t_i$ using the spectral components:
+    3.  Reconstruct the surrogate time series $x_{surr}(t)$ at the **original** irregular time points $t_i$ using the spectral components:
         $$ x_{surr}(t_i) = \sum_{k} \sqrt{P(f_k)} \cos(2\pi f_k t_i + \phi_k) $$
     4.  (Optional) Rank-adjust to preserve the original amplitude distribution (similar to IAAFT).
-*   **Pros:** Mathematically rigorous for uneven data; no interpolation artifacts.
-*   **Cons:** Computationally expensive ($O(N^2)$ or $O(N \cdot N_{freq})$). Requires optimization (e.g., Fast Lomb-Scargle or limiting frequencies) for $N > 10,000$.
+*   **Pros:**
+    *   Mathematically rigorous for uneven data.
+    *   Handles floating mean (trend-robust).
+    *   Fast $O(N \log N)$ implementation via Astropy.
+    *   Supports measurement uncertainties.
 
 #### B. IAAFT (For Even Sampling)
 *   **Methodology:** Iteratively adjusts the Fourier phases and amplitudes to match both the power spectrum and the value distribution of the original data.
@@ -65,8 +85,8 @@ def surrogate_test(
 
 ## Integration Strategy
 
+*   **Dependency:** Add `astropy` to `requirements.txt` / `setup.py`.
 *   **Module:** Create a new module `MannKS/_surrogate.py`.
-*   **Dependencies:** `scipy.signal` (Lomb-Scargle), `numpy.fft` (IAAFT).
 *   **Public API:**
     *   Expose `surrogate_test` in `__init__.py`.
     *   Add a `surrogate_method` argument to `trend_test` to optionally trigger this check alongside the standard test.
@@ -74,24 +94,23 @@ def surrogate_test(
 
 ## Performance Considerations
 
-*   **Large Datasets ($N > 5,000$):**
-    *   Lomb-Scargle is slow. For large $N$, we may need to:
-        *   Use a "Fast Lomb-Scargle" implementation (O(N log N) using FFT on a grid).
-        *   Downsample the frequency grid.
-        *   Default to CAR(1) for speed if `method='auto'`.
-*   **Parallelization:** Surrogate generation and MK calculation are trivially parallelizable.
+*   **Large Datasets ($N > 50,000$):**
+    *   Astropy's `fast` implementation uses FFT-based grid approximation, keeping complexity at $O(N \log N)$. This is significantly faster than the naive $O(N^2)$ Scipy implementation.
+    *   We will expose `n_terms` or frequency grid controls for advanced users to fine-tune speed vs. accuracy.
 
 ## Validation Strategy
 
 1.  **Null Case:** Generate pure Red Noise (AR(1)) with no trend. Verify that the surrogate test correctly rejects the trend (high p-value) while standard MK might falsely detect one.
 2.  **Trend Case:** Add a known linear trend to Red Noise. Verify that surrogates detect the trend (low p-value).
-3.  **Irregular Sampling:** Randomly remove 50% of points from a regular series and verify Lomb-Scargle performance vs. IAAFT (which would fail or require interpolation).
+3.  **Irregular Sampling:** Randomly remove 50% of points from a regular series and verify Astropy-based Lomb-Scargle performance vs. IAAFT (which would fail or require interpolation).
+4.  **Uncertainties:** Verify that providing `dy` correctly influences the surrogate generation when data has heteroscedastic noise.
 
 ## Implementation Steps
 
-1.  Implement `_lomb_scargle_surrogates` in `_surrogate.py`.
-2.  Implement `_iaaft_surrogates` in `_surrogate.py`.
-3.  Implement `surrogate_test` wrapper.
-4.  Integrate into `trend_test`.
-5.  Add comprehensive tests in `tests/test_surrogate.py`.
-6.  Update documentation and tutorials.
+1.  Add `astropy` dependency.
+2.  Implement `_lomb_scargle_surrogates` in `_surrogate.py` using `astropy.timeseries.LombScargle`.
+3.  Implement `_iaaft_surrogates` in `_surrogate.py`.
+4.  Implement `surrogate_test` wrapper with exposed advanced parameters.
+5.  Integrate into `trend_test`.
+6.  Add comprehensive tests in `tests/test_surrogate.py`.
+7.  Update documentation and tutorials.
