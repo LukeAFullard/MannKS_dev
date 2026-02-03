@@ -99,5 +99,16 @@ def run_example():
     except ImportError:
         print("Skipping Lomb-Scargle test: `astropy` not installed.")
 
+    print("\n--- DISCUSSION: Consequences of Results ---")
+    print("1. If Null Hypothesis is Rejected (Significant Result):")
+    print("   - Conclusion: The observed trend is unlikely to be a random fluctuation of the background noise.")
+    print("   - Action: You can confidently quantify the trend using Sen's Slope.")
+    print("   - Implication: The trend is 'robust' against serial correlation.")
+
+    print("\n2. If Null Hypothesis is Accepted (Not Significant):")
+    print("   - Conclusion: The observed 'trend' is indistinguishable from random colored noise.")
+    print("   - Action: Do NOT claim a deterministic trend. Treat the finding as spurious or inconclusive.")
+    print("   - Implication: Any standard MK p-value < 0.05 was likely a Type I error driven by persistence.")
+
 if __name__ == "__main__":
     run_example()
