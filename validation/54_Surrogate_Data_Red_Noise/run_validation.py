@@ -9,7 +9,46 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 from MannKS import trend_test
-from validation.common_validation import ValidationResult, run_validation_suite
+
+class ValidationResult:
+    def __init__(self, name, status, message, details=None):
+        self.name = name
+        self.status = status
+        self.message = message
+        self.details = details or {}
+
+    def to_dict(self):
+        return {
+            'Test Name': self.name,
+            'Status': self.status,
+            'Message': self.message,
+            **self.details
+        }
+
+def run_validation_suite(validation_func):
+    print("Running validation suite...")
+    results = validation_func()
+
+    df = pd.DataFrame([r.to_dict() for r in results])
+
+    output_dir = os.path.dirname(__file__)
+    csv_path = os.path.join(output_dir, 'validation_results.csv')
+    md_path = os.path.join(output_dir, 'README.md')
+
+    # Save CSV
+    df.to_csv(csv_path, index=False)
+    print(f"Results saved to {csv_path}")
+
+    # Save Markdown Report
+    with open(md_path, 'w') as f:
+        f.write("# Validation Report: Surrogate Data Methods\n\n")
+        f.write("| Test Name | Status | Message | Details |\n")
+        f.write("| :--- | :--- | :--- | :--- |\n")
+        for r in results:
+            details_str = ", ".join([f"{k}={v}" for k, v in r.details.items()])
+            f.write(f"| {r.name} | **{r.status}** | {r.message} | {details_str} |\n")
+
+    print(f"Report saved to {md_path}")
 
 def generate_red_noise(n, alpha=0.7, random_state=None):
     """Generate AR(1) red noise: x_t = alpha * x_{t-1} + epsilon_t"""
