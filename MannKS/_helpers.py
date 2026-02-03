@@ -60,6 +60,13 @@ def _aggregate_censored_median(group, is_datetime):
     Computes a robust median for a group of observations which may contain
     censored data, following the LWP-TRENDS R script logic.
 
+    Args:
+        group (pd.DataFrame): Data group to aggregate.
+        is_datetime (bool): Whether the time column is datetime-like.
+
+    Returns:
+        pd.DataFrame: Aggregated group (single row).
+
     .. note::
         The logic for determining if the aggregated median is censored
         (i.e., `median_val <= max_censored_value`) is a heuristic method.

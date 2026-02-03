@@ -67,6 +67,16 @@ def _to_numeric_time(t):
 
 
 def _get_dt_prop(dt, prop):
+    """
+    Helper to access datetime properties, handling both Series and scalars.
+
+    Args:
+        dt (pd.Series or datetime-like): Datetime object or Series.
+        prop (str): Property name (e.g., 'year', 'month').
+
+    Returns:
+        The accessed property.
+    """
     return getattr(dt.dt, prop) if isinstance(dt, pd.Series) else getattr(dt, prop)
 
 # Define season specifications at module level

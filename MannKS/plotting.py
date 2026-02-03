@@ -620,7 +620,16 @@ def plot_rolling_trend(rolling_results, data=None, time_col=None, value_col=None
     plt.close()
 
 def _create_segments(t, breakpoints):
-    """Internal helper to split time vector into segments"""
+    """
+    Internal helper to split time vector into segments.
+
+    Args:
+        t (array-like): Time vector.
+        breakpoints (array-like): Breakpoint locations.
+
+    Returns:
+        list: List of (start, end) tuples for each segment.
+    """
     t_min, t_max = np.min(t), np.max(t)
     sorted_bp = np.sort(breakpoints)
     segments = []
