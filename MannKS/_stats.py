@@ -364,6 +364,16 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
 
 
 def _z_score(s, var_s):
+    """
+    Calculates the Z-score for the Mann-Kendall test.
+
+    Args:
+        s (float): The S statistic.
+        var_s (float): The variance of S.
+
+    Returns:
+        float: The calculated Z-score, or 0 if S is 0.
+    """
     if np.isnan(s) or np.isnan(var_s):
         return np.nan
 
