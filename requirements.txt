@@ -4,3 +4,4 @@ seaborn
 numpy
 scipy
 piecewise-regression
+astropy

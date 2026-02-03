@@ -18,6 +18,7 @@ from ._large_dataset import detect_size_tier
 from .plotting import plot_trend, plot_residuals
 from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
 from .classification import classify_trend
+from ._surrogate import surrogate_test
 
 
 from typing import Union, Tuple, Optional
@@ -49,7 +50,11 @@ def trend_test(
     n_bootstrap: int = 1000,
     large_dataset_mode: str = 'auto',
     max_pairs: Optional[int] = None,
-    random_state: Optional[int] = None
+    random_state: Optional[int] = None,
+    # New v0.6.0 parameters
+    surrogate_method: str = 'none',
+    n_surrogates: int = 1000,
+    surrogate_kwargs: Optional[dict] = None
 ) -> namedtuple:
     """
     Mann-Kendall trend test with Sen's slope for time series data.
@@ -97,6 +102,16 @@ def trend_test(
     random_state : int, optional
         Random seed for reproducible results in fast mode. Set this for
         deterministic output when using fast approximations.
+
+    surrogate_method : str, default 'none'
+        If set to 'auto', 'iaaft', or 'lomb_scargle', performs a surrogate data
+        hypothesis test against colored noise.
+
+    n_surrogates : int, default 1000
+        Number of surrogates to generate if surrogate_method is not 'none'.
+
+    surrogate_kwargs : dict, optional
+        Additional arguments passed to the surrogate test (e.g. {'dy': errors}).
     """
 
     # --- Basic Input Validation ---
@@ -115,7 +130,8 @@ def trend_test(
         'slope_per_second', 'lower_ci_per_second', 'upper_ci_per_second',
         'scaled_slope', 'slope_units',
         'acf1', 'n_effective', 'block_size_used', 'warnings',
-        'computation_mode', 'pairs_used', 'approximation_error'
+        'computation_mode', 'pairs_used', 'approximation_error',
+        'surrogate_result'
     ])
 
     # --- Method String Validation ---
@@ -185,7 +201,7 @@ def trend_test(
                     np.nan, np.nan, np.nan, np.nan, 'insufficient data', analysis_notes,
                     np.nan, np.nan, np.nan, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, '',
                     np.nan, np.nan, None, captured_warnings,
-                    'insufficient', None, None)
+                    'insufficient', None, None, None)
 
         if min_size is not None and n < min_size:
             analysis_notes.append(f'sample size ({n}) below minimum ({min_size})')
@@ -281,7 +297,7 @@ def trend_test(
                     'insufficient data post-aggregation', analysis_notes,
                     np.nan, np.nan, np.nan, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, '',
                     np.nan, np.nan, None, captured_warnings,
-                    'insufficient', None, None)
+                    'insufficient', None, None, None)
 
         # --- Autocorrelation Handling ---
         acf1 = 0.0
@@ -519,6 +535,24 @@ def trend_test(
             pairs_used = None
             approximation_error = None
 
+        # --- Surrogate Test Integration ---
+        surrogate_result = None
+        if surrogate_method != 'none':
+            kwargs = surrogate_kwargs or {}
+
+            # If large dataset mode is triggered and we have filtered data (aggregated or not),
+            # we run surrogate test on the filtered data to match the MK test being performed.
+            # This is safer for consistency.
+
+            surrogate_result = surrogate_test(
+                x_filtered, t_filtered,
+                method=surrogate_method,
+                n_surrogates=n_surrogates,
+                random_state=random_state,
+                **kwargs
+            )
+            analysis_notes.extend(surrogate_result.notes)
+
         # --- EXECUTION BLOCK END ---
 
         # Collect warnings
@@ -531,7 +565,8 @@ def trend_test(
                   slope_per_second, lower_ci, upper_ci,
                   scaled_slope, slope_units,
                   acf1, n_eff, block_size_used, captured_warnings,
-                  computation_mode, pairs_used, approximation_error)
+                  computation_mode, pairs_used, approximation_error,
+                  surrogate_result)
 
 
     # Final Classification and Notes
