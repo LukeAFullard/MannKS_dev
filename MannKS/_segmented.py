@@ -11,16 +11,15 @@ def _bootstrap_breakpoints(t, x, n_breakpoints, n_bootstrap=100, alpha_n=0.05, r
     Bootstrap the breakpoint detection to find robust breakpoint locations.
 
     Args:
-        t: Time vector
-        x: Data vector
-        n_breakpoints: Number of breakpoints to find
-        n_bootstrap: Number of bootstrap iterations
-        alpha_n: Significance level (not used directly here but standard arg)
-        random_state: Seed for random number generator.
+        t (array-like): Time vector.
+        x (array-like): Data vector.
+        n_breakpoints (int): Number of breakpoints to find.
+        n_bootstrap (int): Number of bootstrap iterations.
+        alpha_n (float): Significance level (unused, kept for API consistency).
+        random_state (int, optional): Seed for random number generator.
 
     Returns:
-        all_breakpoints: List of lists. Each inner list contains breakpoints
-                         found in one bootstrap iteration.
+        list: List of lists. Each inner list contains breakpoints found in one iteration.
     """
     # Explicit conversion to numpy arrays for safety
     t = np.asarray(t)
@@ -81,15 +80,16 @@ def find_bagged_breakpoints(t, x, n_breakpoints, n_bootstrap=100, random_state=N
     3. Find the peak (mode) of that density to identify the robust location for that index.
 
     Args:
-        t: Time vector
-        x: Data vector
-        n_breakpoints: Number of breakpoints to identify
-        n_bootstrap: Number of bootstrap iterations
-        random_state: Seed for random number generator.
+        t (array-like): Time vector.
+        x (array-like): Data vector.
+        n_breakpoints (int): Number of breakpoints to identify.
+        n_bootstrap (int): Number of bootstrap iterations.
+        random_state (int, optional): Seed for random number generator.
 
     Returns:
-        robust_breakpoints: Array of robust breakpoint locations
-        all_breakpoints: List of lists of all bootstrap breakpoint samples
+        tuple: (robust_breakpoints, all_breakpoints)
+            - robust_breakpoints (np.ndarray): Array of robust breakpoint locations.
+            - all_breakpoints (list): List of lists of all bootstrap breakpoint samples.
     """
     # Explicit conversion to numpy arrays for safety
     t = np.asarray(t)

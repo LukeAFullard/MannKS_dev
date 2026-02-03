@@ -1,4 +1,12 @@
-# ats.py  -- Akritas-Theil-Sen implementation (single-file, dependency-light)
+"""
+ats.py -- Akritas-Theil-Sen implementation (single-file, dependency-light)
+
+This module implements the Akritas-Theil-Sen (ATS) estimator for linear regression
+with censored data. It handles left-censored, right-censored, and interval-censored data
+by converting observations into intervals and solving for the slope that yields a zero
+Kendall's tau score on the residuals.
+"""
+
 import numpy as np
 import pandas as pd
 from math import inf
@@ -12,13 +20,16 @@ def make_intervals(y: np.ndarray,
                    lod: Optional[np.ndarray] = None) -> Tuple[np.ndarray, np.ndarray]:
     """
     Build intervals [a_i, b_i] for each observation.
-    Arguments:
-      y: numeric face values (for censored rows this should be the numeric reporting value)
-      censored: boolean array (True when censored)
-      cen_type: None or array of 'lt' / 'gt' / 'none' strings (if None, assume all censored are 'lt')
-      lod: numeric detection limits associated with censored observations (len same as y)
+
+    Args:
+        y (np.ndarray): Numeric face values (for censored rows this should be the numeric reporting value).
+        censored (np.ndarray): Boolean array (True when censored).
+        cen_type (Optional[np.ndarray]): Array of 'lt'/'gt'/'none' strings. If None, assumes all censored are 'lt'.
+        lod (Optional[np.ndarray]): Numeric detection limits associated with censored observations (len same as y).
+
     Returns:
-      (lower, upper) arrays where lower[i] <= upper[i]; may include +-inf for left/right censor.
+        Tuple[np.ndarray, np.ndarray]: (lower, upper) arrays where lower[i] <= upper[i].
+                                       May include +-inf for left/right censoring.
     """
     n = len(y)
     lower = np.empty(n, dtype=float)
@@ -49,9 +60,21 @@ def make_intervals(y: np.ndarray,
 # ---------- Pairwise interval comparison on residuals ----------
 def S_of_beta(beta: float, x: np.ndarray, lower: np.ndarray, upper: np.ndarray) -> int:
     """
-    Compute S(beta) = (#concordant) - (#discordant) using residual intervals:
+    Compute the Kendall score S(beta) = (#concordant) - (#discordant) using residual intervals.
+
+    Residual intervals are defined as:
       R_i(beta) = [lower_i - beta*x_i, upper_i - beta*x_i]
-    Definitive comparisons only when intervals do not overlap.
+
+    Definitive comparisons (concordant/discordant) are made only when intervals do not overlap.
+
+    Args:
+        beta (float): The slope candidate.
+        x (np.ndarray): Independent variable.
+        lower (np.ndarray): Lower bounds of response variable intervals.
+        upper (np.ndarray): Upper bounds of response variable intervals.
+
+    Returns:
+        int: The score S(beta).
     """
     n = len(x)
     lower_r = lower - beta * x
@@ -79,7 +102,18 @@ def bracket_and_bisect_generic(score_func: Callable[[float], float],
                                maxiter=60) -> float:
     """
     Find beta* such that score_func(beta*) = 0 using bisection.
+
     Generic version that takes a score function and a list of slopes for initial bracket.
+
+    Args:
+        score_func (Callable[[float], float]): The function to find the root of.
+        slopes_hint (List[float]): List of initial slope estimates to guide bracketing.
+        max_expand (int): Maximum number of bracket expansion steps.
+        tol (float): Tolerance for convergence.
+        maxiter (int): Maximum bisection iterations.
+
+    Returns:
+        float: The estimated root (beta).
     """
     # Define the initial search bracket.
     if slopes_hint:
@@ -134,7 +168,21 @@ def bracket_and_bisect(x: np.ndarray, lower: np.ndarray, upper: np.ndarray,
                        beta0: Optional[float]=None, max_expand=50, tol=1e-8,
                        maxiter=60) -> float:
     """
-    Backward compatible wrapper for the single-season case.
+    Backward compatible wrapper for the single-season case to find the ATS slope.
+
+    Uses `bracket_and_bisect_generic` internally with a constructed score function.
+
+    Args:
+        x (np.ndarray): Independent variable.
+        lower (np.ndarray): Lower bounds of response variable.
+        upper (np.ndarray): Upper bounds of response variable.
+        beta0 (Optional[float]): Deprecated/Unused initial guess.
+        max_expand (int): Maximum bracket expansion steps.
+        tol (float): Convergence tolerance.
+        maxiter (int): Maximum iterations.
+
+    Returns:
+        float: Estimated slope.
     """
     # Normalize x to improve numerical stability in slope calculation
     x_min = np.min(x)
@@ -164,8 +212,18 @@ def bracket_and_bisect(x: np.ndarray, lower: np.ndarray, upper: np.ndarray,
 # ---------- Turnbull-style intercept (practical approach) ----------
 def estimate_intercept_turnbull(residual_lower: np.ndarray, residual_upper: np.ndarray, tol=1e-6, max_iter=100) -> float:
     """
-    Estimates the median of interval-censored data using a Turnbull-style approach.
+    Estimates the median of interval-censored residuals using a Turnbull-style approach.
+
     Correctly handles point masses (uncensored data) and infinite intervals (censored data).
+
+    Args:
+        residual_lower (np.ndarray): Lower bounds of residuals.
+        residual_upper (np.ndarray): Upper bounds of residuals.
+        tol (float): Convergence tolerance for the EM algorithm.
+        max_iter (int): Maximum EM iterations.
+
+    Returns:
+        float: The estimated median of the residuals (intercept).
     """
     # 1. Identify Unique Endpoints
     # We include all boundaries, including -inf and +inf if present.
@@ -263,8 +321,26 @@ def ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray,
               bootstrap_ci: bool = True, n_boot: int = 500,
               ci_alpha: float = 0.05) -> dict:
     """
-    Compute ATS slope estimate and bootstrap CI.
-    Returns dict with keys: beta, intercept, ci_lower, ci_upper, prop_censored, notes
+    Compute Akritas-Theil-Sen (ATS) slope estimate and bootstrap Confidence Interval.
+
+    Args:
+        x (np.ndarray): Independent variable (time).
+        y (np.ndarray): Dependent variable (values).
+        censored (np.ndarray): Boolean array indicating censoring.
+        cen_type (Optional[np.ndarray]): Array of censoring types ('lt', 'gt', etc.).
+        lod (Optional[np.ndarray]): Limit of detection values.
+        bootstrap_ci (bool): Whether to compute bootstrap confidence intervals.
+        n_boot (int): Number of bootstrap iterations.
+        ci_alpha (float): Significance level for CI (e.g., 0.05 for 95%).
+
+    Returns:
+        dict: A dictionary containing:
+            - 'beta': The estimated slope.
+            - 'intercept': The estimated intercept.
+            - 'ci_lower': Lower bound of CI.
+            - 'ci_upper': Upper bound of CI.
+            - 'prop_censored': Proportion of censored data.
+            - 'notes': List of warning notes.
     """
     lower, upper = make_intervals(y, censored, cen_type=cen_type, lod=lod)
 
@@ -356,8 +432,24 @@ def seasonal_ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray, seaso
                        ci_alpha: float = 0.05) -> dict:
     """
     Compute Stratified ATS slope estimate for seasonal data.
-    The overall slope is the root of the sum of the individual seasonal score functions.
-    Returns dict with keys: beta, intercept, ci_lower, ci_upper, prop_censored, notes
+
+    The overall slope is found by solving for zero in the sum of individual seasonal
+    Kendall score functions.
+
+    Args:
+        x (np.ndarray): Independent variable (time).
+        y (np.ndarray): Dependent variable (values).
+        censored (np.ndarray): Boolean array indicating censoring.
+        seasons (np.ndarray): Array of season identifiers.
+        cen_type (Optional[np.ndarray]): Array of censoring types.
+        lod (Optional[np.ndarray]): Limit of detection values.
+        bootstrap_ci (bool): Whether to compute bootstrap confidence intervals.
+        n_boot (int): Number of bootstrap iterations.
+        ci_alpha (float): Significance level for CI.
+
+    Returns:
+        dict: A dictionary containing 'beta', 'intercept', 'ci_lower', 'ci_upper',
+              'prop_censored', and 'notes'.
     """
     x_min = np.min(x)
     x_range = np.ptp(x) if np.ptp(x) > 0 else 1.0

@@ -3,15 +3,17 @@ from scipy.stats import norm
 
 def estimate_acf(x, max_lag=None):
     """
-    Estimate autocorrelation function.
+    Estimate the autocorrelation function (ACF) of a time series.
 
     Args:
-        x: Data vector
-        max_lag: Maximum lag to compute (default: min(n/4, 50))
+        x (array-like): Input time series data.
+        max_lag (int, optional): Maximum lag to compute. Defaults to min(n/4, 50).
 
     Returns:
-        acf: Array of autocorrelation coefficients
-        significant_lag: First lag where ACF crosses significance threshold
+        tuple: (acf, significant_lag)
+            - acf (np.ndarray): Array of autocorrelation coefficients at lags 0..max_lag.
+            - significant_lag (int or None): The first lag index where ACF exceeds the
+              95% confidence interval for white noise, or None if none significant.
     """
     x = np.asarray(x, dtype=float)
     n = len(x)
@@ -61,15 +63,18 @@ def estimate_acf(x, max_lag=None):
 
 def effective_sample_size(x, method='yue'):
     """
-    Calculate effective sample size accounting for autocorrelation.
+    Calculate the effective sample size (ESS) accounting for serial correlation.
 
     Args:
-        x: Data vector
-        method: 'yue' (Yue & Wang 2004) or 'bayley' (Bayley & Hammersley 1946)
+        x (array-like): Input time series data.
+        method (str): Method to estimate ESS.
+            - 'yue': Yue & Wang (2004) correction.
+            - 'bayley': Bayley & Hammersley (1946) approximation for AR(1).
 
     Returns:
-        n_eff: Effective sample size
-        acf1: Lag-1 autocorrelation
+        tuple: (n_eff, acf1)
+            - n_eff (float): The effective sample size.
+            - acf1 (float): The lag-1 autocorrelation coefficient.
     """
     x = np.asarray(x)
     # Remove NaNs for ESS calculation
@@ -110,16 +115,17 @@ def effective_sample_size(x, method='yue'):
 
 def should_apply_correction(x, threshold=0.1):
     """
-    Determine if autocorrelation correction is needed.
+    Determine if autocorrelation correction is needed based on ACF magnitude.
 
     Args:
-        x: Data vector
-        threshold: ACF threshold for correction (default 0.1)
+        x (array-like): Input time series data.
+        threshold (float): Threshold for absolute lag-1 ACF to trigger correction.
 
     Returns:
-        needs_correction: Boolean
-        acf1: Lag-1 autocorrelation
-        n_eff: Effective sample size
+        tuple: (needs_correction, acf1, n_eff)
+            - needs_correction (bool): True if correction is recommended.
+            - acf1 (float): Lag-1 autocorrelation.
+            - n_eff (float): Effective sample size.
     """
     x = np.asarray(x)
     x = x[~np.isnan(x)]

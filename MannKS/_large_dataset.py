@@ -32,17 +32,17 @@ def detect_size_tier(n: int,
     Determine which algorithms to use based on dataset size.
 
     Args:
-        n: Sample size
-        user_mode: User override ('full', 'fast', 'aggregate', 'auto')
-        force_tier: Direct tier specification (1=full, 2=fast, 3=aggregate)
+        n (int): Sample size.
+        user_mode (Optional[str]): User override ('full', 'fast', 'aggregate', 'auto').
+        force_tier (Optional[int]): Direct tier specification (1=full, 2=fast, 3=aggregate).
 
     Returns:
-        dict with keys:
-            - tier: int (1, 2, or 3)
-            - strategy: str description
-            - max_pairs: int for Sen's slope
-            - use_aggregation: bool
-            - warnings: list of warning messages
+        dict: Configuration dictionary with keys:
+            - tier (int): 1, 2, or 3.
+            - strategy (str): 'full', 'fast', or 'aggregate'.
+            - max_pairs (int or None): Max pairs for Sen's slope.
+            - use_aggregation (bool): Whether to suggest aggregation.
+            - warnings (list): List of warning messages.
     """
     warnings_list = []
 
@@ -112,13 +112,13 @@ def fast_sens_slope(x: np.ndarray,
         standard error ≈ IQR(slopes) / √K.
 
     Args:
-        x: Data values
-        t: Time values
-        max_pairs: Maximum number of pairs to sample
-        random_state: Seed for reproducibility
+        x (np.ndarray): Data values.
+        t (np.ndarray): Time values.
+        max_pairs (int): Maximum number of pairs to sample.
+        random_state (Optional[int]): Seed for reproducibility.
 
     Returns:
-        Array of sampled slopes (length <= max_pairs)
+        np.ndarray: Array of sampled slopes (length <= max_pairs).
 
     Statistical Note:
         With max_pairs=100,000:
@@ -186,10 +186,17 @@ def fast_sens_slope_censored(x: np.ndarray,
         3. This preserves the correct proportion of ambiguous/valid slopes
 
     Args:
-        Similar to _sens_estimator_censored but with max_pairs
+        x (np.ndarray): Data values.
+        t (np.ndarray): Time values.
+        cen_type (np.ndarray): Censor types.
+        max_pairs (int): Maximum pairs to sample.
+        lt_mult (float): Left censor multiplier.
+        gt_mult (float): Right censor multiplier.
+        method (str): Method for handling ambiguous slopes ('lwp' or 'unbiased').
+        random_state (Optional[int]): Seed for reproducibility.
 
     Returns:
-        Array of sampled slopes with censoring rules applied
+        np.ndarray: Array of sampled slopes with censoring rules applied.
     """
     n = len(x)
     n_possible_pairs = n * (n - 1) // 2
@@ -268,13 +275,13 @@ def stratified_seasonal_sampling(data: pd.DataFrame,
     from all seasons.
 
     Args:
-        data: DataFrame with season column
-        season_col: Column name for seasons
-        max_per_season: Target samples per season
-        random_state: For reproducibility
+        data (pd.DataFrame): DataFrame with season column.
+        season_col (str): Column name for seasons.
+        max_per_season (int): Target samples per season.
+        random_state (Optional[int]): Seed for reproducibility.
 
     Returns:
-        Stratified sample maintaining season proportions
+        pd.DataFrame: Stratified sample maintaining season proportions.
 
     Theory:
         Seasonal Mann-Kendall requires S = Σ S_i where S_i is the score

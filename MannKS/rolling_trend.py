@@ -37,39 +37,36 @@ def rolling_trend_test(
     Calculate rolling Sen's slope over moving time windows.
 
     Args:
-        x: Data vector (array or DataFrame column)
-        t: Time vector (array of timestamps or numeric)
-        window: Window size.
+        x (Union[np.ndarray, pd.DataFrame]): Data vector (array or DataFrame column).
+        t (np.ndarray): Time vector (array of timestamps or numeric).
+        window (Union[str, int, float]): Window size.
                 - For datetime t: string (e.g., '365D', '10YE') or Timedelta-compatible string.
                   Note: Anchored offsets (e.g., 'YE', 'ME') snap to the next anchor point,
                   which may result in variable window durations (e.g., '1YE' from Jan 31
                   goes to Dec 31 of the same year). For fixed duration, use 'D' (days).
                 - For numeric t: integer or float (e.g., 10, 5.5)
-        step: Step size for sliding the window.
+        step (Optional[Union[str, int, float]]): Step size for sliding the window.
               - For datetime t: string (e.g., '1Y', '6M').
                 Default for Timedeltas (e.g. '365D') is window/2.
                 Default for DateOffsets (e.g. '1YE') is the full window size (non-overlapping)
                 because offsets cannot be divided.
               - For numeric t: integer or float. Default is window/2.
-        min_size: Minimum number of observations required in a window to calculate a trend.
-        alpha: Significance level for the Mann-Kendall test (default 0.05).
-        seasonal: If True, uses `seasonal_trend_test` instead of `trend_test`.
-        period: The seasonal period (e.g., 12 for monthly data). Used if seasonal=True.
-        season_type: The type of seasonality (e.g., 'month'). Used if seasonal=True.
-        slope_scaling: Time unit for scaling the Sen's slope (e.g., 'year').
-        x_unit: Unit of measurement for x (e.g., 'mg/L').
-        continuous_confidence: If True (default for rolling), uses continuous confidence (C)
+        min_size (int): Minimum number of observations required in a window to calculate a trend.
+        alpha (float): Significance level for the Mann-Kendall test (default 0.05).
+        seasonal (bool): If True, uses `seasonal_trend_test` instead of `trend_test`.
+        period (int): The seasonal period (e.g., 12 for monthly data). Used if seasonal=True.
+        season_type (str): The type of seasonality (e.g., 'month'). Used if seasonal=True.
+        slope_scaling (Optional[str]): Time unit for scaling the Sen's slope (e.g., 'year').
+        x_unit (str): Unit of measurement for x (e.g., 'mg/L').
+        continuous_confidence (bool): If True (default for rolling), uses continuous confidence (C)
                                interpretation. If False, uses classical p-value testing.
-        large_dataset_mode : str, default 'auto'
-            Controls algorithm selection for large datasets:
-            - 'auto': Automatic based on sample size (recommended)
-            - 'full': Force exact calculations (may be slow/crash for large n)
-            - 'fast': Force fast approximations
-            - 'aggregate': Force aggregation workflow
-        max_pairs : int, optional
-            Maximum number of pairs to sample in fast mode.
-        random_state : int, optional
-            Random seed for reproducible results in fast mode.
+        large_dataset_mode (str): Controls algorithm selection for large datasets:
+            - 'auto': Automatic based on sample size (recommended).
+            - 'full': Force exact calculations (may be slow/crash for large n).
+            - 'fast': Force fast approximations.
+            - 'aggregate': Force aggregation workflow.
+        max_pairs (Optional[int]): Maximum number of pairs to sample in fast mode.
+        random_state (Optional[int]): Random seed for reproducible results in fast mode.
         **kwargs: Additional arguments passed to `trend_test` or `seasonal_trend_test`.
 
     Returns:
@@ -269,7 +266,18 @@ def rolling_trend_test(
 
 
 def _generate_windows(t_series, window_size, step_size, is_datetime):
-    """Generate sliding window boundaries."""
+    """
+    Generate sliding window boundaries.
+
+    Args:
+        t_series (pd.Series): Time series.
+        window_size (Union[float, pd.Timedelta, pd.DateOffset]): Size of the window.
+        step_size (Union[float, pd.Timedelta, pd.DateOffset]): Step size.
+        is_datetime (bool): Whether the time series is datetime-like.
+
+    Returns:
+        list: List of tuples (window_start, window_end).
+    """
     windows = []
 
     if len(t_series) == 0:
@@ -324,26 +332,26 @@ def compare_periods(
     Compare trends before and after a breakpoint.
 
     Args:
-        x: Data vector
-        t: Time vector
-        breakpoint: Time value to split data (value in t where split occurs)
-        alpha: Significance level
-        seasonal: If True, uses `seasonal_trend_test` instead of `trend_test`.
-        period: The seasonal period (e.g., 12 for monthly data). Used if seasonal=True.
-        season_type: The type of seasonality (e.g., 'month'). Used if seasonal=True.
-        **kwargs: Additional arguments for trend_test or seasonal_trend_test
+        x (array-like): Data vector.
+        t (array-like): Time vector.
+        breakpoint (Any): Time value to split data (value in t where split occurs).
+        alpha (float): Significance level.
+        seasonal (bool): If True, uses `seasonal_trend_test` instead of `trend_test`.
+        period (int): The seasonal period (e.g., 12 for monthly data). Used if seasonal=True.
+        season_type (str): The type of seasonality (e.g., 'month'). Used if seasonal=True.
+        **kwargs: Additional arguments for `trend_test` or `seasonal_trend_test`.
 
     Returns:
         dict: Dictionary containing:
-            - 'before': Result object for pre-breakpoint data
-            - 'after': Result object for post-breakpoint data
-            - 'slope_difference': slope_after - slope_before
-            - 'ci_overlap': Boolean, True if confidence intervals overlap
+            - 'before': Result object for pre-breakpoint data.
+            - 'after': Result object for post-breakpoint data.
+            - 'slope_difference': slope_after - slope_before.
+            - 'ci_overlap': Boolean, True if confidence intervals overlap.
             - 'significant_change': Boolean, True if CIs do NOT overlap.
               Note: This is a conservative test. If CIs do not overlap, the difference
               is statistically significant at alpha. However, overlapping CIs do not
               necessarily imply no significant difference.
-            - 'breakpoint': The breakpoint used
+            - 'breakpoint': The breakpoint used.
     """
     t_arr = np.asarray(t)
     x_arr = np.asarray(x) if not isinstance(x, pd.DataFrame) else x

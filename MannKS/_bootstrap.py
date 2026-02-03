@@ -10,11 +10,11 @@ def optimal_block_size(n, acf):
     autocorrelation becomes negligible).
 
     Args:
-        n: Sample size
-        acf: Autocorrelation function
+        n (int): Sample size.
+        acf (np.ndarray): Autocorrelation function values.
 
     Returns:
-        block_size: Optimal block length
+        int: Optimal block length.
     """
     # Simple heuristic: block size should be roughly the correlation length
     # Correlation length: first lag where ACF < 0.1
@@ -42,11 +42,11 @@ def _moving_block_bootstrap_indices(n, block_size):
     Generate indices for one moving block bootstrap resample.
 
     Args:
-        n: Length of data
-        block_size: Block length
+        n (int): Length of data.
+        block_size (int): Block length.
 
     Returns:
-        indices: Array of indices for the bootstrap sample
+        np.ndarray: Array of indices for the bootstrap sample.
     """
     if block_size < 1:
         raise ValueError(f"Block size must be at least 1. Got {block_size}.")
@@ -73,11 +73,11 @@ def moving_block_bootstrap(x, block_size):
     Generate one moving block bootstrap resample.
 
     Args:
-        x: Data vector
-        block_size: Block length
+        x (array-like): Data vector.
+        block_size (int): Block length.
 
     Returns:
-        x_boot: Bootstrap resample (same length as x)
+        array-like: Bootstrap resample (same length as x).
     """
     n = len(x)
     indices = _moving_block_bootstrap_indices(n, block_size)
@@ -108,15 +108,20 @@ def block_bootstrap_mann_kendall(x, t, censored, cen_type,
     test which tests monotonic trend, but users should be aware of this approximation.
 
     Args:
-        x, t, censored, cen_type: Standard inputs
-        block_size: 'auto' or integer
-        n_bootstrap: Number of bootstrap resamples
-        tau_method, mk_test_method: Pass-through to _mk_score_and_var_censored
+        x (np.ndarray): Data values.
+        t (np.ndarray): Time values.
+        censored (np.ndarray): Boolean array indicating censoring.
+        cen_type (np.ndarray): Array of censoring types.
+        block_size (Union[str, int]): 'auto' or integer block size.
+        n_bootstrap (int): Number of bootstrap resamples.
+        tau_method (str): Method for Kendall's Tau calculation.
+        mk_test_method (str): Method for MK test score calculation.
 
     Returns:
-        p_boot: Bootstrap p-value
-        s_obs: Observed S statistic
-        s_boot_dist: Bootstrap distribution of S (for diagnostics)
+        tuple: (p_boot, s_obs, s_boot_dist)
+            - p_boot (float): Bootstrap p-value.
+            - s_obs (float): Observed S statistic.
+            - s_boot_dist (np.ndarray): Bootstrap distribution of S.
     """
     n = len(x)
 
@@ -197,13 +202,22 @@ def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
     it avoids the bias introduced by 'reconstructing' censored values from residuals.
 
     Args:
-        **kwargs: Additional arguments passed to _sens_estimator_censored
+        x (np.ndarray): Data values.
+        t (np.ndarray): Time values.
+        censored (np.ndarray): Boolean array indicating censoring.
+        cen_type (np.ndarray): Array of censoring types.
+        block_size (Union[str, int]): 'auto' or integer block size.
+        n_bootstrap (int): Number of bootstrap resamples.
+        alpha (float): Significance level (e.g., 0.05 for 95% CI).
+        **kwargs: Additional arguments passed to `_sens_estimator_censored`
                   (e.g., method, lt_mult, gt_mult).
 
     Returns:
-        slope: Sen's slope
-        lower_ci, upper_ci: Bootstrap confidence intervals
-        boot_slopes: Bootstrap distribution (for diagnostics)
+        tuple: (slope, lower_ci, upper_ci, boot_slopes)
+            - slope (float): Observed Sen's slope.
+            - lower_ci (float): Lower bootstrap confidence interval.
+            - upper_ci (float): Upper bootstrap confidence interval.
+            - boot_slopes (np.ndarray): Bootstrap distribution of slopes.
     """
     n = len(x)
 
