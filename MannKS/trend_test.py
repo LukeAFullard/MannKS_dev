@@ -247,6 +247,12 @@ def trend_test(
 
         data_filtered, is_datetime = _prepare_data(x, t, hicensor)
 
+        # Ensure data is sorted by time for correct autocorrelation handling (bootstrap/surrogates)
+        if is_datetime:
+            data_filtered = data_filtered.sort_values(by='t_original')
+        else:
+            data_filtered = data_filtered.sort_values(by='t')
+
         note = get_analysis_note(data_filtered, values_col='value', censored_col='censored')
         analysis_notes.append(note)
 
@@ -643,28 +649,29 @@ def trend_test(
             n_orig = len(x_arr)
             n_filt = len(x_filtered)
 
-            if n_orig != n_filt:
-                # We need to slice kwargs because data was filtered (NaNs dropped).
-                # Robustly identify which rows were kept using 'original_index' if available.
+            # Note: We ALWAYs check for original_index because we now sort data_filtered
+            # by time, so even if n_orig == n_filt, the order might have changed.
+            # We need to slice/reorder kwargs to match the sorted data.
 
-                if 'original_index' in data_filtered.columns:
-                     # Robust path: Use integer positions tracked during preparation
-                     kept_indices = data_filtered['original_index'].values
+            if 'original_index' in data_filtered.columns:
+                 # Robust path: Use integer positions tracked during preparation
+                 kept_indices = data_filtered['original_index'].values
 
-                     for k, v in kwargs_base.items():
-                         if hasattr(v, '__len__') and len(v) == n_orig:
-                              # Attempt to slice by integer position
-                              if isinstance(v, (pd.Series, pd.DataFrame)):
-                                   kwargs_filtered[k] = v.iloc[kept_indices]
-                              else:
-                                   kwargs_filtered[k] = np.asarray(v)[kept_indices]
-                         else:
-                              kwargs_filtered[k] = v
-                else:
-                    # Fallback path (e.g. if aggregation dropped original_index)
-                    # Note: Slicing original-length kwargs after aggregation is statistically ambiguous
-                    # and usually implies user error, but we attempt a best-effort index match.
+                 for k, v in kwargs_base.items():
+                     if hasattr(v, '__len__') and len(v) == n_orig and not isinstance(v, str):
+                          # Attempt to slice by integer position
+                          if isinstance(v, (pd.Series, pd.DataFrame)):
+                               kwargs_filtered[k] = v.iloc[kept_indices]
+                          else:
+                               kwargs_filtered[k] = np.asarray(v)[kept_indices]
+                     else:
+                          kwargs_filtered[k] = v
+            else:
+                # Fallback path (e.g. if aggregation dropped original_index)
+                # Note: Slicing original-length kwargs after aggregation is statistically ambiguous
+                # and usually implies user error, but we attempt a best-effort index match.
 
+                if n_orig != n_filt:
                     kept_indices = data_filtered.index
 
                     use_mask = False
@@ -683,7 +690,7 @@ def trend_test(
                                 use_mask = True
 
                     for k, v in kwargs_base.items():
-                        if hasattr(v, '__len__') and len(v) == n_orig:
+                        if hasattr(v, '__len__') and len(v) == n_orig and not isinstance(v, str):
                              if isinstance(v, (np.ndarray, list, pd.Series)):
                                  if use_mask:
                                       if isinstance(v, (pd.Series, pd.DataFrame)):
@@ -704,14 +711,13 @@ def trend_test(
                                  kwargs_filtered[k] = v
                         else:
                              kwargs_filtered[k] = v
-            else:
-                # No filtering happened (or lengths match).
-                # trend_test (unlike seasonal_trend_test) does NOT sort data_filtered.
-                # So data_filtered preserves the order of input x.
-                # We can pass kwargs directly, assuming they match x in order.
-
-                for k, v in kwargs_base.items():
-                     kwargs_filtered[k] = v
+                else:
+                    # n_orig == n_filt AND no original_index.
+                    # This happens if we aggregated but somehow kept the length (unlikely)
+                    # or if original_index was lost but no filtering occurred.
+                    # We assume passing directly is fine (or unavoidable).
+                    for k, v in kwargs_base.items():
+                         kwargs_filtered[k] = v
 
             # If large dataset mode is triggered and we have filtered data (aggregated or not),
             # we run surrogate test on the filtered data to match the MK test being performed.
