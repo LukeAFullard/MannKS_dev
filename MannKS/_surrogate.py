@@ -252,10 +252,15 @@ def _lomb_scargle_surrogates(
 def surrogate_test(
     x: Union[np.ndarray, "pd.DataFrame"], # type: ignore
     t: np.ndarray,
+    censored: Optional[np.ndarray] = None,
+    cen_type: Optional[np.ndarray] = None,
     dy: Optional[np.ndarray] = None,
     method: str = 'auto',
     n_surrogates: int = 1000,
     random_state: Optional[int] = None,
+    mk_test_method: str = 'lwp',
+    tie_break_method: str = 'lwp',
+    tau_method: str = 'b',
     # Advanced Parameters
     freq_method: str = 'auto',
     normalization: str = 'standard',
@@ -273,6 +278,8 @@ def surrogate_test(
     Args:
         x (Union[np.ndarray, pd.DataFrame]): Data values.
         t (np.ndarray): Time values.
+        censored (Optional[np.ndarray]): Boolean array indicating censoring.
+        cen_type (Optional[np.ndarray]): Array of censoring types.
         dy (Optional[np.ndarray]): Measurement uncertainties (used only for Lomb-Scargle method).
         method (str): Surrogate generation method ('auto', 'iaaft', 'lomb_scargle').
             - 'auto': Selects 'iaaft' if time steps are uniform, 'lomb_scargle' otherwise.
@@ -280,6 +287,9 @@ def surrogate_test(
             - 'lomb_scargle': Spectral synthesis via Astropy (handles uneven sampling).
         n_surrogates (int): Number of surrogate datasets to generate.
         random_state (Optional[int]): Seed for reproducibility.
+        mk_test_method (str): Method for MK test score calculation.
+        tie_break_method (str): Method for breaking ties in timestamps.
+        tau_method (str): Method for Kendall's Tau calculation.
         freq_method (str): (Lomb-Scargle only) 'auto' or 'log'.
         normalization (str): (Lomb-Scargle only) Periodogram normalization.
         fit_mean (bool): (Lomb-Scargle only) Fit a floating mean during periodogram calculation.
@@ -291,8 +301,25 @@ def surrogate_test(
     """
     x_arr = np.asarray(x).flatten()
     t_arr = np.asarray(t).flatten()
+    n = len(x_arr)
+
+    if censored is None:
+        censored = np.zeros_like(x_arr, dtype=bool)
+    if cen_type is None:
+        cen_type = np.full(x_arr.shape, 'not', dtype=object)
 
     notes = []
+
+    if np.any(censored):
+        warnings.warn(
+            "Censored data detected in surrogate test. Surrogate series are generated "
+            "using the numeric values (detection limits) as continuous input and are "
+            "treated as uncensored. The null hypothesis test compares the original "
+            "(censored) S statistic against a distribution of (uncensored) surrogate "
+            "S statistics. This approximation may be biased if censoring is heavy.",
+            UserWarning
+        )
+        notes.append("Censored data: surrogates treated as uncensored")
 
     # Check for uneven sampling
     dt = np.diff(t_arr)
@@ -349,20 +376,30 @@ def surrogate_test(
     # 1. Original Score
     s_orig, _, _, _ = _mk_score_and_var_censored(
         x_arr, t_arr,
-        censored=np.zeros_like(x_arr, dtype=bool),
-        cen_type=np.full(x_arr.shape, 'not', dtype=object)
+        censored=censored,
+        cen_type=cen_type,
+        mk_test_method=mk_test_method,
+        tie_break_method=tie_break_method,
+        tau_method=tau_method
     )
 
     # 2. Surrogate Scores
     surrogate_scores = np.zeros(n_surrogates)
+
+    # Pre-allocate uncensored arrays for surrogates to avoid repeated creation
+    surr_censored = np.zeros(n, dtype=bool)
+    surr_cen_type = np.full(n, 'not', dtype=object)
 
     # Use simpler non-censored loop for speed if possible, but our _mk function is optimized
     # Ideally we'd have a vectorised MK for many arrays, but loop is acceptable here
     for i in range(n_surrogates):
         s_surr, _, _, _ = _mk_score_and_var_censored(
             surrogates[i], t_arr,
-            censored=np.zeros_like(x_arr, dtype=bool),
-            cen_type=np.full(x_arr.shape, 'not', dtype=object)
+            censored=surr_censored,
+            cen_type=surr_cen_type,
+            mk_test_method=mk_test_method,
+            tie_break_method=tie_break_method,
+            tau_method=tau_method
         )
         surrogate_scores[i] = s_surr
 

@@ -91,7 +91,8 @@ def moving_block_bootstrap(x, block_size):
 
 def block_bootstrap_mann_kendall(x, t, censored, cen_type,
                                  block_size='auto', n_bootstrap=1000,
-                                 tau_method='b', mk_test_method='robust'):
+                                 tau_method='b', mk_test_method='robust',
+                                 tie_break_method='lwp'):
     """
     Block bootstrap Mann-Kendall test for autocorrelated data.
 
@@ -116,6 +117,7 @@ def block_bootstrap_mann_kendall(x, t, censored, cen_type,
         n_bootstrap (int): Number of bootstrap resamples.
         tau_method (str): Method for Kendall's Tau calculation.
         mk_test_method (str): Method for MK test score calculation.
+        tie_break_method (str): Method for breaking ties in timestamps.
 
     Returns:
         tuple: (p_boot, s_obs, s_boot_dist)
@@ -129,7 +131,8 @@ def block_bootstrap_mann_kendall(x, t, censored, cen_type,
     s_obs, var_s_obs, _, _ = _mk_score_and_var_censored(
         x, t, censored, cen_type,
         tau_method=tau_method,
-        mk_test_method=mk_test_method
+        mk_test_method=mk_test_method,
+        tie_break_method=tie_break_method
     )
 
     # Detrend data under H0 (no trend)
@@ -174,7 +177,8 @@ def block_bootstrap_mann_kendall(x, t, censored, cen_type,
         s_b, _, _, _ = _mk_score_and_var_censored(
             x_boot, t, censored_boot, cen_type_boot,
             tau_method=tau_method,
-            mk_test_method=mk_test_method
+            mk_test_method=mk_test_method,
+            tie_break_method=tie_break_method
         )
         s_boot_dist[b] = s_b
 
