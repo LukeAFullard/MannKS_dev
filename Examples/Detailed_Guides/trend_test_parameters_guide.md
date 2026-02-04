@@ -151,6 +151,56 @@ Defaults are recommended for most users.
 
 ---
 
+### Surrogate Data Parameters
+
+These parameters control the surrogate data testing for robust trend analysis against red noise.
+
+#### `surrogate_method`
+-   **Type:** `str`, **Default:** `'none'`
+-   **Description:** Controls whether to perform surrogate data testing.
+-   **Usefulness:**
+    *   `'none'`: Standard Mann-Kendall test.
+    *   `'auto'`: Automatically selects `'iaaft'` for evenly spaced data or `'lomb_scargle'` for unevenly spaced data.
+    *   `'iaaft'`: Forces Iterated Amplitude Adjusted Fourier Transform surrogates.
+    *   `'lomb_scargle'`: Forces spectral synthesis using Lomb-Scargle periodogram.
+
+#### `n_surrogates`
+-   **Type:** `int`, **Default:** `1000`
+-   **Description:** The number of surrogate datasets to generate.
+-   **Usefulness:** Higher values provide more precise p-values.
+
+#### `surrogate_kwargs`
+-   **Type:** `dict`, **Default:** `None`
+-   **Description:** Additional arguments passed to the surrogate generation functions.
+-   **Usefulness:** Allows advanced configuration, such as setting `{'freq_method': 'log'}` for Lomb-Scargle or passing measurement errors `{'dy': errors}`.
+
+---
+
+### Large Dataset Parameters
+
+These parameters control the optimization strategies for large datasets (N > 5,000).
+
+#### `large_dataset_mode`
+-   **Type:** `str`, **Default:** `'auto'`
+-   **Description:** Controls the algorithm selection for large datasets.
+-   **Usefulness:**
+    *   `'auto'`: Automatically selects the best method based on sample size (Full < 5k < Fast < 50k < Aggregate).
+    *   `'full'`: Forces exact calculation (slow for large N).
+    *   `'fast'`: Forces hybrid optimization (stochastic slope, exact MK score).
+    *   `'aggregate'`: Forces the aggregation workflow.
+
+#### `max_pairs`
+-   **Type:** `int`, **Default:** `None` (Defaults to 100,000 in fast mode)
+-   **Description:** The maximum number of pairs to sample when calculating Sen's slope in "Fast Mode".
+-   **Usefulness:** Controls the trade-off between speed and precision. 100,000 pairs typically yield an error < 0.5%.
+
+#### `random_state`
+-   **Type:** `int`, **Default:** `None`
+-   **Description:** Seed for the random number generator.
+-   **Usefulness:** Ensures reproducibility when using stochastic methods like "Fast Mode" or Surrogate Testing.
+
+---
+
 ### Other Parameters
 
 #### `min_size`

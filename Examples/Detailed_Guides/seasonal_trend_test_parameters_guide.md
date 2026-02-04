@@ -146,6 +146,36 @@ Aggregation in a seasonal context is about ensuring that you have **one represen
 
 ---
 
+### Large Dataset Parameters
+
+These parameters control the optimization strategies for large seasonal datasets.
+
+#### `large_dataset_mode`
+-   **Type:** `str`, **Default:** `'auto'`
+-   **Description:** Controls the algorithm selection.
+-   **Usefulness:**
+    *   `'auto'`: Automatically selects the best method.
+    *   `'full'`: Forces exact calculation.
+    *   `'fast'`: Forces hybrid optimization (stratified sampling).
+    *   `'aggregate'`: Forces the aggregation workflow.
+
+#### `max_pairs`
+-   **Type:** `int`, **Default:** `None`
+-   **Description:** Maximum pairs for slope estimation.
+-   **Usefulness:** Higher values improve precision at the cost of speed.
+
+#### `max_per_season`
+-   **Type:** `int`, **Default:** `None` (Defaults to 1000 in fast mode)
+-   **Description:** The maximum number of observations to use *per season* when stratified sampling is active (in "Fast Mode").
+-   **Usefulness:** Ensures that the sample size is manageable while maintaining a balanced representation of every season (e.g., if you have 10,000 January points but only 500 July points, this prevents January from dominating the computational cost).
+
+#### `random_state`
+-   **Type:** `int`, **Default:** `None`
+-   **Description:** Seed for the random number generator.
+-   **Usefulness:** Critical for reproducible results when stratified sampling is used.
+
+---
+
 ### Other Parameters
 
 #### `min_size_per_season`
