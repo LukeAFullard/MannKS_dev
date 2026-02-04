@@ -39,7 +39,7 @@ def run_example():
 
     n = 100
     t = np.arange(n)
-    x_red = generate_red_noise(n, alpha=0.9, seed=123) # High persistence
+    x_red = generate_red_noise(n, alpha=0.9, seed=0) # High persistence
 
     print("--- Scenario 1: Evenly Spaced Red Noise (No Trend) ---")
 
@@ -118,13 +118,13 @@ Running Example 36: Surrogate Data Hypothesis Testing
 
 --- Scenario 1: Evenly Spaced Red Noise (No Trend) ---
 Standard MK Test:
-  Trend: decreasing
-  P-value: 0.2516 (Likely < 0.05, a Type I Error)
+  Trend: increasing
+  P-value: 0.0000 (Likely < 0.05, a Type I Error)
 
 Running Surrogate Test (IAAFT)...
 Surrogate Test Result:
   Method Used: iaaft
-  Surrogate P-value: 0.6760
+  Surrogate P-value: 0.3100
   Is Trend Significant? False
   (A high p-value correctly indicates the 'trend' is just noise.)
 
@@ -142,7 +142,7 @@ Surrogate Test Result:
 
 ### 1. The False Positive Case (Scenario 1)
 *   The **Standard MK Test** might return a low p-value (detecting a trend) because the data has "memory"—it stays high or low for long periods.
-*   The **Surrogate Test** correctly identifies that this "trend" is indistinguishable from random noise with the same power spectrum. The high p-value (0.6760) saves us from making a Type I error.
+*   The **Surrogate Test** correctly identifies that this "trend" is indistinguishable from random noise with the same power spectrum. The high p-value (0.3100) saves us from making a Type I error.
 
 ### 2. The Uneven Trend Case (Scenario 2)
 *   The data has gaps (uneven spacing), so standard FFT methods (IAAFT) would require interpolation, introducing bias.

@@ -620,7 +620,12 @@ def trend_test(
 
             # Sanitize kwargs to prevent collision with explicit arguments
             kwargs = (surrogate_kwargs or {}).copy()
-            for key in ['method', 'n_surrogates', 'random_state']:
+            collision_keys = [
+                'method', 'n_surrogates', 'random_state',
+                'mk_test_method', 'tie_break_method', 'tau_method',
+                'censored', 'cen_type'
+            ]
+            for key in collision_keys:
                 kwargs.pop(key, None)
 
             # If large dataset mode is triggered and we have filtered data (aggregated or not),

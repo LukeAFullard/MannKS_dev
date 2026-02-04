@@ -627,7 +627,13 @@ def seasonal_trend_test(
 
             # Prepare kwargs
             kwargs = (surrogate_kwargs or {}).copy()
-            for key in ['method', 'n_surrogates', 'random_state']:
+            collision_keys = [
+                'method', 'n_surrogates', 'random_state',
+                'mk_test_method', 'tie_break_method', 'tau_method',
+                'censored', 'cen_type',
+                'x', 't'
+            ]
+            for key in collision_keys:
                 kwargs.pop(key, None)
 
             # Iterate over seasons
