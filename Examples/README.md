@@ -108,3 +108,5 @@ In addition to the practical examples, the following deep-dive guides are availa
 *   [**Rolling Trend Analysis Guide**](./Detailed_Guides/rolling_trend_guide.md): Moving window analysis.
 *   [**Segmented Trend Analysis Guide**](./Detailed_Guides/segmented_trend_guide.md): Structural breakpoint detection.
 *   [**Large Dataset Analysis Guide**](./Detailed_Guides/large_dataset_guide.md): Strategies for analyzing big data.
+*   [**Surrogate Data Testing Guide**](./Detailed_Guides/surrogate_data_guide.md): Robust testing against red noise (serial correlation).
+*   [**Block Bootstrap Guide**](./Detailed_Guides/block_bootstrap_guide.md): Handling autocorrelated data with bootstrap methods.
