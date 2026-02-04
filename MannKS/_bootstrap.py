@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 from ._stats import _mk_score_and_var_censored, _sens_estimator_unequal_spacing, _sens_estimator_censored
 
 def optimal_block_size(n, acf):
@@ -143,7 +144,11 @@ def block_bootstrap_mann_kendall(x, t, censored, cen_type,
     else:
         slopes = _sens_estimator_unequal_spacing(x, t)
 
-    median_slope = np.nanmedian(slopes)
+    if len(slopes) > 0 and not np.all(np.isnan(slopes)):
+        median_slope = np.nanmedian(slopes)
+    else:
+        median_slope = 0.0
+
     if np.isnan(median_slope):
         median_slope = 0.0
 
@@ -230,7 +235,12 @@ def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
         slopes = _sens_estimator_censored(x, t, cen_type, **kwargs)
     else:
         slopes = _sens_estimator_unequal_spacing(x, t)
-    slope_obs = np.nanmedian(slopes)
+
+    if len(slopes) > 0 and not np.all(np.isnan(slopes)):
+        slope_obs = np.nanmedian(slopes)
+    else:
+        slope_obs = 0.0
+
     if np.isnan(slope_obs):
         slope_obs = 0.0
 
@@ -272,7 +282,9 @@ def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
         else:
             slopes_b = _sens_estimator_unequal_spacing(x_boot, t_boot)
 
-        boot_slope = np.nanmedian(slopes_b)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            boot_slope = np.nanmedian(slopes_b)
         boot_slopes[b] = boot_slope
 
     # Percentile confidence intervals

@@ -1,8 +1,10 @@
 
 import pytest
 import numpy as np
+import pandas as pd
 import MannKS._bootstrap as bootstrap
 from MannKS._stats import _mk_score_and_var_censored
+from MannKS.trend_test import trend_test
 
 def test_optimal_block_size():
     # Test with uncorrelated data
@@ -111,3 +113,51 @@ def test_bootstrap_mk_censored_alignment():
                 assert not is_cen
             elif val == 30.0:
                 assert is_cen
+
+def test_surrogate_with_block_bootstrap_coexistence():
+    """
+    Verify that surrogate testing and block bootstrap can be requested simultaneously.
+    """
+    n = 50
+    t = np.arange(n)
+    x = 0.1 * t + np.random.randn(n)
+
+    result = trend_test(
+        x, t,
+        autocorr_method='block_bootstrap',
+        n_bootstrap=100,
+        surrogate_method='iaaft',
+        n_surrogates=100
+    )
+
+    # Check if both ran
+    assert result.block_size_used is not None # Indicates bootstrap ran
+    assert result.surrogate_result is not None # Indicates surrogate ran
+    assert result.surrogate_result.method == 'iaaft'
+
+def test_block_bootstrap_censored_data():
+    """
+    Verify block bootstrap runs with censored data.
+    """
+    n = 50
+    t = np.arange(n)
+    x = 0.1 * t + np.random.randn(n)
+
+    # Add censoring
+    censored = np.zeros(n, dtype=bool)
+    censored[0:5] = True # First 5 points censored
+
+    df = pd.DataFrame({
+        'value': x,
+        'censored': censored,
+        'cen_type': ['lt'] * n
+    })
+
+    result = trend_test(
+        df, t,
+        autocorr_method='block_bootstrap',
+        n_bootstrap=50
+    )
+
+    assert result.trend is not None
+    assert result.block_size_used is not None

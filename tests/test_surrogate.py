@@ -1,6 +1,7 @@
 
 import pytest
 import numpy as np
+import pandas as pd
 import sys
 from MannKS._surrogate import surrogate_test, _iaaft_surrogates, _lomb_scargle_surrogates
 from MannKS.trend_test import trend_test
@@ -237,3 +238,64 @@ def test_censored_surrogate_propagation():
 
     # We assert it is significantly below the imputation-only baseline
     assert std_surr < 2.65
+
+def test_surrogate_kwargs_slicing_with_dataframe_and_nans():
+    """
+    Test that surrogate_kwargs are correctly sliced when input x is a DataFrame
+    with NaNs and a DateTimeIndex, causing trend_test to filter data.
+    """
+    # Create data with NaNs
+    dates = pd.date_range("2020-01-01", periods=10, freq="D")
+    values = np.arange(10).astype(float)
+    values[5] = np.nan # Introduce NaN at index 5
+
+    df = pd.DataFrame({'value': values}, index=dates)
+
+    # Create a kwargs array that matches original length
+    # dy is commonly used in Lomb-Scargle
+    dy = np.ones(10) * 0.1
+    # We set index 5 to a sentinel value to check logic, but since it's filtered
+    # we won't see it in the surrogate test call.
+
+    # We also pass a dummy kwarg to see if it gets PASSED through without error now
+    custom_arg = np.arange(10)
+
+    try:
+        if HAS_ASTROPY:
+            method = 'lomb_scargle'
+        else:
+            method = 'iaaft' # Fallback for test environment without astropy (though requirements say it is there)
+
+        result = trend_test(
+            df, dates,
+            surrogate_method=method,
+            n_surrogates=10,
+            surrogate_kwargs={'dy': dy, 'custom_arg': custom_arg}
+        )
+    except Exception as e:
+        pytest.fail(f"trend_test raised exception: {e}")
+
+    assert result.surrogate_result is not None
+    assert result.surrogate_result.method == method
+
+def test_surrogate_imputation_logic_consistency():
+    """
+    Check if surrogate test handles censoring by imputation consistent with expectations.
+    """
+    x = np.array([1, 2, 3, 4, 5], dtype=float)
+    t = np.arange(5)
+    censored = np.array([True, False, False, False, True]) # <1, 2, 3, 4, <5
+    cen_type = np.array(['lt', 'not', 'not', 'not', 'lt'])
+
+    res = surrogate_test(
+        x, t,
+        censored=censored,
+        cen_type=cen_type,
+        method='iaaft',
+        n_surrogates=10,
+        lt_mult=0.5
+    )
+
+    assert res.notes is not None
+    # Note: The warning is captured by pytest, but notes are returned in result
+    assert any("Censored data: surrogates generated from imputed values" in note for note in res.notes)
