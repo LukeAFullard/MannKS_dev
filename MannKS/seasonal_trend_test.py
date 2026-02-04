@@ -90,6 +90,67 @@ def seasonal_trend_test(
     random_state : int, optional
         Random seed for reproducible results in fast mode. Set this for
         deterministic output when using fast approximations.
+
+    Args:
+        x (Union[np.ndarray, pd.DataFrame]): A vector of data, which can be numeric or a pandas
+            DataFrame from `prepare_censored_data`.
+        t (np.ndarray): A vector of corresponding timestamps, which can be
+            numeric or datetime-like.
+        period (int, optional): The seasonal period (e.g., 12 for monthly data).
+            Required if `t` is numeric. If `t` is datetime, inferred from `season_type`.
+        alpha (float, optional): The significance level for the test. Defaults to 0.05.
+        agg_method (str, optional): Method for temporal aggregation.
+            - 'none' (default): No aggregation.
+            - 'median': Aggregates to the median value.
+            - 'robust_median': A more robust median for censored data.
+            - 'middle': Selects the observation closest to the time mean.
+            - 'middle_lwp': Selects the observation closest to the theoretical midpoint.
+            - 'lwp': LWP-style aggregation.
+        agg_period (str, optional): The time period for aggregation (e.g., 'year', 'month').
+        season_type (str, optional): The type of seasonality for datetime inputs
+            (e.g., 'month', 'day_of_week'). Defaults to 'month'.
+        hicensor (Union[bool, float], optional): The high-censor threshold.
+            If True, uses the highest left-censored ('<') value. If a number is
+            provided, that value is used as the threshold. Defaults to False.
+        plot_path (str, optional): The file path to save the trend plot.
+        residual_plot_path (str, optional): The file path to save the residual plot.
+        lt_mult (float, optional): Multiplier for left-censored data (default 0.5).
+        gt_mult (float, optional): Multiplier for right-censored data (default 1.1).
+        sens_slope_method (str, optional): Method for calculating Sen's slope.
+            - 'unbiased' (default): Sets ambiguous slopes to NaN.
+            - 'lwp': Sets ambiguous slopes to 0 (conservative).
+            - 'ats': Uses the Akritas-Theil-Sen estimator for censored data.
+        tau_method (str, optional): Method for Kendall's Tau calculation.
+            - 'b' (default): Kendall's Tau-b (adjusts for ties).
+            - 'a': Kendall's Tau-a (no adjustment).
+        min_size_per_season (int, optional): Minimum sample size per season. Defaults to 5.
+        mk_test_method (str, optional): Method for Mann-Kendall test.
+            - 'lwp' (default): Standardized approach.
+            - 'robust': Uses robust tie handling.
+        ci_method (str, optional): Method for confidence intervals.
+            - 'lwp' (default): Uses linear interpolation.
+            - 'direct': Uses direct rank lookup.
+        tie_break_method (str, optional): Method for breaking ties in timestamps.
+            - 'lwp' (default): Uses 1/1000th of minimum difference.
+            - 'robust': Uses 1/2 of minimum difference.
+        category_map (dict, optional): Custom mapping for trend classification.
+        continuous_confidence (bool, optional): Whether to report continuous confidence (True)
+            or classical p-value based trend (False). Defaults to True.
+        x_unit (str, optional): Unit of measurement for x (e.g., 'mg/L').
+        slope_scaling (str, optional): Time unit to scale the slope to (e.g., 'year').
+        seasonal_coloring (bool, optional): Whether to color points by season in plots.
+        autocorr_method (str, optional): Method for handling autocorrelation.
+            - 'none' (default): No correction.
+            - 'block_bootstrap': Use block bootstrap (recommended for seasonal).
+        block_size (Union[str, int], optional): Block size for bootstrap. Defaults to 'auto'.
+        n_bootstrap (int, optional): Number of bootstrap iterations. Defaults to 1000.
+        large_dataset_mode (str, optional): See Parameters section above.
+        max_pairs (int, optional): See Parameters section above.
+        max_per_season (int, optional): See Parameters section above.
+        random_state (int, optional): See Parameters section above.
+
+    Returns:
+        namedtuple: A named tuple containing the results of the Seasonal Mann-Kendall test.
     """
 
     # --- Basic Input Validation ---
