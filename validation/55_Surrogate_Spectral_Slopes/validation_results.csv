@@ -1,0 +1,12 @@
+Test Name,Status,Message,beta,mk_rejection_rate,surr_rejection_rate
+Spectral Slope Beta=0.0,PASS,"Beta=0.00: MK Rej=0.04, Surr Rej=0.02",0.0,0.04,0.02
+Spectral Slope Beta=0.25,PASS,"Beta=0.25: MK Rej=0.02, Surr Rej=0.00",0.25,0.02,0.0
+Spectral Slope Beta=0.5,PASS,"Beta=0.50: MK Rej=0.20, Surr Rej=0.06",0.5,0.2,0.06
+Spectral Slope Beta=0.75,PASS,"Beta=0.75: MK Rej=0.42, Surr Rej=0.08",0.75,0.42,0.08
+Spectral Slope Beta=1.0,PASS,"Beta=1.00: MK Rej=0.48, Surr Rej=0.04",1.0,0.48,0.04
+Spectral Slope Beta=1.25,PASS,"Beta=1.25: MK Rej=0.64, Surr Rej=0.12",1.25,0.64,0.12
+Spectral Slope Beta=1.5,PASS,"Beta=1.50: MK Rej=0.74, Surr Rej=0.00",1.5,0.74,0.0
+Spectral Slope Beta=1.75,PASS,"Beta=1.75: MK Rej=0.64, Surr Rej=0.00",1.75,0.64,0.0
+Spectral Slope Beta=2.0,PASS,"Beta=2.00: MK Rej=0.80, Surr Rej=0.10",2.0,0.8,0.1
+Spectral Slope Beta=2.25,PASS,"Beta=2.25: MK Rej=0.78, Surr Rej=0.06",2.25,0.78,0.06
+Spectral Slope Beta=2.5,PASS,"Beta=2.50: MK Rej=0.68, Surr Rej=0.06",2.5,0.68,0.06
