@@ -409,7 +409,8 @@ def trend_test(
                 x_filtered, t_filtered, censored_filtered, cen_type_filtered,
                 block_size=block_size_used, n_bootstrap=n_bootstrap,
                 tau_method=tau_method, mk_test_method=mk_test_method,
-                tie_break_method=tie_break_method
+                tie_break_method=tie_break_method,
+                lt_mult=lt_mult, gt_mult=gt_mult
             )
 
             p = p_boot

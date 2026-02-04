@@ -92,7 +92,7 @@ def test_bootstrap_mk_censored_alignment():
     # x=[10, 30], slope forced to 0
     bootstrap._mk_score_and_var_censored = mock_mk
     original_sen = bootstrap._sens_estimator_censored
-    bootstrap._sens_estimator_censored = lambda *args: [0.0]
+    bootstrap._sens_estimator_censored = lambda *args, **kwargs: [0.0]
 
     captured_x = []
     captured_censored = []

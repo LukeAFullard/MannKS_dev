@@ -93,7 +93,8 @@ def moving_block_bootstrap(x, block_size):
 def block_bootstrap_mann_kendall(x, t, censored, cen_type,
                                  block_size='auto', n_bootstrap=1000,
                                  tau_method='b', mk_test_method='robust',
-                                 tie_break_method='lwp'):
+                                 tie_break_method='lwp',
+                                 lt_mult=0.5, gt_mult=1.1):
     """
     Block bootstrap Mann-Kendall test for autocorrelated data.
 
@@ -119,6 +120,8 @@ def block_bootstrap_mann_kendall(x, t, censored, cen_type,
         tau_method (str): Method for Kendall's Tau calculation.
         mk_test_method (str): Method for MK test score calculation.
         tie_break_method (str): Method for breaking ties in timestamps.
+        lt_mult (float): Multiplier for left-censored data (default 0.5).
+        gt_mult (float): Multiplier for right-censored data (default 1.1).
 
     Returns:
         tuple: (p_boot, s_obs, s_boot_dist)
@@ -147,7 +150,7 @@ def block_bootstrap_mann_kendall(x, t, censored, cen_type,
     # We remove the global trend to test the null hypothesis of no trend
     # while preserving the autocorrelation structure.
     if np.any(censored):
-        slopes = _sens_estimator_censored(x, t, cen_type)
+        slopes = _sens_estimator_censored(x, t, cen_type, lt_mult=lt_mult, gt_mult=gt_mult)
     else:
         slopes = _sens_estimator_unequal_spacing(x, t)
 
