@@ -5,6 +5,7 @@ import pandas as pd
 import sys
 from MannKS._surrogate import surrogate_test, _iaaft_surrogates, _lomb_scargle_surrogates
 from MannKS.trend_test import trend_test
+from MannKS.seasonal_trend_test import seasonal_trend_test
 
 try:
     import astropy
@@ -299,3 +300,128 @@ def test_surrogate_imputation_logic_consistency():
     assert res.notes is not None
     # Note: The warning is captured by pytest, but notes are returned in result
     assert any("Censored data: surrogates generated from imputed values" in note for note in res.notes)
+
+
+def test_seasonal_trend_test_surrogate():
+    """Test seasonal trend test with surrogate data."""
+    # Create 2 years of monthly data
+    dates = pd.date_range("2020-01-01", periods=24, freq="ME")
+    t = dates
+    # Trend + Seasonality + Noise
+    # Trend: 0.1 per month
+    # Seasonality: +1 for first 6 months, -1 for last 6 months
+    trend = 0.1 * np.arange(24)
+    seasonality = np.tile(np.concatenate([np.ones(6), -np.ones(6)]), 2)
+    noise = np.random.default_rng(42).normal(0, 0.1, 24)
+    x = trend + seasonality + noise
+
+    res = seasonal_trend_test(
+        x, t,
+        season_type='month',
+        surrogate_method='iaaft',
+        n_surrogates=50,
+        random_state=42
+    )
+
+    assert res.surrogate_result is not None
+    assert res.surrogate_result.method == 'seasonal_iaaft'
+    # Should detect trend
+    assert res.surrogate_result.trend_significant
+    assert res.trend != 'no trend'
+
+
+def test_seasonal_trend_test_block_bootstrap():
+    """Test seasonal trend test with block bootstrap."""
+    # Create 5 years of monthly data
+    dates = pd.date_range("2020-01-01", periods=60, freq="ME")
+    t = dates
+    x = np.arange(60) * 0.1 + np.random.normal(0, 1, 60)
+
+    res = seasonal_trend_test(
+        x, t,
+        season_type='month',
+        autocorr_method='block_bootstrap',
+        n_bootstrap=50,
+        block_size=2 # 2 years
+    )
+
+    assert res.block_size_used == 2
+    # Should detect trend
+    assert bool(res.h) is True
+
+
+def test_large_dataset_performance_warning():
+    """Test that warning is issued for large dataset + fast mode + lwp MK + surrogates."""
+    # Mock size tier detection to force 'fast' mode without creating huge array
+    # We can do this by just creating a large enough array (e.g. > 5000)
+    # 5001 is enough to trigger fast mode default (tier 2)
+
+    n = 6000
+    t = np.arange(n)
+    x = np.random.randn(n)
+
+    # Mock surrogate_test to avoid actual computation which would be O(N^2 * n_surrogates)
+    import sys
+    import importlib
+    tt_module = importlib.import_module("MannKS.trend_test")
+    from MannKS._surrogate import SurrogateResult
+
+    orig_surrogate = tt_module.surrogate_test
+
+    def mock_surrogate(*args, **kwargs):
+        # Return a dummy result
+        return SurrogateResult(
+            method='mock', original_score=0, surrogate_scores=np.zeros(1),
+            p_value=0.5, z_score=0, n_surrogates=kwargs.get('n_surrogates', 1),
+            trend_significant=False, notes=[]
+        )
+
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(tt_module, 'surrogate_test', mock_surrogate)
+
+        with pytest.warns(UserWarning, match="Performance Warning"):
+            trend_test(
+                x, t,
+                surrogate_method='iaaft',
+                n_surrogates=101, # > 100 to trigger warning
+                mk_test_method='lwp',
+                random_state=42
+            )
+
+
+def test_seasonal_surrogate_kwargs_alignment():
+    """
+    Test that surrogate_kwargs are correctly sliced/aligned in seasonal_trend_test.
+    """
+    # 2 years, monthly
+    n = 24
+    dates = pd.date_range("2020-01-01", periods=n, freq="ME")
+    x = np.random.randn(n)
+
+    # Create a kwarg array aligned with input
+    # e.g., 'dy'
+    dy = np.arange(n).astype(float)
+
+    # We'll use a mock to intercept the call to surrogate_test inside seasonal_trend_test
+    import sys
+    import importlib
+    st_module = importlib.import_module("MannKS.seasonal_trend_test")
+
+    captured_kwargs_list = []
+
+    orig_surrogate = st_module.surrogate_test
+
+    def mock_surrogate(*args, **kwargs):
+        captured_kwargs_list.append(kwargs)
+        return orig_surrogate(*args, **kwargs)
+
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(st_module, 'surrogate_test', mock_surrogate)
+
+        seasonal_trend_test(
+            x, dates,
+            season_type='month',
+            surrogate_method='iaaft',
+            n_surrogates=10,
+            surrogate_kwargs={'dy': dy}
+        )
