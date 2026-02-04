@@ -44,7 +44,7 @@ def _get_min_positive_diff(arr):
     return np.min(pos_diffs) if len(pos_diffs) > 0 else 0.0
 
 
-def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test_method='robust', tie_break_method='robust'):
+def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test_method='robust', tie_break_method='robust', calc_var=True):
     """
     Calculates the Mann-Kendall S statistic and its variance for censored data.
 
@@ -56,6 +56,8 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
         tau_method (str): 'a' or 'b' for Kendall's Tau.
         mk_test_method (str): 'robust' or 'lwp'.
         tie_break_method (str): 'robust' or 'lwp' for handling ties in timestamps.
+        calc_var (bool): Whether to calculate Variance, Tau, and Denominator.
+                        If False, returns (S, nan, nan, nan). Default True.
 
     Returns:
         tuple: (kenS, varS, D, Tau)
@@ -113,7 +115,7 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
     tt = 0
     uu = 0
 
-    use_fast_path = (n > 5000 and not np.any(cx) and mk_test_method != 'lwp')
+    use_fast_path = (n > 500 and not np.any(cx) and mk_test_method != 'lwp')
     use_chunking = n > 5000 and not use_fast_path
 
     if use_fast_path:
@@ -269,6 +271,9 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
             yplus[yplus > 1] = 1
             uplus = yplus * np.abs(np.sign(diffy))
             uu += np.sum(uplus) / 2.0
+
+    if not calc_var:
+        return kenS, np.nan, np.nan, np.nan
 
     # 5. D (denominator) calculation for Tau
     J = n * (n - 1) / 2.0
@@ -509,6 +514,7 @@ def _sens_estimator_adaptive(x, t, max_pairs=None, random_state=None):
     Returns:
         np.ndarray: Array of slopes (exact or sampled).
     """
+    # v0.6.0: Adaptive estimator
     n = len(x)
 
     if max_pairs is None:
@@ -666,6 +672,7 @@ def _sens_estimator_censored_adaptive(x, t, cen_type,
     Returns:
         np.ndarray: Array of slopes (exact or sampled).
     """
+    # v0.6.0: Adaptive estimator
     n = len(x)
 
     if max_pairs is None:

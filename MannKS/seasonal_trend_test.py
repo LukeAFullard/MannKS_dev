@@ -294,7 +294,7 @@ def seasonal_trend_test(
             # Define mapping from season_type to pandas offset alias
             SEASON_TO_OFFSET = {
                 'year': 'Y', 'month': 'M', 'quarter': 'Q',
-                'day': 'D', 'hour': 'H', 'minute': 'T', 'second': 'S',
+                'day': 'D', 'hour': 'h', 'minute': 'min', 'second': 's',
                 'week': 'W', 'week_of_year': 'W', 'day_of_year': 'D'
             }
             period_alias = SEASON_TO_OFFSET.get(season_type, 'M')
