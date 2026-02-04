@@ -358,7 +358,6 @@ def _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b', mk_test
         Tau = kenS / D
     else:
         Tau = 0
-        warnings.warn("Denominator near zero in Tau calculation", UserWarning)
 
     return kenS, varS, D, Tau
 

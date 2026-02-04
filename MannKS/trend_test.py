@@ -668,47 +668,32 @@ def trend_test(
                           kwargs_filtered[k] = v
             else:
                 # Fallback path (e.g. if aggregation dropped original_index)
-                # Note: Slicing original-length kwargs after aggregation is statistically ambiguous
-                # and usually implies user error, but we attempt a best-effort index match.
 
                 if n_orig != n_filt:
-                    kept_indices = data_filtered.index
+                    # We have filtered or aggregated data, but no map to original indices.
+                    # We check if we can reconstruct a simple NaN mask.
 
                     use_mask = False
                     mask = None
 
-                    # Try to reconstruct mask if we can (only works for simple filtering, not aggregation)
-                    if isinstance(x, pd.DataFrame) and not pd.api.types.is_integer_dtype(data_filtered.index):
-                        if all(c in x.columns for c in ['value', 'censored', 'cen_type']):
-                            vals = x['value'].values
-                        else:
-                            vals, _ = _preprocessing(x)
+                    # Attempt mask reconstruction only if we suspect simple filtering (not aggregation)
+                    # Simple filtering usually preserves index unless reset_index was called,
+                    # but _prepare_data returns a new DF with RangeIndex if input was array.
+                    # However, _prepare_data ADDS original_index.
+                    # So if original_index is missing, it MUST be because aggregation dropped it.
 
-                        if len(vals) == n_orig:
-                            mask = ~np.isnan(vals)
-                            if np.sum(mask) == n_filt:
-                                use_mask = True
+                    # If aggregation dropped it, we cannot map length-N kwargs to length-M data.
 
                     for k, v in kwargs_base.items():
                         if hasattr(v, '__len__') and len(v) == n_orig and not isinstance(v, str):
-                             if isinstance(v, (np.ndarray, list, pd.Series)):
-                                 if use_mask:
-                                      if isinstance(v, (pd.Series, pd.DataFrame)):
-                                           kwargs_filtered[k] = v[mask]
-                                      else:
-                                           kwargs_filtered[k] = np.asarray(v)[mask]
-                                 elif isinstance(v, (pd.Series, pd.DataFrame)):
-                                     try:
-                                         kwargs_filtered[k] = v.loc[kept_indices]
-                                     except:
-                                          if hasattr(v, 'iloc'):
-                                               kwargs_filtered[k] = v.iloc[kept_indices]
-                                          else:
-                                               kwargs_filtered[k] = np.asarray(v)[kept_indices]
-                                 else:
-                                     kwargs_filtered[k] = np.asarray(v)[kept_indices]
-                             else:
-                                 kwargs_filtered[k] = v
+                             # Ambiguous mapping: User provided length-N argument (e.g. error bars)
+                             # but we are using length-M aggregated data.
+                             raise ValueError(
+                                 f"Surrogate argument '{k}' has length {len(v)} (matches original input), "
+                                 f"but the analysis is running on aggregated/filtered data (length {n_filt}). "
+                                 "Automatic mapping is not possible because 'original_index' was lost during aggregation. "
+                                 f"Please pre-aggregate '{k}' to match the analysis resolution or pass a matching array."
+                             )
                         else:
                              kwargs_filtered[k] = v
                 else:
