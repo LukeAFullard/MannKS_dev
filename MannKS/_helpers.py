@@ -123,6 +123,10 @@ def _prepare_data(x, t, hicensor):
     """
     if isinstance(x, pd.DataFrame) and all(col in x.columns for col in ['value', 'censored', 'cen_type']):
         data = x.copy()
+    elif isinstance(x, pd.DataFrame):
+        # Fallback for simple DataFrame: treat as numeric values.
+        # This bypasses the string check below which iterates column names.
+        pass
     elif hasattr(x, '__iter__') and any(isinstance(i, str) for i in x):
         raise TypeError("Input data `x` contains strings. Please pre-process it with `prepare_censored_data` first.")
     else:

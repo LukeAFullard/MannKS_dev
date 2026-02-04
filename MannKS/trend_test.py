@@ -13,7 +13,7 @@ from ._stats import (_z_score, _p_value, _sens_estimator_unequal_spacing,
                      _sen_probability, _sens_estimator_adaptive,
                      _sens_estimator_censored_adaptive)
 from ._ats import ats_slope
-from ._helpers import (_prepare_data, _aggregate_by_group, _value_for_time_increment)
+from ._helpers import (_prepare_data, _aggregate_by_group, _value_for_time_increment, _preprocessing)
 from ._large_dataset import detect_size_tier
 from .plotting import plot_trend, plot_residuals
 from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
@@ -644,52 +644,57 @@ def trend_test(
             n_filt = len(x_filtered)
 
             if n_orig != n_filt:
-                # We need to slice kwargs.
-                # Assuming 'data_filtered' has the subset of original rows.
-                # If the user provided 'dy' as a numpy array, we can't easily index it with DataFrame index.
-                # But 'data_filtered' was constructed from x_arr/t_arr.
-                # If we assume x_arr/t_arr were aligned with kwargs['dy'], we can replicate the mask.
+                # We need to slice kwargs because data was filtered (NaNs dropped).
 
-                # Re-derive the mask used in _prepare_data (simplified)
-                # Note: _prepare_data handles hicensor logic too, but mainly drops NaNs from t and value.
-                # We'll use a heuristic: if kwarg is array of length n_orig, slice it.
+                # Robustly identify which rows were kept.
+                # If x is a DataFrame with non-integer index, data_filtered.index contains labels (timestamps).
+                # Using these labels to slice a numpy array (v) will fail.
+                # We must determine the boolean mask or integer positions.
 
-                # Construct mask
-                # Check for NaNs in original input arrays (as _prepare_data does)
-                # This is slightly redundant but safer than assuming complex index logic
-                # We need to match the rows kept in 'data_filtered'.
+                use_mask = False
+                mask = None
 
-                # Best approach: If data_filtered came from a DataFrame x, it has the original Index.
-                # If x was array, _prepare_data created a DataFrame with default RangeIndex (0..N-1).
-                # But _prepare_data sorts by time if unsorted!
+                # If potential index mismatch exists (DataFrame input with non-integer index)
+                if isinstance(x, pd.DataFrame) and not pd.api.types.is_integer_dtype(data_filtered.index):
+                     # Reconstruct the mask used by _prepare_data (drop NaNs in value)
+                     if all(c in x.columns for c in ['value', 'censored', 'cen_type']):
+                          vals = x['value'].values
+                     else:
+                          # Simple DF
+                          vals, _ = _preprocessing(x)
 
-                # Let's check how _prepare_data works. It returns a DataFrame.
-                # If we can map back to original indices, we can slice kwargs.
-                # If x was array, the DataFrame has a default index that might not match original position after dropna?
-                # Actually, _prepare_data creates a DF from the inputs. The index of that DF
-                # corresponds to original position (0..N-1) if we just pass arrays.
+                     if len(vals) == n_orig:
+                          mask = ~np.isnan(vals)
+                          # Verify consistency
+                          if np.sum(mask) == n_filt:
+                              use_mask = True
 
-                # So data_filtered.index contains the original integer indices of the points kept.
                 kept_indices = data_filtered.index
 
                 for k, v in kwargs_base.items():
                     if hasattr(v, '__len__') and len(v) == n_orig:
                          # Attempt to slice
                          if isinstance(v, (np.ndarray, list, pd.Series)):
-                             if isinstance(v, (pd.Series, pd.DataFrame)):
-                                 # Align by index if possible, else slice by integer position
-                                 # If v has same index as original, loc[kept_indices] works
+                             if use_mask:
+                                  # Robust slicing with boolean mask
+                                  if isinstance(v, (pd.Series, pd.DataFrame)):
+                                       kwargs_filtered[k] = v[mask]
+                                  else:
+                                       kwargs_filtered[k] = np.asarray(v)[mask]
+                             elif isinstance(v, (pd.Series, pd.DataFrame)):
+                                 # Align by index if possible
                                  try:
                                      kwargs_filtered[k] = v.loc[kept_indices]
                                  except:
-                                      # Fallback to integer indexing if index doesn't match
+                                      # Fallback to integer indexing (iloc) if index doesn't match
                                       if hasattr(v, 'iloc'):
+                                           # If kept_indices are integers (RangeIndex), this works.
                                            kwargs_filtered[k] = v.iloc[kept_indices]
                                       else:
-                                           # List/Array
                                            kwargs_filtered[k] = np.asarray(v)[kept_indices]
                              else:
                                  # Numpy array or list -> slice by integer indices
+                                 # This assumes kept_indices are integers (RangeIndex from array input)
                                  kwargs_filtered[k] = np.asarray(v)[kept_indices]
                          else:
                              kwargs_filtered[k] = v
