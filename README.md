@@ -32,10 +32,10 @@ Use this package when your data has:
 - **No normal distribution** (non-parametric methods don't require it)
 - **Small to large sample sizes** (Automatic support for n > 10,000)
 
-**NEW IN V0.6.0**: **Surrogate Data Testing**. MannKS now supports hypothesis testing against "Red Noise" (serial correlation). Instead of assuming independence, you can generate thousands of synthetic datasets (using IAAFT or Lomb-Scargle methods) to verify if your trend is real or just a random fluctuation of a persistent background process. See [Example 36](./Examples/36_Surrogate_Data_Testing) and the [Surrogate Data Guide](./Examples/Detailed_Guides/surrogate_data_guide.md).
+**NEW IN V0.6.0**: **Surrogate Data Testing**. MannKS now supports hypothesis testing against **serial correlation** (colored noise). Instead of assuming independence, you can generate thousands of synthetic datasets (using IAAFT or Lomb-Scargle methods) that mimic the power spectrum of your original data. This verifies if your trend is real or just a random fluctuation of the persistent background noise. See [Example 36](./Examples/36_Surrogate_Data_Testing) and the [Surrogate Data Guide](./Examples/Detailed_Guides/surrogate_data_guide.md).
 
 ```python
-# Test against red noise null hypothesis
+# Test against colored noise null hypothesis
 result = trend_test(x, t, surrogate_method='auto', n_surrogates=1000)
 print(result.surrogate_result.p_value)
 ```
