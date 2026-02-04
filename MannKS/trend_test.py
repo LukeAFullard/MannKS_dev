@@ -402,7 +402,8 @@ def trend_test(
             p_boot, s_obs, s_boot_dist = block_bootstrap_mann_kendall(
                 x_filtered, t_filtered, censored_filtered, cen_type_filtered,
                 block_size=block_size_used, n_bootstrap=n_bootstrap,
-                tau_method=tau_method, mk_test_method=mk_test_method
+                tau_method=tau_method, mk_test_method=mk_test_method,
+                tie_break_method=tie_break_method
             )
 
             p = p_boot
@@ -610,6 +611,11 @@ def trend_test(
 
             surrogate_result = surrogate_test(
                 x_filtered, t_filtered,
+                censored=censored_filtered,
+                cen_type=cen_type_filtered,
+                mk_test_method=mk_test_method,
+                tie_break_method=tie_break_method,
+                tau_method=tau_method,
                 method=surrogate_method,
                 n_surrogates=n_surrogates,
                 random_state=random_state,
