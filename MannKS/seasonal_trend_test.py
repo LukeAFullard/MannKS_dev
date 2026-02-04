@@ -682,11 +682,12 @@ def seasonal_trend_test(
                                             kwargs_season[k] = v
                                   else:
                                        # Aggregation + Raw kwargs -> undefined/unsupported
+                                           # Updated message to match trend_test.py style:
                                        raise ValueError(
-                                           f"Surrogate argument '{k}' has length {len(v)} (matches original input), "
-                                           "but the analysis is running on aggregated seasonal data. "
-                                           "Automatic mapping is not possible because 'original_index' was lost during aggregation. "
-                                           f"Please pre-aggregate '{k}' to match the analysis resolution or pass a matching array."
+                                               f"Surrogate arguments (e.g. '{k}') cannot be automatically mapped when aggregation "
+                                               f"is used (`agg_method='{agg_method}'`) because the link to original indices is lost. "
+                                               "Please pre-aggregate your surrogate arguments to match the analysis data or pass "
+                                               "arguments that match the aggregated data length."
                                        )
 
                              # Case 2: Kwarg matches FILTERED data length (len(data_filtered))
@@ -701,11 +702,12 @@ def seasonal_trend_test(
                         elif hasattr(v, '__len__') and len(v) == n_raw and not isinstance(v, str):
                              # Case 3: Kwarg matches ORIGINAL length (n_raw) but we fell through Case 1
                              # because original_index is missing AND aggregation happened (so no simple mask).
+                             # Updated message to match trend_test.py style:
                              raise ValueError(
-                                 f"Surrogate argument '{k}' has length {len(v)} (matches original input), "
-                                 "but the analysis is running on aggregated seasonal data. "
-                                 "Automatic mapping is not possible because 'original_index' was lost during aggregation. "
-                                 f"Please pre-aggregate '{k}' to match the analysis resolution or pass a matching array."
+                                 f"Surrogate arguments (e.g. '{k}') cannot be automatically mapped when aggregation "
+                                 f"is used (`agg_method='{agg_method}'`) because the link to original indices is lost. "
+                                 "Please pre-aggregate your surrogate arguments to match the analysis data or pass "
+                                 "arguments that match the aggregated data length."
                              )
                         else:
                              kwargs_season[k] = v
