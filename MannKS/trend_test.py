@@ -538,11 +538,18 @@ def trend_test(
             if autocorr_method == 'block_bootstrap' and sens_slope_method != 'ats':
                 # Bootstrap confidence intervals for slope
                 from ._bootstrap import block_bootstrap_confidence_intervals
+
+                # Determine max_pairs for bootstrap iterations
+                # Use the same limit as detected for the main test
+                boot_max_pairs = max_pairs if max_pairs else tier_info_filtered.get('max_pairs')
+
                 _, lower_ci, upper_ci, _ = block_bootstrap_confidence_intervals(
                     x_filtered, t_filtered, censored_filtered, cen_type_filtered,
                     block_size=block_size_used, n_bootstrap=n_bootstrap, alpha=alpha,
                     method=sens_slope_method,
-                    lt_mult=lt_mult, gt_mult=gt_mult
+                    lt_mult=lt_mult, gt_mult=gt_mult,
+                    max_pairs=boot_max_pairs,
+                    random_state=random_state
                 )
                 # Note: sen_probability logic remains standard approx or needs bootstrap update (omitted for now)
                 sen_prob, sen_prob_max, sen_prob_min = _sen_probability(slopes, var_s_ci, total_pairs=total_possible_pairs) # Approximation

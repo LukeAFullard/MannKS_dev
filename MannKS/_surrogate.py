@@ -457,7 +457,8 @@ def surrogate_test(
             cen_type=s_type,
             mk_test_method=mk_test_method,
             tie_break_method=tie_break_method,
-            tau_method=tau_method
+            tau_method=tau_method,
+            calc_var=False
         )
         surrogate_scores[i] = s_surr
 

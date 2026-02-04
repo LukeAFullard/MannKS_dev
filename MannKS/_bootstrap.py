@@ -1,6 +1,8 @@
 import numpy as np
 import warnings
-from ._stats import _mk_score_and_var_censored, _sens_estimator_unequal_spacing, _sens_estimator_censored
+from ._stats import (_mk_score_and_var_censored, _sens_estimator_unequal_spacing,
+                     _sens_estimator_censored, _sens_estimator_adaptive,
+                     _sens_estimator_censored_adaptive)
 
 def optimal_block_size(n, acf):
     """
@@ -193,7 +195,8 @@ def block_bootstrap_mann_kendall(x, t, censored, cen_type,
             x_boot, t, censored_boot, cen_type_boot,
             tau_method=tau_method,
             mk_test_method=mk_test_method,
-            tie_break_method=tie_break_method
+            tie_break_method=tie_break_method,
+            calc_var=False
         )
         s_boot_dist[b] = s_b
 
@@ -207,6 +210,7 @@ def block_bootstrap_mann_kendall(x, t, censored, cen_type,
 def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
                                         block_size='auto', n_bootstrap=1000,
                                         alpha=0.05,
+                                        max_pairs=None, random_state=None,
                                         **kwargs):
     """
     Bootstrap confidence intervals for Sen's slope with autocorrelated data.
@@ -228,6 +232,8 @@ def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
         block_size (Union[str, int]): 'auto' or integer block size.
         n_bootstrap (int): Number of bootstrap resamples.
         alpha (float): Significance level (e.g., 0.05 for 95% CI).
+        max_pairs (int, optional): Maximum pairs for adaptive Sen's slope.
+        random_state (int, optional): Seed for adaptive sampling (not bootstrap).
         **kwargs: Additional arguments passed to `_sens_estimator_censored`
                   (e.g., method, lt_mult, gt_mult).
 
@@ -249,9 +255,9 @@ def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
 
     # Calculate observed slope
     if np.any(censored):
-        slopes = _sens_estimator_censored(x, t, cen_type, **kwargs)
+        slopes = _sens_estimator_censored_adaptive(x, t, cen_type, max_pairs=max_pairs, random_state=random_state, **kwargs)
     else:
-        slopes = _sens_estimator_unequal_spacing(x, t)
+        slopes = _sens_estimator_adaptive(x, t, max_pairs=max_pairs, random_state=random_state)
 
     if len(slopes) > 0 and not np.all(np.isnan(slopes)):
         slope_obs = np.nanmedian(slopes)
@@ -295,9 +301,9 @@ def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
 
         # Calculate slope for bootstrap sample
         if np.any(censored_boot):
-            slopes_b = _sens_estimator_censored(x_boot, t_boot, cen_type_boot, **kwargs)
+            slopes_b = _sens_estimator_censored_adaptive(x_boot, t_boot, cen_type_boot, max_pairs=max_pairs, random_state=None, **kwargs)
         else:
-            slopes_b = _sens_estimator_unequal_spacing(x_boot, t_boot)
+            slopes_b = _sens_estimator_adaptive(x_boot, t_boot, max_pairs=max_pairs, random_state=None)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
