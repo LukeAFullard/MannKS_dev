@@ -600,6 +600,24 @@ def trend_test(
         # --- Surrogate Test Integration ---
         surrogate_result = None
         if surrogate_method != 'none':
+            # Performance Check for Large Datasets
+            # If we are in fast mode but mk_test_method is 'lwp' (O(N^2)), surrogate test will be slow.
+            # Recommend upgrading to 'robust' (O(N log N)) if not already set.
+            # Note: We do not force 'robust' automatically here to avoid changing user statistics unexpectedly,
+            # but we can warn if the mismatch (Fast Mode + Slow Surrogates) is detected.
+
+            is_large_fast = computation_mode == 'fast'
+            is_slow_mk = mk_test_method == 'lwp'
+
+            if is_large_fast and is_slow_mk and n_surrogates > 100:
+                warnings.warn(
+                    "Performance Warning: Large dataset detected with `mk_test_method='lwp'`. "
+                    f"Surrogate testing ({n_surrogates} runs) will be very slow (O(N^2)). "
+                    "Consider setting `mk_test_method='robust'` to enable O(N log N) optimization.",
+                    UserWarning
+                )
+                analysis_notes.append("Slow surrogate test (suggest mk_test_method='robust')")
+
             # Sanitize kwargs to prevent collision with explicit arguments
             kwargs = (surrogate_kwargs or {}).copy()
             for key in ['method', 'n_surrogates', 'random_state']:

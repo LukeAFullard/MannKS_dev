@@ -20,6 +20,7 @@ from ._large_dataset import detect_size_tier
 from .plotting import plot_trend, plot_residuals
 from .analysis_notes import get_analysis_note, get_sens_slope_analysis_note
 from .classification import classify_trend
+from ._surrogate import surrogate_test, SurrogateResult
 
 
 from typing import Union, Optional
@@ -54,7 +55,10 @@ def seasonal_trend_test(
     large_dataset_mode: str = 'auto',
     max_pairs: Optional[int] = None,
     max_per_season: Optional[int] = None,
-    random_state: Optional[int] = None
+    random_state: Optional[int] = None,
+    surrogate_method: str = 'none',
+    n_surrogates: int = 1000,
+    surrogate_kwargs: Optional[dict] = None
 ) -> namedtuple:
     """
     Seasonal Mann-Kendall trend test with Sen's slope for time series data.
@@ -90,6 +94,17 @@ def seasonal_trend_test(
     random_state : int, optional
         Random seed for reproducible results in fast mode. Set this for
         deterministic output when using fast approximations.
+
+    surrogate_method : str, default 'none'
+        If set to 'auto', 'iaaft', or 'lomb_scargle', performs a surrogate data
+        hypothesis test. Surrogates are generated independently for each season
+        and the Seasonal S statistic is aggregated.
+
+    n_surrogates : int, default 1000
+        Number of surrogates to generate if surrogate_method is not 'none'.
+
+    surrogate_kwargs : dict, optional
+        Additional arguments passed to the surrogate test (e.g. {'dy': errors}).
 
     Args:
         x (Union[np.ndarray, pd.DataFrame]): A vector of data, which can be numeric or a pandas
@@ -169,7 +184,8 @@ def seasonal_trend_test(
         'slope_per_second', 'scaled_slope', 'slope_units',
         'lower_ci_per_second', 'upper_ci_per_second',
         'acf1', 'n_effective', 'block_size_used', 'warnings',
-        'computation_mode', 'pairs_used', 'approximation_error'
+        'computation_mode', 'pairs_used', 'approximation_error',
+        'surrogate_result'
     ])
 
     # --- Method String Validation ---
@@ -589,6 +605,79 @@ def seasonal_trend_test(
                     # Accumulate total pairs for CI scaling
                     total_possible_pairs += n * (n - 1) // 2
 
+        # --- Surrogate Test Integration ---
+        surrogate_result = None
+        if surrogate_method != 'none':
+            # Initialize accumulators
+            total_surrogate_scores = np.zeros(n_surrogates)
+            surrogate_notes = []
+
+            # Prepare kwargs
+            kwargs = (surrogate_kwargs or {}).copy()
+            for key in ['method', 'n_surrogates', 'random_state']:
+                kwargs.pop(key, None)
+
+            # Iterate over seasons
+            for i in season_range:
+                season_mask = data_filtered['season'] == i
+                season_data = data_filtered[season_mask]
+                n = len(season_data)
+
+                if n > 1:
+                    # Run surrogate test for this season
+                    # Note: We only need the scores, but the function returns a full result object
+                    # We reuse the logic in surrogate_test to handle generation + scoring consistently
+
+                    res_season = surrogate_test(
+                        x=season_data['value'],
+                        t=season_data['t'],
+                        censored=season_data['censored'],
+                        cen_type=season_data['cen_type'],
+                        method=surrogate_method,
+                        n_surrogates=n_surrogates,
+                        random_state=random_state, # Same seed for all seasons? Or allow drift?
+                        # Using same seed might correlate surrogates across seasons if generator is deterministic
+                        # and time/data are similar. Usually distinct random states are better if we want independence.
+                        # However, for reproducibility, we usually want deterministic behavior.
+                        # We'll increment random_state if provided.
+                        mk_test_method=mk_test_method,
+                        tie_break_method=tie_break_method,
+                        tau_method=tau_method,
+                        **kwargs
+                    )
+
+                    if random_state is not None:
+                        random_state += 1 # Shift seed for next season to avoid identical noise patterns
+
+                    total_surrogate_scores += res_season.surrogate_scores
+                    if res_season.notes:
+                        for note in res_season.notes:
+                            if note not in surrogate_notes:
+                                surrogate_notes.append(note)
+
+            # Aggregate results
+            # Calculate p-value for the seasonal S
+            n_extreme = np.sum(np.abs(total_surrogate_scores) >= np.abs(s))
+            p_surr = n_extreme / n_surrogates
+
+            mean_s_surr = np.mean(total_surrogate_scores)
+            std_s_surr = np.std(total_surrogate_scores, ddof=1)
+            z_surr = (s - mean_s_surr) / std_s_surr if std_s_surr > 0 else 0.0
+
+            trend_sig = p_surr < 0.05
+
+            surrogate_result = SurrogateResult(
+                method=f"seasonal_{surrogate_method}",
+                original_score=s,
+                surrogate_scores=total_surrogate_scores,
+                p_value=p_surr,
+                z_score=z_surr,
+                n_surrogates=n_surrogates,
+                trend_significant=trend_sig,
+                notes=surrogate_notes
+            )
+            analysis_notes.extend(surrogate_notes)
+
         # Sen's slope calculation (Same as before)
         slope_data = data_filtered
         var_s_for_ci = var_s
@@ -776,7 +865,8 @@ def seasonal_trend_test(
                   slope_per_second, scaled_slope, slope_units,
                   lower_ci_per_second, upper_ci_per_second,
                   np.nan, np.nan, block_size_used, captured_warnings,
-                  computation_mode, pairs_used, approximation_error) # acf1, n_eff not calc for seasonal
+                  computation_mode, pairs_used, approximation_error,
+                  surrogate_result) # acf1, n_eff not calc for seasonal
 
     # Final Classification and Notes
     if continuous_confidence:
