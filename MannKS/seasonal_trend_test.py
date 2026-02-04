@@ -643,24 +643,60 @@ def seasonal_trend_test(
                 n = len(season_data)
 
                 if n > 1:
-                    # Filter array-like kwargs (e.g., 'dy') to match the season subset
-                    # We assume any array-like argument in kwargs of the same length as the original data
-                    # should be sliced.
+                    # Filter array-like kwargs (e.g., 'dy') to match the season subset.
+                    # We must handle two cases:
+                    # 1. Kwarg matches ORIGINAL data length (n_raw) -> Apply NaN filter mask -> Apply season mask.
+                    # 2. Kwarg matches FILTERED data length (len(data_filtered)) -> Apply season mask.
+
                     kwargs_season = {}
-                    n_filtered = len(data_filtered)
+                    n_current_filtered = len(data_filtered)
+
+                    # Reconstruct mask if needed (only if no aggregation was done, as aggregation destroys 1-to-1 mapping)
+                    # If aggregation was done, n_raw != n_current_filtered usually, but we can't easily map back.
+                    # Users should provide aggregated kwargs in that case.
+
+                    mask_x_to_filtered = None
+                    if n_raw != n_current_filtered and agg_method == 'none':
+                         # Reconstruct NaN mask
+                         if isinstance(x, pd.DataFrame) and all(c in x.columns for c in ['value', 'censored', 'cen_type']):
+                              vals = x['value'].values
+                         else:
+                              # Need _preprocessing. It is not imported by default.
+                              # But we can access it via _helpers if imported?
+                              # Or simpler: we assume if len(v) == n_raw, we must slice.
+                              # But we need the mask.
+                              from ._helpers import _preprocessing
+                              vals, _ = _preprocessing(x)
+
+                         if len(vals) == n_raw:
+                              mask_x_to_filtered = ~np.isnan(vals)
 
                     for k, v in kwargs_base.items():
-                        if hasattr(v, '__len__') and len(v) == n_filtered:
-                             # Only slice if it looks like a parallel data array
-                             # We compare length to data_filtered because that is what we are slicing (season_mask)
+                        if hasattr(v, '__len__') and isinstance(v, (np.ndarray, list, pd.Series)):
+                             v_len = len(v)
+                             if v_len == n_raw and mask_x_to_filtered is not None:
+                                  # Case 1: Raw length -> Filter -> Season
+                                  # First filter NaNs
+                                  if isinstance(v, (pd.Series, pd.DataFrame)):
+                                      v_filt = v[mask_x_to_filtered]
+                                  else:
+                                      v_filt = np.asarray(v)[mask_x_to_filtered]
 
-                             if isinstance(v, (np.ndarray, list, pd.Series)):
-                                 if isinstance(v, (pd.Series, pd.DataFrame)):
+                                  # Then filter season
+                                  if isinstance(v_filt, (pd.Series, pd.DataFrame)):
+                                       kwargs_season[k] = v_filt[season_mask.values if hasattr(season_mask, 'values') else season_mask]
+                                  else:
+                                       kwargs_season[k] = np.asarray(v_filt)[season_mask]
+
+                             elif v_len == n_current_filtered:
+                                  # Case 2: Already filtered/aggregated length -> Season
+                                  if isinstance(v, (pd.Series, pd.DataFrame)):
                                       kwargs_season[k] = v[season_mask.values if hasattr(season_mask, 'values') else season_mask]
-                                 else:
+                                  else:
                                       kwargs_season[k] = np.asarray(v)[season_mask]
                              else:
-                                 kwargs_season[k] = v
+                                  # Length mismatch
+                                  kwargs_season[k] = v
                         else:
                              kwargs_season[k] = v
 
