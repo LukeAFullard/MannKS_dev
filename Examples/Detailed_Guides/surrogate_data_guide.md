@@ -2,6 +2,12 @@
 
 The `surrogate_test` functionality in `MannKS` (introduced in v0.6.0) provides a robust way to test for trends in the presence of **serial correlation** (also known as autocorrelation or "Red Noise").
 
+## A Note on Terminology: "Surrogate Data" vs. "Surrogate Monitoring"
+
+**Crucial Distinction:** In environmental science and water quality monitoring, the term "surrogate" often refers to **Surrogate Monitoring**—using a cheap, continuous sensor (like turbidity) to estimate an expensive parameter (like suspended sediment).
+
+**Surrogate Data Testing** (this method) is different. It is a statistical technique. Unlike Surrogate Monitoring (which uses proxies to estimate data), Surrogate Data Testing generates thousands of synthetic timelines to verify that a detected trend isn't just a random fluctuation of the water's natural "red noise" background.
+
 ## The Problem: Red Noise
 
 Standard statistical tests, including the Mann-Kendall test, assume that the "noise" (residuals) in your time series is independent (White Noise). However, real-world environmental, financial, and physical data often exhibit **persistence**:
