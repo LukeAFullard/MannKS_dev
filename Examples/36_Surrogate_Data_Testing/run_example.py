@@ -33,7 +33,7 @@ def run_example():
 
     n = 100
     t = np.arange(n)
-    x_red = generate_red_noise(n, alpha=0.9, seed=123) # High persistence
+    x_red = generate_red_noise(n, alpha=0.9, seed=0) # High persistence
 
     print("--- Scenario 1: Evenly Spaced Red Noise (No Trend) ---")
 
