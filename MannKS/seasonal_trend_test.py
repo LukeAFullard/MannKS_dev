@@ -682,7 +682,12 @@ def seasonal_trend_test(
                                             kwargs_season[k] = v
                                   else:
                                        # Aggregation + Raw kwargs -> undefined/unsupported
-                                       kwargs_season[k] = v
+                                       raise ValueError(
+                                           f"Surrogate argument '{k}' has length {len(v)} (matches original input), "
+                                           "but the analysis is running on aggregated seasonal data. "
+                                           "Automatic mapping is not possible because 'original_index' was lost during aggregation. "
+                                           f"Please pre-aggregate '{k}' to match the analysis resolution or pass a matching array."
+                                       )
 
                              # Case 2: Kwarg matches FILTERED data length (len(data_filtered))
                              elif v_len == n_current_filtered:
@@ -693,6 +698,15 @@ def seasonal_trend_test(
                              else:
                                   # Length mismatch
                                   kwargs_season[k] = v
+                        elif hasattr(v, '__len__') and len(v) == n_raw and not isinstance(v, str):
+                             # Case 3: Kwarg matches ORIGINAL length (n_raw) but we fell through Case 1
+                             # because original_index is missing AND aggregation happened (so no simple mask).
+                             raise ValueError(
+                                 f"Surrogate argument '{k}' has length {len(v)} (matches original input), "
+                                 "but the analysis is running on aggregated seasonal data. "
+                                 "Automatic mapping is not possible because 'original_index' was lost during aggregation. "
+                                 f"Please pre-aggregate '{k}' to match the analysis resolution or pass a matching array."
+                             )
                         else:
                              kwargs_season[k] = v
 
