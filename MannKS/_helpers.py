@@ -126,7 +126,12 @@ def _prepare_data(x, t, hicensor):
     elif isinstance(x, pd.DataFrame):
         # Fallback for simple DataFrame: treat as numeric values.
         # This bypasses the string check below which iterates column names.
-        pass
+        x_proc, _ = _preprocessing(x)
+        data = pd.DataFrame({
+            'value': x_proc,
+            'censored': np.zeros(len(x_proc), dtype=bool),
+            'cen_type': np.full(len(x_proc), 'not', dtype=object)
+        })
     elif hasattr(x, '__iter__') and any(isinstance(i, str) for i in x):
         raise TypeError("Input data `x` contains strings. Please pre-process it with `prepare_censored_data` first.")
     else:

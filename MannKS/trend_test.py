@@ -701,31 +701,13 @@ def trend_test(
                     else:
                          kwargs_filtered[k] = v
             else:
-                # No filtering happened (or lengths match), pass as is
-                # (Assuming no reordering happened that isn't handled by surrogate_test...
-                # but _prepare_data DOES sort by time! surrogate_test assumes t is sorted? No, it handles it.)
-                # However, if 'dy' is passed, it must align with 'x_filtered'.
-                # If sorting happened in _prepare_data, 'x_filtered' is sorted by 't'.
-                # 'dy' in kwargs is likely in original order.
-                # We MUST reorder 'dy' to match 'x_filtered' if 'x_filtered' was sorted.
-
-                # Check if sorting happened
-                # _prepare_data sorts by 't' (or 't_original').
-                # If original t was not sorted, we must sort kwargs too.
-
-                # To be robust: always use the index of data_filtered to reorder/slice kwargs.
-                kept_indices = data_filtered.index
+                # No filtering happened (or lengths match).
+                # trend_test (unlike seasonal_trend_test) does NOT sort data_filtered.
+                # So data_filtered preserves the order of input x.
+                # We can pass kwargs directly, assuming they match x in order.
 
                 for k, v in kwargs_base.items():
-                    if hasattr(v, '__len__') and len(v) == n_orig:
-                         if isinstance(v, (np.ndarray, list, pd.Series)):
-                             # Use integer indices from data_filtered to select from v
-                             # This handles both filtering (dropping) and reordering (sorting)
-                             kwargs_filtered[k] = np.asarray(v)[kept_indices]
-                         else:
-                             kwargs_filtered[k] = v
-                    else:
-                         kwargs_filtered[k] = v
+                     kwargs_filtered[k] = v
 
             # If large dataset mode is triggered and we have filtered data (aggregated or not),
             # we run surrogate test on the filtered data to match the MK test being performed.

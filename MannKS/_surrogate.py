@@ -196,14 +196,16 @@ def _lomb_scargle_surrogates(
 
     surrogates = np.empty((n_surrogates, n))
 
+    # Use zero-started time for synthesis to preserve numerical precision in cosine arguments
+    t_shift = t - np.min(t)
+    t_2pi = 2 * np.pi * t_shift
+
     for k in range(n_surrogates):
         # Random Phases
         phases = rng.uniform(0, 2 * np.pi, size=len(freq))
 
         # Initialize input amplitudes for synthesis with target amplitudes
         A_k = amplitudes_target.copy()
-
-        t_2pi = 2 * np.pi * t
 
         # Iterative Loop
         # If max_iter=1, this runs once (standard method)
