@@ -161,3 +161,200 @@ result = trend_test(
     }
 )
 ```
+
+## Future Work: Power Calculation via Monte Carlo
+
+Regarding surrogate data testing for trends against a colored noise model:
+
+Short version up front:
+**There is no closed-form power calculation for a Theil–Sen + IAAFT/Lomb-Scargle surrogate test.**
+But **yes, you can absolutely estimate the power** — *and the minimum detectable trend* — **via Monte Carlo**, using exactly the ingredients you already have.
+
+Below I’ll lay this out carefully and practically, tuned to uneven sampling and your current setup.
+
+### 1. Why there is no analytic power formula here
+
+Power depends on:
+
+* the **noise structure** (often long-memory / coloured),
+* **uneven sampling**,
+* **non-Gaussian distributions**,
+* a **robust estimator** (Theil–Sen),
+* and a **non-parametric test statistic** compared to an empirical surrogate distribution.
+
+That combination breaks every assumption needed for a textbook power formula.
+
+This is not a weakness — it’s actually *why* surrogate testing is defensible.
+But it means **power must be estimated empirically**.
+
+Fortunately, this is *exactly* what Monte Carlo surrogates are good at.
+
+### 2. Conceptually: what “power” means in your context
+
+For your specific test, power answers this question:
+
+> *If the true underlying process has a trend of magnitude β, what fraction of realizations would be detected as “significant” against the coloured-noise null using my surrogate test?*
+
+Formally:
+$$ \text{Power}(\beta) = P(\text{reject null} \mid \text{true trend} = \beta) $$
+
+This probability depends on:
+
+* record length,
+* sampling times,
+* noise colour,
+* estimator (Theil–Sen/Mann-Kendall),
+* surrogate algorithm (IAAFT / Lomb–Scargle),
+* significance threshold (e.g. 95%).
+
+So power is **experiment-specific** — which is exactly why simulation is the right tool.
+
+### 3. The key idea: inject trends into realistic noise
+
+You already have everything you need:
+
+* the **sampling times** (uneven),
+* the **noise structure** (captured by IAAFT or LS surrogates),
+* the **trend estimator** (Theil–Sen),
+* the **decision rule** (exceeds 95% of surrogates).
+
+The power calculation is simply:
+
+> “If I repeatedly generate time series that *look like my data* but with a known trend added, how often does my test detect it?”
+
+### 4. Step-by-step Monte Carlo power experiment
+
+Here’s the clean, defensible workflow.
+
+#### Step 1: Fix the null noise model
+
+Choose *one* null at a time (important for interpretability):
+
+* IAAFT surrogates of the original data (preferred if distribution matters), or
+* Lomb–Scargle phase-randomized surrogates (preferred if sampling irregularity dominates).
+
+This defines your noise model.
+
+> **Implementation Note:** You may need to access internal functions `MannKS._surrogate._iaaft_surrogates` or `MannKS._surrogate._lomb_scargle_surrogates` to generate single realizations, as the public `surrogate_test` function encapsulates this step. Future versions may expose a public generator API.
+
+#### Step 2: Choose candidate trend magnitudes
+
+Define a grid of trend slopes:
+$$ \beta \in \{0, 0.25\hat\beta, 0.5\hat\beta, \hat\beta, 1.5\hat\beta, 2\hat\beta, \dots\} $$
+
+Include:
+
+* β = 0 → false positive rate check
+* β ≈ observed Theil–Sen slope
+* larger values → detectability threshold
+
+#### Step 3: Generate synthetic series with injected trends
+
+For each β:
+
+1. Generate a surrogate noise realization $n_i(t)$
+2. Add a deterministic trend:
+   $$ x_i(t) = n_i(t) + \beta (t - \bar{t}) $$
+   (centering time avoids intercept artifacts)
+3. Preserve **original sampling times exactly**
+
+Repeat this **N times** (e.g. 500–2000).
+
+#### Step 4: Apply your exact test
+
+For each synthetic series:
+
+1. Run the surrogate test:
+   `result = surrogate_test(x_i, t, ...)`
+2. Check significance:
+   `detected = result.trend_significant` (or `result.p_value < 0.05`)
+
+*Note: This approach uses the p-value derived from the Mann-Kendall S-statistic distribution, which is robust and statistically consistent with the package's design.*
+
+#### Step 5: Estimate power
+
+For each β:
+$$ \text{Power}(\beta) = \frac{\text{Number detected}}{N} $$
+
+Plot:
+
+* **power vs trend magnitude**
+
+This curve is gold.
+
+### 5. What this gives you (and why it’s powerful)
+
+From this single experiment you get:
+
+#### ✅ Minimum detectable trend
+
+The smallest β such that:
+$$ \text{Power}(\beta) \ge 0.8 \quad \text{(or 0.9)} $$
+
+This is often *much larger* than the observed trend in red-noise systems — and that’s a **scientific result**, not a failure.
+
+#### ✅ Interpretation of “non-significant”
+
+You can now say:
+
+> “Given the sampling and noise properties of this record, trends smaller than X units per decade cannot be reliably detected.”
+
+That is vastly more informative than “no trend detected”.
+
+#### ✅ A defensible explanation for stakeholders
+
+Instead of:
+
+> “The trend is not significant”
+
+You can say:
+
+> “The estimated trend is smaller than the minimum detectable trend given the observed coloured-noise variability and record length.”
+
+That’s bulletproof.
+
+### 6. Where Theil–Sen fits in (important nuance)
+
+Theil–Sen is:
+
+* robust to outliers,
+* median-based,
+* slightly **less powerful** than OLS *under Gaussian noise*,
+* but often **more powerful** under heavy-tailed or non-Gaussian noise.
+
+Your Monte Carlo experiment automatically captures this tradeoff because the detection step (`surrogate_test`) relies on the rank-based Mann-Kendall S-statistic, which is the hypothesis test counterpart to the Theil-Sen estimator.
+
+**Do not swap estimators during the power experiment.**
+Power must be computed for the *exact* statistic you use in inference (here, the S-statistic via `surrogate_test`).
+
+### 7. Lomb–Scargle surrogates: one extra caution
+
+For uneven sampling:
+
+* Lomb–Scargle phase randomization preserves spectral content *in the frequency domain*,
+* but may not preserve **time-domain distribution** or local variance structure.
+
+Two good practices:
+
+* run power experiments for **both** IAAFT-style and LS-style surrogates,
+* report the **more conservative** detection threshold.
+
+If both agree → very strong result.
+
+### 8. How this looks in a paper (suggested wording)
+
+You can *explicitly* report power without overclaiming:
+
+> “Monte-Carlo power analysis was performed by injecting deterministic linear trends of varying magnitude into coloured-noise surrogate realizations consistent with the observed sampling and spectral structure. For each trend magnitude, detection power was estimated as the fraction of realizations for which the surrogate-based Mann-Kendall test rejected the null hypothesis (p < 0.05). The minimum detectable trend at 80% power was X units per decade, exceeding the observed trend estimate.”
+
+That sentence alone signals methodological maturity.
+
+### 9. Big picture (and this is the key insight)
+
+When a trend is “indistinguishable from coloured noise”, there are **three distinct possibilities**:
+
+1. The true trend is zero
+2. The true trend exists but is **below detectability**
+3. The null model is misspecified
+
+A power analysis lets you *separate (2) from (1)* — which is something classical significance testing cannot do.
