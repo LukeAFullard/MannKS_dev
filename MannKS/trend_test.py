@@ -645,61 +645,65 @@ def trend_test(
 
             if n_orig != n_filt:
                 # We need to slice kwargs because data was filtered (NaNs dropped).
+                # Robustly identify which rows were kept using 'original_index' if available.
 
-                # Robustly identify which rows were kept.
-                # If x is a DataFrame with non-integer index, data_filtered.index contains labels (timestamps).
-                # Using these labels to slice a numpy array (v) will fail.
-                # We must determine the boolean mask or integer positions.
+                if 'original_index' in data_filtered.columns:
+                     # Robust path: Use integer positions tracked during preparation
+                     kept_indices = data_filtered['original_index'].values
 
-                use_mask = False
-                mask = None
-
-                # If potential index mismatch exists (DataFrame input with non-integer index)
-                if isinstance(x, pd.DataFrame) and not pd.api.types.is_integer_dtype(data_filtered.index):
-                     # Reconstruct the mask used by _prepare_data (drop NaNs in value)
-                     if all(c in x.columns for c in ['value', 'censored', 'cen_type']):
-                          vals = x['value'].values
-                     else:
-                          # Simple DF
-                          vals, _ = _preprocessing(x)
-
-                     if len(vals) == n_orig:
-                          mask = ~np.isnan(vals)
-                          # Verify consistency
-                          if np.sum(mask) == n_filt:
-                              use_mask = True
-
-                kept_indices = data_filtered.index
-
-                for k, v in kwargs_base.items():
-                    if hasattr(v, '__len__') and len(v) == n_orig:
-                         # Attempt to slice
-                         if isinstance(v, (np.ndarray, list, pd.Series)):
-                             if use_mask:
-                                  # Robust slicing with boolean mask
-                                  if isinstance(v, (pd.Series, pd.DataFrame)):
-                                       kwargs_filtered[k] = v[mask]
-                                  else:
-                                       kwargs_filtered[k] = np.asarray(v)[mask]
-                             elif isinstance(v, (pd.Series, pd.DataFrame)):
-                                 # Align by index if possible
-                                 try:
-                                     kwargs_filtered[k] = v.loc[kept_indices]
-                                 except:
-                                      # Fallback to integer indexing (iloc) if index doesn't match
-                                      if hasattr(v, 'iloc'):
-                                           # If kept_indices are integers (RangeIndex), this works.
-                                           kwargs_filtered[k] = v.iloc[kept_indices]
-                                      else:
-                                           kwargs_filtered[k] = np.asarray(v)[kept_indices]
-                             else:
-                                 # Numpy array or list -> slice by integer indices
-                                 # This assumes kept_indices are integers (RangeIndex from array input)
-                                 kwargs_filtered[k] = np.asarray(v)[kept_indices]
+                     for k, v in kwargs_base.items():
+                         if hasattr(v, '__len__') and len(v) == n_orig:
+                              # Attempt to slice by integer position
+                              if isinstance(v, (pd.Series, pd.DataFrame)):
+                                   kwargs_filtered[k] = v.iloc[kept_indices]
+                              else:
+                                   kwargs_filtered[k] = np.asarray(v)[kept_indices]
                          else:
+                              kwargs_filtered[k] = v
+                else:
+                    # Fallback path (e.g. if aggregation dropped original_index)
+                    # Note: Slicing original-length kwargs after aggregation is statistically ambiguous
+                    # and usually implies user error, but we attempt a best-effort index match.
+
+                    kept_indices = data_filtered.index
+
+                    use_mask = False
+                    mask = None
+
+                    # Try to reconstruct mask if we can (only works for simple filtering, not aggregation)
+                    if isinstance(x, pd.DataFrame) and not pd.api.types.is_integer_dtype(data_filtered.index):
+                        if all(c in x.columns for c in ['value', 'censored', 'cen_type']):
+                            vals = x['value'].values
+                        else:
+                            vals, _ = _preprocessing(x)
+
+                        if len(vals) == n_orig:
+                            mask = ~np.isnan(vals)
+                            if np.sum(mask) == n_filt:
+                                use_mask = True
+
+                    for k, v in kwargs_base.items():
+                        if hasattr(v, '__len__') and len(v) == n_orig:
+                             if isinstance(v, (np.ndarray, list, pd.Series)):
+                                 if use_mask:
+                                      if isinstance(v, (pd.Series, pd.DataFrame)):
+                                           kwargs_filtered[k] = v[mask]
+                                      else:
+                                           kwargs_filtered[k] = np.asarray(v)[mask]
+                                 elif isinstance(v, (pd.Series, pd.DataFrame)):
+                                     try:
+                                         kwargs_filtered[k] = v.loc[kept_indices]
+                                     except:
+                                          if hasattr(v, 'iloc'):
+                                               kwargs_filtered[k] = v.iloc[kept_indices]
+                                          else:
+                                               kwargs_filtered[k] = np.asarray(v)[kept_indices]
+                                 else:
+                                     kwargs_filtered[k] = np.asarray(v)[kept_indices]
+                             else:
+                                 kwargs_filtered[k] = v
+                        else:
                              kwargs_filtered[k] = v
-                    else:
-                         kwargs_filtered[k] = v
             else:
                 # No filtering happened (or lengths match).
                 # trend_test (unlike seasonal_trend_test) does NOT sort data_filtered.

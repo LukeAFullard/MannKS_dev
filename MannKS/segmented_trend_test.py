@@ -7,7 +7,7 @@ from typing import Union, Optional, List, Tuple
 
 from ._segmented import HybridSegmentedTrend as _HybridSegmentedTrend
 from ._datetime import _to_numeric_time, _is_datetime_like
-from ._helpers import _get_slope_scaling_factor
+from ._helpers import _get_slope_scaling_factor, _prepare_data
 
 _Segmented_Trend_Test_Tuple = namedtuple('Segmented_Trend_Test', [
     'n_breakpoints', 'breakpoints', 'breakpoint_cis', 'segments',
@@ -88,67 +88,6 @@ class SegmentedTrendResult(_Segmented_Trend_Test_Tuple):
 
         return y_pred
 
-def _prepare_data(x, t, hicensor=False):
-    """
-    Internal helper to prepare data for segmented analysis.
-
-    Args:
-        x (Union[np.ndarray, pd.DataFrame]): Input data.
-        t (np.ndarray): Time vector.
-        hicensor (Union[bool, float]): High-censor threshold.
-
-    Returns:
-        tuple: (df, is_dt)
-            - df (pd.DataFrame): Prepared dataframe.
-            - is_dt (bool): Whether input time was datetime.
-    """
-    is_dt = _is_datetime_like(t)
-    t_num = _to_numeric_time(t)
-
-    if isinstance(x, pd.DataFrame):
-        df = x.copy()
-        if 'value' not in df.columns:
-             if x.shape[1] == 1:
-                 df.columns = ['value']
-                 df['censored'] = False
-                 df['cen_type'] = 'none'
-             else:
-                 raise ValueError("Input DataFrame must contain a 'value' column.")
-        if 'censored' not in df.columns:
-             df['censored'] = False
-        if 'cen_type' not in df.columns:
-             df['cen_type'] = 'none'
-    else:
-        df = pd.DataFrame({'value': np.asarray(x)})
-        df['censored'] = False
-        df['cen_type'] = 'none'
-
-    df['t'] = t_num
-    df['t_original'] = np.asarray(t)
-
-    # Handle missing values
-    mask = ~np.isnan(df['value'])
-    df = df[mask].copy()
-
-    df = df.sort_values('t').reset_index(drop=True)
-
-    if hicensor:
-        if isinstance(hicensor, bool) and hicensor:
-             if 'lt' in df['cen_type'].values:
-                 max_lt = df.loc[df['cen_type'] == 'lt', 'value'].max()
-                 mask_hi = df['value'] < max_lt
-                 df.loc[mask_hi, 'censored'] = True
-                 df.loc[mask_hi, 'cen_type'] = 'lt'
-                 df.loc[mask_hi, 'value'] = max_lt
-        elif isinstance(hicensor, (int, float)):
-             max_lt = hicensor
-             mask_hi = df['value'] < max_lt
-             df.loc[mask_hi, 'censored'] = True
-             df.loc[mask_hi, 'cen_type'] = 'lt'
-             df.loc[mask_hi, 'value'] = max_lt
-
-    return df, is_dt
-
 def segmented_trend_test(
     x: Union[np.ndarray, pd.DataFrame],
     t: np.ndarray,
@@ -210,6 +149,7 @@ def segmented_trend_test(
 
         # 1. Data Prep
         data_filtered, is_datetime = _prepare_data(x, t, hicensor)
+        data_filtered = data_filtered.sort_values('t')
 
         x_val = data_filtered['value'].to_numpy()
         t_numeric = data_filtered['t'].to_numpy()

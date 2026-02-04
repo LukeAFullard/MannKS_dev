@@ -147,9 +147,11 @@ def _prepare_data(x, t, hicensor):
     t_numeric, _ = _preprocessing(t_raw)
     data['t_original'] = t_raw
     data['t'] = t_numeric
+    data['original_index'] = np.arange(len(data))
 
-    # Handle missing values
-    mask = ~np.isnan(data['value'])
+    # Handle missing values (in BOTH value and time)
+    # Note: t_numeric will contain NaNs if the original time was NaT or invalid
+    mask = (~np.isnan(data['value'])) & (~np.isnan(data['t']))
     data_filtered = data[mask].copy()
 
     # Apply HiCensor rule if requested
