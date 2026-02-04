@@ -147,3 +147,22 @@ def test_trend_test_integration_advanced():
 
     assert res.surrogate_result is not None
     assert res.surrogate_result.method == 'lomb_scargle'
+
+@pytest.mark.skipif(not HAS_ASTROPY, reason="Astropy not installed")
+def test_iterative_ls():
+    """Test the iterative Lomb-Scargle feature."""
+    rng = np.random.default_rng(42)
+    n = 20
+    t = np.sort(rng.uniform(0, 100, n))
+    x = rng.standard_normal(n)
+
+    # Should run without error
+    res = surrogate_test(
+        x, t,
+        method='lomb_scargle',
+        n_surrogates=2,
+        max_iter=3, # Small iterations for speed
+        random_state=42
+    )
+    assert res.method == 'lomb_scargle'
+    assert len(res.surrogate_scores) == 2

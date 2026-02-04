@@ -626,7 +626,7 @@ def seasonal_trend_test(
             surrogate_notes = []
 
             # Prepare kwargs
-            kwargs = (surrogate_kwargs or {}).copy()
+            kwargs_base = (surrogate_kwargs or {}).copy()
             collision_keys = [
                 'method', 'n_surrogates', 'random_state',
                 'mk_test_method', 'tie_break_method', 'tau_method',
@@ -634,7 +634,7 @@ def seasonal_trend_test(
                 'x', 't'
             ]
             for key in collision_keys:
-                kwargs.pop(key, None)
+                kwargs_base.pop(key, None)
 
             # Iterate over seasons
             for i in season_range:
@@ -643,10 +643,28 @@ def seasonal_trend_test(
                 n = len(season_data)
 
                 if n > 1:
-                    # Run surrogate test for this season
-                    # Note: We only need the scores, but the function returns a full result object
-                    # We reuse the logic in surrogate_test to handle generation + scoring consistently
+                    # Filter array-like kwargs (e.g., 'dy') to match the season subset
+                    # We assume any array-like argument in kwargs of the same length as the original data
+                    # should be sliced.
+                    kwargs_season = {}
+                    n_filtered = len(data_filtered)
 
+                    for k, v in kwargs_base.items():
+                        if hasattr(v, '__len__') and len(v) == n_filtered:
+                             # Only slice if it looks like a parallel data array
+                             # We compare length to data_filtered because that is what we are slicing (season_mask)
+
+                             if isinstance(v, (np.ndarray, list, pd.Series)):
+                                 if isinstance(v, (pd.Series, pd.DataFrame)):
+                                      kwargs_season[k] = v[season_mask.values if hasattr(season_mask, 'values') else season_mask]
+                                 else:
+                                      kwargs_season[k] = np.asarray(v)[season_mask]
+                             else:
+                                 kwargs_season[k] = v
+                        else:
+                             kwargs_season[k] = v
+
+                    # Run surrogate test for this season
                     res_season = surrogate_test(
                         x=season_data['value'],
                         t=season_data['t'],
@@ -655,14 +673,12 @@ def seasonal_trend_test(
                         method=surrogate_method,
                         n_surrogates=n_surrogates,
                         random_state=random_state, # Same seed for all seasons? Or allow drift?
-                        # Using same seed might correlate surrogates across seasons if generator is deterministic
-                        # and time/data are similar. Usually distinct random states are better if we want independence.
-                        # However, for reproducibility, we usually want deterministic behavior.
-                        # We'll increment random_state if provided.
                         mk_test_method=mk_test_method,
                         tie_break_method=tie_break_method,
                         tau_method=tau_method,
-                        **kwargs
+                        lt_mult=lt_mult,
+                        gt_mult=gt_mult,
+                        **kwargs_season
                     )
 
                     if random_state is not None:

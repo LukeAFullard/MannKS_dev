@@ -619,14 +619,108 @@ def trend_test(
                 analysis_notes.append("Slow surrogate test (suggest mk_test_method='robust')")
 
             # Sanitize kwargs to prevent collision with explicit arguments
-            kwargs = (surrogate_kwargs or {}).copy()
+            kwargs_base = (surrogate_kwargs or {}).copy()
             collision_keys = [
                 'method', 'n_surrogates', 'random_state',
                 'mk_test_method', 'tie_break_method', 'tau_method',
                 'censored', 'cen_type'
             ]
             for key in collision_keys:
-                kwargs.pop(key, None)
+                kwargs_base.pop(key, None)
+
+            # Note: trend_test performs filtering (NaN removal) via _prepare_data.
+            # If the user passed array-like args (e.g. 'dy') in surrogate_kwargs corresponding
+            # to the original data, they must be sliced to match 'x_filtered' / 't_filtered'.
+            # However, _prepare_data returns a new DataFrame 'data_filtered'.
+            # We don't have a boolean mask relative to original X unless we reconstruct it.
+            # _prepare_data logic: filters NaNs in x or t.
+            # If input was DataFrame, index might be preserved.
+
+            kwargs_filtered = {}
+            # If input X was array, we lost the index map unless we trust lengths?
+            # _prepare_data returns 'data_filtered' which is a DataFrame.
+            # If the filtered length != original length, we have a mismatch.
+            n_orig = len(x_arr)
+            n_filt = len(x_filtered)
+
+            if n_orig != n_filt:
+                # We need to slice kwargs.
+                # Assuming 'data_filtered' has the subset of original rows.
+                # If the user provided 'dy' as a numpy array, we can't easily index it with DataFrame index.
+                # But 'data_filtered' was constructed from x_arr/t_arr.
+                # If we assume x_arr/t_arr were aligned with kwargs['dy'], we can replicate the mask.
+
+                # Re-derive the mask used in _prepare_data (simplified)
+                # Note: _prepare_data handles hicensor logic too, but mainly drops NaNs from t and value.
+                # We'll use a heuristic: if kwarg is array of length n_orig, slice it.
+
+                # Construct mask
+                # Check for NaNs in original input arrays (as _prepare_data does)
+                # This is slightly redundant but safer than assuming complex index logic
+                # We need to match the rows kept in 'data_filtered'.
+
+                # Best approach: If data_filtered came from a DataFrame x, it has the original Index.
+                # If x was array, _prepare_data created a DataFrame with default RangeIndex (0..N-1).
+                # But _prepare_data sorts by time if unsorted!
+
+                # Let's check how _prepare_data works. It returns a DataFrame.
+                # If we can map back to original indices, we can slice kwargs.
+                # If x was array, the DataFrame has a default index that might not match original position after dropna?
+                # Actually, _prepare_data creates a DF from the inputs. The index of that DF
+                # corresponds to original position (0..N-1) if we just pass arrays.
+
+                # So data_filtered.index contains the original integer indices of the points kept.
+                kept_indices = data_filtered.index
+
+                for k, v in kwargs_base.items():
+                    if hasattr(v, '__len__') and len(v) == n_orig:
+                         # Attempt to slice
+                         if isinstance(v, (np.ndarray, list, pd.Series)):
+                             if isinstance(v, (pd.Series, pd.DataFrame)):
+                                 # Align by index if possible, else slice by integer position
+                                 # If v has same index as original, loc[kept_indices] works
+                                 try:
+                                     kwargs_filtered[k] = v.loc[kept_indices]
+                                 except:
+                                      # Fallback to integer indexing if index doesn't match
+                                      if hasattr(v, 'iloc'):
+                                           kwargs_filtered[k] = v.iloc[kept_indices]
+                                      else:
+                                           # List/Array
+                                           kwargs_filtered[k] = np.asarray(v)[kept_indices]
+                             else:
+                                 # Numpy array or list -> slice by integer indices
+                                 kwargs_filtered[k] = np.asarray(v)[kept_indices]
+                         else:
+                             kwargs_filtered[k] = v
+                    else:
+                         kwargs_filtered[k] = v
+            else:
+                # No filtering happened (or lengths match), pass as is
+                # (Assuming no reordering happened that isn't handled by surrogate_test...
+                # but _prepare_data DOES sort by time! surrogate_test assumes t is sorted? No, it handles it.)
+                # However, if 'dy' is passed, it must align with 'x_filtered'.
+                # If sorting happened in _prepare_data, 'x_filtered' is sorted by 't'.
+                # 'dy' in kwargs is likely in original order.
+                # We MUST reorder 'dy' to match 'x_filtered' if 'x_filtered' was sorted.
+
+                # Check if sorting happened
+                # _prepare_data sorts by 't' (or 't_original').
+                # If original t was not sorted, we must sort kwargs too.
+
+                # To be robust: always use the index of data_filtered to reorder/slice kwargs.
+                kept_indices = data_filtered.index
+
+                for k, v in kwargs_base.items():
+                    if hasattr(v, '__len__') and len(v) == n_orig:
+                         if isinstance(v, (np.ndarray, list, pd.Series)):
+                             # Use integer indices from data_filtered to select from v
+                             # This handles both filtering (dropping) and reordering (sorting)
+                             kwargs_filtered[k] = np.asarray(v)[kept_indices]
+                         else:
+                             kwargs_filtered[k] = v
+                    else:
+                         kwargs_filtered[k] = v
 
             # If large dataset mode is triggered and we have filtered data (aggregated or not),
             # we run surrogate test on the filtered data to match the MK test being performed.
@@ -642,7 +736,9 @@ def trend_test(
                 method=surrogate_method,
                 n_surrogates=n_surrogates,
                 random_state=random_state,
-                **kwargs
+                lt_mult=lt_mult,
+                gt_mult=gt_mult,
+                **kwargs_filtered
             )
             analysis_notes.extend(surrogate_result.notes)
 
