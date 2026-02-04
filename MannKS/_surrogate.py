@@ -118,7 +118,8 @@ def _lomb_scargle_surrogates(
     random_state: Optional[int] = None,
     periodogram_method: Optional[str] = None,
     max_iter: int = 1,
-    tol: float = 0.01
+    tol: float = 0.01,
+    **kwargs
 ) -> np.ndarray:
     """
     Generates surrogates using Spectral Synthesis from Lomb-Scargle Periodogram.
@@ -140,6 +141,7 @@ def _lomb_scargle_surrogates(
                                           If None, defaults to 'fast' for 'auto' freq_method.
         max_iter (int): Maximum iterations for spectral correction. Default 1 (non-iterative).
         tol (float): Convergence tolerance (unused in current implementation, reserved for future).
+        **kwargs: Additional arguments (ignored, but allowed for flexibility).
 
     Returns:
         np.ndarray: Array of surrogate time series.
