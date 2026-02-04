@@ -36,7 +36,8 @@ def test_audit_surrogate_aggregation_mismatch():
         )
         pytest.fail("Should have raised ValueError for mismatched surrogate kwargs")
     except ValueError as e:
-        assert "Automatic mapping is not possible" in str(e)
+        # v0.6.0 Fix: Updated error message to be more explicit about aggregation
+        assert "cannot be automatically mapped" in str(e)
     except Exception as e:
         pytest.fail(f"Aggregation + Surrogate + Kwargs crashed with unexpected error: {e}")
 
