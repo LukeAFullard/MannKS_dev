@@ -178,6 +178,30 @@ class HybridSegmentedTrend:
 
     def fit(self, t, x, censored=None, cen_type=None, lt_mult=0.5, gt_mult=1.1, alpha=0.05,
             large_dataset_mode='auto', max_pairs=None, aggregation_threshold=10000, aggregation_target=2500):
+        """
+        Fit the hybrid segmented trend model to the data.
+
+        This process involves:
+        1.  **Structure Discovery (Phase 1)**: Using OLS-based piecewise regression to find
+            optimal breakpoint locations. This step handles large datasets via aggregation
+            if necessary and supports bagging for robust breakpoint estimation.
+        2.  **Robust Estimation (Phase 2)**: Using Mann-Kendall tests and Sen's slope
+            estimators on the identified segments to calculate robust slopes and confidence
+            intervals, handling censored data if present.
+
+        Args:
+            t (array-like): Time vector (numeric).
+            x (array-like): Data vector.
+            censored (array-like, optional): Boolean array indicating censored data points.
+            cen_type (array-like, optional): Array of censoring types ('lt', 'gt', 'not').
+            lt_mult (float, optional): Multiplier for left-censored data substitution (Phase 1 & 2).
+            gt_mult (float, optional): Multiplier for right-censored data substitution (Phase 1 & 2).
+            alpha (float, optional): Significance level for confidence intervals.
+            large_dataset_mode (str, optional): Strategy for large datasets ('auto', 'full', 'fast', 'aggregate').
+            max_pairs (int, optional): Maximum pairs for fast Sen's slope estimation.
+            aggregation_threshold (int, optional): Sample size threshold to trigger aggregation in Phase 1.
+            aggregation_target (int, optional): Target number of bins for aggregation in Phase 1.
+        """
         t = np.asarray(t)
         x = np.asarray(x)
 
@@ -480,6 +504,15 @@ class HybridSegmentedTrend:
             })
 
     def predict(self, t):
+        """
+        Predict values using the fitted segmented model.
+
+        Args:
+            t (array-like): Time vector to predict at.
+
+        Returns:
+            np.ndarray: Predicted values. Returns NaNs if model is not fitted.
+        """
         t = np.asarray(t)
         y_pred = np.zeros_like(t, dtype=float)
         y_pred[:] = np.nan
