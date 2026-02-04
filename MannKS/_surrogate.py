@@ -115,19 +115,15 @@ def _lomb_scargle_surrogates(
     fit_mean: bool = True,
     center_data: bool = True,
     random_state: Optional[int] = None,
-    periodogram_method: Optional[str] = None
+    periodogram_method: Optional[str] = None,
+    max_iter: int = 1,
+    tol: float = 0.01
 ) -> np.ndarray:
     """
     Generates surrogates using Spectral Synthesis from Lomb-Scargle Periodogram.
 
     Suitable for UNEVENLY spaced data. Uses Astropy.
-
-    Algorithm:
-    1. Compute LS Periodogram P(f).
-    2. Generate random phases phi ~ U[0, 2pi).
-    3. Reconstruct time series at original time points t:
-       x_surr(t) = sum( sqrt(P(f)) * cos(2*pi*f*t + phi) )
-    4. Rank-adjust to match original value distribution (Gaussianization correction).
+    Can be iterative (max_iter > 1) to correct for spectral whitening caused by rank adjustment.
 
     Args:
         x (np.ndarray): Input data values.
@@ -141,6 +137,8 @@ def _lomb_scargle_surrogates(
         random_state (Optional[int]): Seed for reproducibility.
         periodogram_method (Optional[str]): Astropy method (e.g., 'fast', 'slow', 'cython').
                                           If None, defaults to 'fast' for 'auto' freq_method.
+        max_iter (int): Maximum iterations for spectral correction. Default 1 (non-iterative).
+        tol (float): Convergence tolerance (unused in current implementation, reserved for future).
 
     Returns:
         np.ndarray: Array of surrogate time series.
@@ -150,6 +148,7 @@ def _lomb_scargle_surrogates(
 
     rng = np.random.default_rng(random_state)
     n = len(x)
+    sorted_x = np.sort(x)
 
     # Pre-processing
     if center_data:
@@ -157,16 +156,19 @@ def _lomb_scargle_surrogates(
     else:
         x_centered = x
 
+    if max_iter < 1:
+        raise ValueError("`max_iter` must be at least 1.")
+
     # Warn about performance for large computations
-    if n * n_surrogates > 2000000:
+    if n * n_surrogates * max_iter > 2000000:
          warnings.warn(
             f"Lomb-Scargle surrogate generation is computationally expensive for N={n} "
-            f"and n_surrogates={n_surrogates}. Expect significant runtime. "
-            "Consider reducing n_surrogates or aggregating data.",
+            f"n_surrogates={n_surrogates} and max_iter={max_iter}. Expect significant runtime. "
+            "Consider reducing n_surrogates, max_iter, or aggregating data.",
             UserWarning
         )
 
-    # 1. Compute Lomb-Scargle Periodogram
+    # 1. Compute Lomb-Scargle Periodogram of Original Data (Target)
     ls = LombScargle(t, x_centered, dy=dy, fit_mean=fit_mean, center_data=False) # centering handled above or by fit_mean
 
     # Auto-frequency selection
@@ -179,81 +181,72 @@ def _lomb_scargle_surrogates(
          max_freq = n / (2 * np.mean(np.diff(np.sort(t)))) # Nyquist approx
          freq = np.geomspace(min_freq, max_freq, num=n*2)
 
-         # Astropy 'fast' method requires regular frequency grid.
-         # For log-spaced (irregular) frequency, we must use 'slow' or standard method.
-         # 'cython' is the default standard method which handles arbitrary frequencies.
          if periodogram_method:
              method_to_use = periodogram_method
          else:
              method_to_use = 'cython'
          power = ls.power(freq, normalization=normalization, method=method_to_use)
     else:
-        # User supplied array not fully supported in this simplified snippet, fallback to auto
         method_to_use = periodogram_method if periodogram_method else 'fast'
         freq, power = ls.autopower(normalization=normalization, method=method_to_use)
 
-    # Convert power to amplitude for synthesis
-    # Note: Normalization affects this scaling.
-    # For 'standard' norm, Power is related to variance.
-    # We use a heuristic: we just use sqrt(Power) as weights and then rescale the final series
-    # to match the original variance/distribution exactly via rank mapping (step 4).
-    # This avoids complex normalization reverse-engineering.
-    amplitudes = np.sqrt(power)
+    # Target amplitudes (sqrt of power)
+    # This is a heuristic for synthesis.
+    amplitudes_target = np.sqrt(power)
 
     surrogates = np.empty((n_surrogates, n))
 
-    # Store sorted original values for rank adjustment
-    sorted_x = np.sort(x)
-
     for k in range(n_surrogates):
-        # 2. Random Phases
+        # Random Phases
         phases = rng.uniform(0, 2 * np.pi, size=len(freq))
 
-        # 3. Spectral Synthesis
-        # x_surr = Sum( A * cos(2pi*f*t + phi) )
-        # Using broadcasting: (n_t, 1) * (1, n_f) -> (n_t, n_f) -> sum -> (n_t,)
-        # For large N, this sum is slow. We can optimize.
-
-        # Optimization: Process in chunks if N*N_freq is too large
-        # But for typical usage (N < 10k), direct sum is okay.
-        # Astropy's autopower usually returns ~5*N frequencies.
-        # So N=1000 -> 5000 freq -> 5e6 ops. Fast.
-        # N=10000 -> 50000 freq -> 5e8 ops. ~1 sec per surrogate.
-        # For 1000 surrogates, this is too slow.
-
-        # FAST SYNTHESIS APPROXIMATION required for large N.
-        # However, since t is uneven, we CANNOT use IFFT easily.
-        # We will stick to direct summation but limit frequencies if needed?
-        # Or rely on the user to limit N for this expensive test.
-        # Let's use a dot product which is optimized in BLAS.
-
-        # Argument: 2 * pi * f * t + phi
-        # Shapes: t (N,), f (M,), phi (M,)
-        # We need sum over M.
-        # arg = 2*pi * t[:, None] * freq[None, :] + phases[None, :]
-        # This creates (N, M) array. 10k * 50k floats = 4GB RAM. Too big.
-
-        # Chunked summation
-        x_surr_raw = np.zeros(n)
-        chunk_size = 1000 # Process 1000 frequencies at a time
+        # Initialize input amplitudes for synthesis with target amplitudes
+        A_k = amplitudes_target.copy()
 
         t_2pi = 2 * np.pi * t
 
-        for i in range(0, len(freq), chunk_size):
-            end = min(i + chunk_size, len(freq))
-            f_chunk = freq[i:end]
-            p_chunk = phases[i:end]
-            a_chunk = amplitudes[i:end]
+        # Iterative Loop
+        # If max_iter=1, this runs once (standard method)
+        for i_iter in range(max_iter):
+            # A. Synthesis
+            # x_surr = Sum( A * cos(2pi*f*t + phi) )
 
-            # (N, 1) * (1, Chunk) + (1, Chunk)
-            arg = t_2pi[:, np.newaxis] * f_chunk[np.newaxis, :] + p_chunk[np.newaxis, :]
-            x_surr_raw += np.sum(a_chunk * np.cos(arg), axis=1)
+            x_synth = np.zeros(n)
+            chunk_size = 1000 # Process 1000 frequencies at a time
 
-        # 4. Rank Adjustment (IAAFT-like step for uneven data)
-        # Replaces synthesized values with original values based on rank.
-        # This preserves the marginal distribution exactly.
-        rank_indices = np.argsort(np.argsort(x_surr_raw))
-        surrogates[k, :] = sorted_x[rank_indices]
+            for j in range(0, len(freq), chunk_size):
+                end = min(j + chunk_size, len(freq))
+                f_chunk = freq[j:end]
+                p_chunk = phases[j:end]
+                a_chunk = A_k[j:end]
+
+                # (N, 1) * (1, Chunk) + (1, Chunk)
+                arg = t_2pi[:, np.newaxis] * f_chunk[np.newaxis, :] + p_chunk[np.newaxis, :]
+                x_synth += np.sum(a_chunk * np.cos(arg), axis=1)
+
+            # B. Rank Adjustment
+            # Replaces synthesized values with original values based on rank.
+            rank_indices = np.argsort(np.argsort(x_synth))
+            x_adjusted = sorted_x[rank_indices]
+
+            # If this is the last iteration, we are done
+            if i_iter == max_iter - 1:
+                surrogates[k, :] = x_adjusted
+                break
+
+            # C. Spectral Correction Step
+            # Compare output spectrum to target spectrum and adjust input amplitudes
+
+            # Compute LS of the ADJUSTED surrogate
+            # Note: Must use 'cython' or similar that supports arbitrary freq grid to match exactly
+            ls_out = LombScargle(t, x_adjusted, dy=dy, fit_mean=fit_mean, center_data=False)
+            power_out = ls_out.power(freq, normalization=normalization, method='cython')
+            amplitudes_out = np.sqrt(power_out)
+
+            # Correction factor: A_in_new = A_in_old * (A_target / A_out)^0.8
+            # (Power 0.8 is a damping factor found to be stable)
+            ratio = (amplitudes_target + 1e-9) / (amplitudes_out + 1e-9)
+            A_k = A_k * np.power(ratio, 0.8)
 
     return surrogates
 
@@ -275,6 +268,9 @@ def surrogate_test(
     normalization: str = 'standard',
     fit_mean: bool = True,
     center_data: bool = True,
+    max_iter: int = 1,
+    lt_mult: float = 0.5,
+    gt_mult: float = 1.1,
     **kwargs
 ) -> SurrogateResult:
     """
@@ -303,6 +299,9 @@ def surrogate_test(
         normalization (str): (Lomb-Scargle only) Periodogram normalization.
         fit_mean (bool): (Lomb-Scargle only) Fit a floating mean during periodogram calculation.
         center_data (bool): (Lomb-Scargle only) Center data before analysis.
+        max_iter (int): (Lomb-Scargle only) Max iterations for spectral correction. Default 1.
+        lt_mult (float): Multiplier for left-censored data (default 0.5).
+        gt_mult (float): Multiplier for right-censored data (default 1.1).
         **kwargs: Additional arguments passed to the underlying surrogate generator.
 
     Returns:
@@ -319,16 +318,40 @@ def surrogate_test(
 
     notes = []
 
+    # Apply imputation if censored data is present
+    x_eff = x_arr.copy()
     if np.any(censored):
+        # We need to distinguish between left and right censoring if possible
+        # Typically 'cen_type' handles this: 'lt', 'gt', 'not'
+        # Default behavior if cen_type is not specific? _mk_score... uses it.
+        # Here we manually apply substitution.
+
+        lt_mask = censored & (cen_type == 'lt')
+        gt_mask = censored & (cen_type == 'gt')
+
+        # Fallback: if cen_type is all 'not' but censored is True, assume 'lt'?
+        # Or check if cen_type contains ANY 'lt' or 'gt'.
+        # Most project helpers assume 'lt' if unspecified for boolean masked arrays.
+        if not np.any(lt_mask) and not np.any(gt_mask):
+             # Assume all censored are 'lt' (standard environmental default)
+             lt_mask = censored
+
+        if np.any(lt_mask):
+            x_eff[lt_mask] *= lt_mult
+        if np.any(gt_mask):
+            x_eff[gt_mask] *= gt_mult
+
         warnings.warn(
-            "Censored data detected in surrogate test. Surrogate series are generated "
-            "using the numeric values (detection limits) as continuous input and are "
-            "treated as uncensored. The null hypothesis test compares the original "
-            "(censored) S statistic against a distribution of (uncensored) surrogate "
-            "S statistics. This approximation may be biased if censoring is heavy.",
+            f"Censored data detected in surrogate test. Surrogate series are generated "
+            f"using imputed values (lt_mult={lt_mult}, gt_mult={gt_mult}) as continuous input. "
+            "The null hypothesis test compares the original (censored) S statistic against "
+            "a distribution of (imputed) surrogate S statistics.",
             UserWarning
         )
-        notes.append("Censored data: surrogates treated as uncensored")
+        notes.append(f"Censored data: surrogates generated from imputed values ({lt_mult}x/{gt_mult}x)")
+    else:
+        # No censored data, x_eff is just x_arr
+        pass
 
     # Check for uneven sampling
     dt = np.diff(t_arr)
@@ -358,13 +381,14 @@ def surrogate_test(
              raise ImportError("Method 'lomb_scargle' requires `astropy`.")
 
         surrogates = _lomb_scargle_surrogates(
-            x_arr, t_arr, dy=dy,
+            x_eff, t_arr, dy=dy,
             n_surrogates=n_surrogates,
             freq_method=freq_method,
             normalization=normalization,
             fit_mean=fit_mean,
             center_data=center_data,
             random_state=random_state,
+            max_iter=max_iter,
             **kwargs  # Pass any extra arguments to the implementation
         )
     elif method_used == 'iaaft':
@@ -372,7 +396,7 @@ def surrogate_test(
             warnings.warn("Using IAAFT on unevenly spaced data. Results may be biased.", UserWarning)
 
         surrogates = _iaaft_surrogates(
-            x_arr,
+            x_eff,
             n_surrogates=n_surrogates,
             random_state=random_state
         )
