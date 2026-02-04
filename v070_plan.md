@@ -14,7 +14,7 @@ The standard "Leap Year Reduction" ($366 \to 365$) is just a specific case of a 
 
 ## Core Feature: `quantile_trend_test`
 
-The function will be redesigned to handle flexible blocking and resolution.
+The function will be redesigned to handle flexible blocking, resolution, and statistical configuration.
 
 ```python
 def quantile_trend_test(
@@ -23,6 +23,9 @@ def quantile_trend_test(
     block_frequency: str = 'YE',   # 'YE' (Yearly), '2YE' (2-Year), 'QS' (Quarterly)
     min_samples: int = 10,         # Minimum samples required per block to be valid
     quantiles: Union[str, int, list] = 'auto',
+    alpha: float = 0.05,           # Significance level
+    classification: bool = True,   # Enable trend likelihood classification
+    category_map: Optional[dict] = None, # Custom confidence mapping
     **mk_kwargs
 ) -> QuantileResult:
     """
@@ -38,6 +41,13 @@ def quantile_trend_test(
                   all blocks to this length (preserving 'native' resolution).
         - int (e.g., 100): Interpolates data to 100 evenly spaced percentiles.
         - list (e.g., [0.1, 0.5, 0.9]): Computes only specific percentiles.
+    alpha : float, default 0.05
+        Significance level for the Mann-Kendall test (determines p-value threshold).
+    classification : bool, default True
+        If True, classifies the trend likelihood (e.g., "Highly Likely Increasing")
+        using MannKS.classification logic.
+    category_map : dict, optional
+        Custom mapping for trend classification (confidence -> label).
     """
 
 ```
@@ -73,11 +83,10 @@ If the user requests `quantiles=100` (percentiles) or `quantiles=[0.05, 0.95]`:
 
 ### 3. The Trend Loop
 
-(Unchanged)
-
 1. Construct Matrix $M$ where rows = Time Blocks, columns = Quantiles/Ranks.
 2. Iterate through columns.
-3. Run `MannKS.trend_test` on each column.
+3. Run `MannKS.trend_test` on each column, passing `alpha` and `category_map`.
+4. Store the full result, including `slope`, `p_value`, `significance` ($p < \alpha$), and `classification` string.
 
 ## Visualization
 
