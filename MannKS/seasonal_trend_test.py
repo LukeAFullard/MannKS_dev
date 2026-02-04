@@ -644,52 +644,48 @@ def seasonal_trend_test(
 
                 if n > 1:
                     # Filter array-like kwargs (e.g., 'dy') to match the season subset.
-                    # We must handle two cases:
-                    # 1. Kwarg matches ORIGINAL data length (n_raw) -> Apply NaN filter mask -> Apply season mask.
-                    # 2. Kwarg matches FILTERED data length (len(data_filtered)) -> Apply season mask.
-
                     kwargs_season = {}
                     n_current_filtered = len(data_filtered)
 
-                    # Reconstruct mask if needed (only if no aggregation was done, as aggregation destroys 1-to-1 mapping)
-                    # If aggregation was done, n_raw != n_current_filtered usually, but we can't easily map back.
-                    # Users should provide aggregated kwargs in that case.
-
-                    mask_x_to_filtered = None
-                    if n_raw != n_current_filtered and agg_method == 'none':
-                         # Reconstruct NaN mask
-                         if isinstance(x, pd.DataFrame) and all(c in x.columns for c in ['value', 'censored', 'cen_type']):
-                              vals = x['value'].values
-                         else:
-                              # Need _preprocessing. It is not imported by default.
-                              # But we can access it via _helpers if imported?
-                              # Or simpler: we assume if len(v) == n_raw, we must slice.
-                              # But we need the mask.
-                              from ._helpers import _preprocessing
-                              vals, _ = _preprocessing(x)
-
-                         if len(vals) == n_raw:
-                              mask_x_to_filtered = ~np.isnan(vals)
-
                     for k, v in kwargs_base.items():
-                        if hasattr(v, '__len__') and isinstance(v, (np.ndarray, list, pd.Series)):
+                        if hasattr(v, '__len__') and isinstance(v, (np.ndarray, list, pd.Series, pd.DataFrame)):
                              v_len = len(v)
-                             if v_len == n_raw and mask_x_to_filtered is not None:
-                                  # Case 1: Raw length -> Filter -> Season
-                                  # First filter NaNs
-                                  if isinstance(v, (pd.Series, pd.DataFrame)):
-                                      v_filt = v[mask_x_to_filtered]
-                                  else:
-                                      v_filt = np.asarray(v)[mask_x_to_filtered]
 
-                                  # Then filter season
-                                  if isinstance(v_filt, (pd.Series, pd.DataFrame)):
-                                       kwargs_season[k] = v_filt[season_mask.values if hasattr(season_mask, 'values') else season_mask]
-                                  else:
-                                       kwargs_season[k] = np.asarray(v_filt)[season_mask]
+                             # Case 1: Kwarg matches ORIGINAL data length (n_raw)
+                             if v_len == n_raw:
+                                  # Use robust indexing if available
+                                  if 'original_index' in season_data.columns:
+                                       orig_idx = season_data['original_index'].values
+                                       if isinstance(v, (pd.Series, pd.DataFrame)):
+                                            kwargs_season[k] = v.iloc[orig_idx]
+                                       else:
+                                            kwargs_season[k] = np.asarray(v)[orig_idx]
+                                  elif agg_method == 'none':
+                                       # Fallback to mask reconstruction (old logic) if original_index missing (unlikely)
+                                       # This assumes no sampling/aggregation happened
+                                       from ._helpers import _preprocessing
+                                       if isinstance(x, pd.DataFrame) and all(c in x.columns for c in ['value', 'censored', 'cen_type']):
+                                            vals = x['value'].values
+                                       else:
+                                            vals, _ = _preprocessing(x)
 
+                                       if len(vals) == n_raw:
+                                            mask_x_to_filtered = ~np.isnan(vals)
+                                            # Filter NaNs then season
+                                            if isinstance(v, (pd.Series, pd.DataFrame)):
+                                                v_filt = v[mask_x_to_filtered]
+                                                kwargs_season[k] = v_filt[season_mask.values if hasattr(season_mask, 'values') else season_mask]
+                                            else:
+                                                v_filt = np.asarray(v)[mask_x_to_filtered]
+                                                kwargs_season[k] = v_filt[season_mask]
+                                       else:
+                                            kwargs_season[k] = v
+                                  else:
+                                       # Aggregation + Raw kwargs -> undefined/unsupported
+                                       kwargs_season[k] = v
+
+                             # Case 2: Kwarg matches FILTERED data length (len(data_filtered))
                              elif v_len == n_current_filtered:
-                                  # Case 2: Already filtered/aggregated length -> Season
                                   if isinstance(v, (pd.Series, pd.DataFrame)):
                                       kwargs_season[k] = v[season_mask.values if hasattr(season_mask, 'values') else season_mask]
                                   else:
