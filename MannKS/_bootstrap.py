@@ -126,6 +126,13 @@ def block_bootstrap_mann_kendall(x, t, censored, cen_type,
             - s_obs (float): Observed S statistic.
             - s_boot_dist (np.ndarray): Bootstrap distribution of S.
     """
+    # Ensure inputs are sorted by time, as Sen's slope estimator logic relies on it.
+    sort_idx = np.argsort(t)
+    x = x[sort_idx]
+    t = t[sort_idx]
+    censored = censored[sort_idx]
+    cen_type = cen_type[sort_idx]
+
     n = len(x)
 
     # Calculate observed statistic
@@ -228,6 +235,13 @@ def block_bootstrap_confidence_intervals(x, t, censored, cen_type,
             - upper_ci (float): Upper bootstrap confidence interval.
             - boot_slopes (np.ndarray): Bootstrap distribution of slopes.
     """
+    # Ensure inputs are sorted by time.
+    sort_idx = np.argsort(t)
+    x = x[sort_idx]
+    t = t[sort_idx]
+    censored = censored[sort_idx]
+    cen_type = cen_type[sort_idx]
+
     n = len(x)
 
     # Calculate observed slope
