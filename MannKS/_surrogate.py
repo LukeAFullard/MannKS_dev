@@ -114,7 +114,8 @@ def _lomb_scargle_surrogates(
     normalization: str = 'standard',
     fit_mean: bool = True,
     center_data: bool = True,
-    random_state: Optional[int] = None
+    random_state: Optional[int] = None,
+    periodogram_method: Optional[str] = None
 ) -> np.ndarray:
     """
     Generates surrogates using Spectral Synthesis from Lomb-Scargle Periodogram.
@@ -138,6 +139,8 @@ def _lomb_scargle_surrogates(
         fit_mean (bool): Whether to fit a floating mean during periodogram calculation.
         center_data (bool): Whether to center data before analysis.
         random_state (Optional[int]): Seed for reproducibility.
+        periodogram_method (Optional[str]): Astropy method (e.g., 'fast', 'slow', 'cython').
+                                          If None, defaults to 'fast' for 'auto' freq_method.
 
     Returns:
         np.ndarray: Array of surrogate time series.
@@ -168,7 +171,8 @@ def _lomb_scargle_surrogates(
 
     # Auto-frequency selection
     if freq_method == 'auto':
-        freq, power = ls.autopower(normalization=normalization, method='fast')
+        method_to_use = periodogram_method if periodogram_method else 'fast'
+        freq, power = ls.autopower(normalization=normalization, method=method_to_use)
     elif freq_method == 'log':
          # Heuristic for log-spacing (good for red noise)
          min_freq = 1 / (np.max(t) - np.min(t))
@@ -178,10 +182,15 @@ def _lomb_scargle_surrogates(
          # Astropy 'fast' method requires regular frequency grid.
          # For log-spaced (irregular) frequency, we must use 'slow' or standard method.
          # 'cython' is the default standard method which handles arbitrary frequencies.
-         power = ls.power(freq, normalization=normalization, method='cython')
+         if periodogram_method:
+             method_to_use = periodogram_method
+         else:
+             method_to_use = 'cython'
+         power = ls.power(freq, normalization=normalization, method=method_to_use)
     else:
         # User supplied array not fully supported in this simplified snippet, fallback to auto
-        freq, power = ls.autopower(normalization=normalization, method='fast')
+        method_to_use = periodogram_method if periodogram_method else 'fast'
+        freq, power = ls.autopower(normalization=normalization, method=method_to_use)
 
     # Convert power to amplitude for synthesis
     # Note: Normalization affects this scaling.

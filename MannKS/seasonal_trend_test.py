@@ -608,6 +608,19 @@ def seasonal_trend_test(
         # --- Surrogate Test Integration ---
         surrogate_result = None
         if surrogate_method != 'none':
+            # Performance Warning for Large Datasets (similar to trend_test)
+            is_large_fast = tier_info_filtered['strategy'] == 'fast'
+            is_slow_mk = mk_test_method == 'lwp'
+
+            if is_large_fast and is_slow_mk and n_surrogates > 100:
+                warnings.warn(
+                    "Performance Warning: Large dataset detected with `mk_test_method='lwp'`. "
+                    f"Surrogate testing ({n_surrogates} runs) will be very slow (O(N^2)). "
+                    "Consider setting `mk_test_method='robust'` to enable O(N log N) optimization.",
+                    UserWarning
+                )
+                analysis_notes.append("Slow surrogate test (suggest mk_test_method='robust')")
+
             # Initialize accumulators
             total_surrogate_scores = np.zeros(n_surrogates)
             surrogate_notes = []
