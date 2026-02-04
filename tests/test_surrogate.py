@@ -1,6 +1,7 @@
 
 import pytest
 import numpy as np
+import sys
 from MannKS._surrogate import surrogate_test, _iaaft_surrogates, _lomb_scargle_surrogates
 from MannKS.trend_test import trend_test
 
@@ -166,3 +167,73 @@ def test_iterative_ls():
     )
     assert res.method == 'lomb_scargle'
     assert len(res.surrogate_scores) == 2
+
+def test_surrogate_kwargs_slicing(monkeypatch):
+    """
+    Verify that array-like surrogate_kwargs are sliced correctly when
+    trend_test filters out NaNs from the input.
+    """
+    # Create data with NaNs
+    n = 20
+    x = np.random.randn(n)
+    t = np.arange(n)
+    x[5] = np.nan # Introduce NaN
+
+    # Create an error array (dy) matching original length
+    dy = np.ones(n) * 0.1
+    dy[5] = 999 # Check if this outlier is removed
+
+    # Access the module correctly
+    tt_module = sys.modules['MannKS.trend_test']
+
+    captured_kwargs = {}
+
+    # Original function
+    orig_surrogate = tt_module.surrogate_test
+
+    def mock_surrogate_test(*args, **kwargs):
+        captured_kwargs.update(kwargs)
+        return orig_surrogate(*args, **kwargs)
+
+    monkeypatch.setattr(tt_module, 'surrogate_test', mock_surrogate_test)
+
+    trend_test(
+        x, t,
+        surrogate_method='lomb_scargle',
+        n_surrogates=10,
+        surrogate_kwargs={'dy': dy}
+    )
+
+    assert 'dy' in captured_kwargs
+    dy_received = captured_kwargs['dy']
+    assert len(dy_received) == n - 1
+    assert 999 not in dy_received
+
+def test_censored_surrogate_propagation():
+    """
+    Verify that censoring flags are propagated to surrogates, reducing variance
+    (conservative behavior removal) compared to imputation-only surrogates.
+    """
+    # Setup: censored data with overlap where imputation increases variance
+    x_val = np.array([5.0, 2.0, 5.0, 3.0])
+    censored = np.array([True, False, True, False]) # <5, 2, <5, 3
+    cen_type = np.array(['lt', 'not', 'lt', 'not'])
+    lt_mult = 0.5
+    t = np.arange(4)
+
+    # Run surrogate_test
+    # This uses the new implementation (propagating censoring)
+    res = surrogate_test(
+        x_val, t, censored=censored, cen_type=cen_type,
+        method='iaaft', n_surrogates=1000, random_state=42,
+        lt_mult=lt_mult
+    )
+
+    std_surr = np.std(res.surrogate_scores)
+
+    # From audit:
+    # Imputed-only std was ~2.77
+    # Censored-propagated std was ~2.24 (2.49 in sample)
+
+    # We assert it is significantly below the imputation-only baseline
+    assert std_surr < 2.65

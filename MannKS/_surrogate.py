@@ -13,6 +13,7 @@ Supported Methods:
 import numpy as np
 import warnings
 from typing import Optional, Union, Tuple, NamedTuple, List
+from scipy.stats import rankdata
 
 try:
     from astropy.timeseries import LombScargle
@@ -345,9 +346,8 @@ def surrogate_test(
 
         warnings.warn(
             f"Censored data detected in surrogate test. Surrogate series are generated "
-            f"using imputed values (lt_mult={lt_mult}, gt_mult={gt_mult}) as continuous input. "
-            "The null hypothesis test compares the original (censored) S statistic against "
-            "a distribution of (imputed) surrogate S statistics.",
+            f"using imputed values (lt_mult={lt_mult}, gt_mult={gt_mult}). "
+            "Censoring flags are propagated to the surrogates to ensure a consistent S-statistic distribution.",
             UserWarning
         )
         notes.append(f"Censored data: surrogates generated from imputed values ({lt_mult}x/{gt_mult}x)")
@@ -421,17 +421,38 @@ def surrogate_test(
     # 2. Surrogate Scores
     surrogate_scores = np.zeros(n_surrogates)
 
-    # Pre-allocate uncensored arrays for surrogates to avoid repeated creation
-    surr_censored = np.zeros(n, dtype=bool)
-    surr_cen_type = np.full(n, 'not', dtype=object)
+    # Prepare for censoring propagation
+    if np.any(censored):
+        # Sort original data/censoring by imputed values to create a map
+        sort_idx = np.argsort(x_eff, kind='stable')
+        sorted_censored = censored[sort_idx]
+        sorted_cen_type = cen_type[sort_idx]
+    else:
+        # Defaults for uncensored case
+        surr_censored = np.zeros(n, dtype=bool)
+        surr_cen_type = np.full(n, 'not', dtype=object)
 
-    # Use simpler non-censored loop for speed if possible, but our _mk function is optimized
-    # Ideally we'd have a vectorised MK for many arrays, but loop is acceptable here
     for i in range(n_surrogates):
+        row = surrogates[i]
+
+        if np.any(censored):
+            # Map censoring status to the surrogate values
+            # rankdata(method='ordinal') returns ranks 1..N
+            # We use these ranks to index into the sorted censoring arrays
+            ranks = rankdata(row, method='ordinal') - 1
+            # Ensure ranks are within bounds (should be 0..N-1) and integer type
+            ranks = np.clip(ranks, 0, n - 1).astype(int)
+
+            s_cen = sorted_censored[ranks]
+            s_type = sorted_cen_type[ranks]
+        else:
+            s_cen = surr_censored
+            s_type = surr_cen_type
+
         s_surr, _, _, _ = _mk_score_and_var_censored(
-            surrogates[i], t_arr,
-            censored=surr_censored,
-            cen_type=surr_cen_type,
+            row, t_arr,
+            censored=s_cen,
+            cen_type=s_type,
             mk_test_method=mk_test_method,
             tie_break_method=tie_break_method,
             tau_method=tau_method
