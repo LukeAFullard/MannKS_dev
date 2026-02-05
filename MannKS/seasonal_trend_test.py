@@ -631,7 +631,8 @@ def seasonal_trend_test(
                 'method', 'n_surrogates', 'random_state',
                 'mk_test_method', 'tie_break_method', 'tau_method',
                 'censored', 'cen_type',
-                'x', 't'
+                'x', 't',
+                'lt_mult', 'gt_mult'
             ]
             for key in collision_keys:
                 kwargs_base.pop(key, None)
