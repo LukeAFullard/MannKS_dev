@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.6.0] - 2026-03-05
+
+### Added
+- **Surrogate Data Testing**: Robust hypothesis testing against colored noise backgrounds.
+  - `surrogate_test` function supporting IAAFT (even sampling) and Lomb-Scargle (uneven sampling).
+  - Handles censored data via rank-based censoring propagation.
+  - Integration with `trend_test` and `seasonal_trend_test` via `surrogate_method`.
+- **Power Analysis**: Monte Carlo power estimation for trend detection.
+  - `power_test` calculates statistical power curves and Minimum Detectable Trend (MDT).
+  - Supports custom noise models (IAAFT/Lomb-Scargle) and slope scaling.
+- **Seasonal Integration**: Full support for surrogate testing in seasonal contexts.
+  - Aggregates surrogate statistics across seasons.
+  - Correctly handles argument alignment for seasonal subsets.
+- **Dependencies**: Added `astropy` for spectral analysis and `piecewise-regression`.
+
+### Fixed
+- **Reproducibility**: Ensured `random_state` deterministically seeds all internal Monte Carlo loops in `power_test` and `surrogate_test`.
+
 ## [0.5.0] - 2026-03-04
 
 ### Added
