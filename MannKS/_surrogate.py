@@ -162,6 +162,12 @@ def _lomb_scargle_surrogates(
     if max_iter < 1:
         raise ValueError("`max_iter` must be at least 1.")
 
+    # Check for constant data (zero variance)
+    # If data is constant, Lomb-Scargle fails or produces NaNs (division by zero power).
+    # Surrogates of constant data should be constant.
+    if np.std(x) < 1e-9:
+        return np.tile(x, (n_surrogates, 1))
+
     # Warn about performance for large computations
     if n * n_surrogates * max_iter > 2000000:
          warnings.warn(
@@ -356,6 +362,9 @@ def surrogate_test(
     else:
         # No censored data, x_eff is just x_arr
         pass
+
+    if n_surrogates <= 0:
+        raise ValueError("`n_surrogates` must be positive.")
 
     # Check for uneven sampling
     dt = np.diff(t_arr)
