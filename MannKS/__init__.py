@@ -22,6 +22,7 @@ from .segmented_trend_test import (
     calculate_breakpoint_probability
 )
 from ._surrogate import surrogate_test, SurrogateResult
+from .power import power_test, PowerResult
 
 __all__ = [
     'trend_test',
@@ -43,7 +44,9 @@ __all__ = [
     'find_best_segmentation',
     'calculate_breakpoint_probability',
     'surrogate_test',
-    'SurrogateResult'
+    'SurrogateResult',
+    'power_test',
+    'PowerResult'
 ]
 
 __version__ = "0.6.0"
