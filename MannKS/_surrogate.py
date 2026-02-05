@@ -330,7 +330,7 @@ def surrogate_test(
     notes = []
 
     # Apply imputation if censored data is present
-    x_eff = x_arr.copy()
+    x_eff = x_arr.copy().astype(float)
     if np.any(censored):
         # We need to distinguish between left and right censoring if possible
         # Typically 'cen_type' handles this: 'lt', 'gt', 'not'
