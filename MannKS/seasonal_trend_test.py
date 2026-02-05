@@ -683,7 +683,7 @@ def seasonal_trend_test(
                                             kwargs_season[k] = v
                                   else:
                                        # Aggregation + Raw kwargs -> undefined/unsupported
-                                           # Updated message to match trend_test.py style:
+                                       # Audit v0.6.0: Explicitly forbid ambiguous mapping
                                        raise ValueError(
                                                f"Surrogate arguments (e.g. '{k}') cannot be automatically mapped when aggregation "
                                                f"is used (`agg_method='{agg_method}'`) because the link to original indices is lost. "

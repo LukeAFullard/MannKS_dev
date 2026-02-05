@@ -684,6 +684,7 @@ def trend_test(
                 # destroying the mapping to the original input order unless 'original_index' was preserved.
                 # Even if lengths match (1-to-1 aggregation), the order might differ (unsorted input vs sorted agg).
                 if agg_method != 'none':
+                    # Audit v0.6.0: Explicitly forbid ambiguous mapping during aggregation
                     raise ValueError(
                         f"Surrogate arguments (e.g. 'dy') cannot be automatically mapped when aggregation "
                         f"is used (`agg_method='{agg_method}'`) because the link to original indices is lost. "
