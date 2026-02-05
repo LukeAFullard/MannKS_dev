@@ -37,6 +37,7 @@ def power_test(
     random_state: Optional[int] = None,
     surrogate_kwargs: Optional[dict] = None,
     slope_scaling: Optional[str] = None,
+    detrend: bool = False,
     **kwargs
 ) -> PowerResult:
     """
@@ -63,6 +64,10 @@ def power_test(
             converted to 'units per second' before injection.
             Supports: 's', 'min', 'h', 'D', 'Y' and their full names (e.g. 'year', 'day').
             Default is None (no conversion, interpreted as units per second or raw time unit).
+        detrend (bool): If True, linearly detrends the input `x` before generating surrogates.
+            This prevents an existing strong trend in `x` from inflating the low-frequency
+            power of the noise model, which would otherwise reduce the estimated power.
+            Default is False (conservative).
         **kwargs: Additional arguments passed to `surrogate_test`.
 
     Returns:
@@ -118,6 +123,20 @@ def power_test(
 
     rng = np.random.default_rng(random_state)
 
+    # Detrend if requested
+    x_for_noise = x_arr
+    if detrend:
+        # Simple linear detrending using least squares for speed/robustness balance
+        # We use t_numeric (seconds) for detrending
+        # Fit y = m*t + c
+        mask = np.isfinite(x_arr)
+        if np.any(mask):
+            A = np.vstack([t_numeric[mask], np.ones(np.sum(mask))]).T
+            m, c = np.linalg.lstsq(A, x_arr[mask], rcond=None)[0]
+            x_for_noise = x_arr - (m * t_numeric + c)
+        else:
+            x_for_noise = x_arr
+
     # Check method
     is_uniform = np.allclose(np.diff(t_numeric), np.diff(t_numeric)[0], rtol=1e-3)
 
@@ -145,14 +164,14 @@ def power_test(
             raise ImportError("Method 'lomb_scargle' requires `astropy`.")
 
         noise_bank = _lomb_scargle_surrogates(
-            x_arr, t_numeric,
+            x_for_noise, t_numeric,
             n_surrogates=n_simulations,
             random_state=random_state,
             **gen_kwargs
         )
     elif method_used == 'iaaft':
         noise_bank = _iaaft_surrogates(
-            x_arr,
+            x_for_noise,
             n_surrogates=n_simulations,
             random_state=random_state,
             # IAAFT accepts max_iter, tol in kwargs? No, explicit args.
