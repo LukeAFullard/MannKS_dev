@@ -637,7 +637,8 @@ def trend_test(
             collision_keys = [
                 'method', 'n_surrogates', 'random_state',
                 'mk_test_method', 'tie_break_method', 'tau_method',
-                'censored', 'cen_type'
+                'censored', 'cen_type',
+                'x', 't'
             ]
             for key in collision_keys:
                 kwargs_base.pop(key, None)
