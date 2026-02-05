@@ -201,7 +201,7 @@ def _lomb_scargle_surrogates(
 
     # Target amplitudes (sqrt of power)
     # This is a heuristic for synthesis.
-    amplitudes_target = np.sqrt(power)
+    amplitudes_target = np.sqrt(np.maximum(power, 0))
 
     surrogates = np.empty((n_surrogates, n))
 
