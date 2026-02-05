@@ -172,6 +172,17 @@ def power_test(
 
     power_values = []
 
+    # Prepare seeds if random_state is set
+    # We need n_slopes * n_simulations seeds
+    seeds = None
+    if random_state is not None:
+        # Create a new RNG derived from main seed to generate sub-seeds
+        seed_rng = np.random.default_rng(random_state + 1)
+        total_runs = len(slopes_scaled) * n_simulations
+        seeds = seed_rng.integers(0, 2**32, size=total_runs)
+
+    run_counter = 0
+
     for idx, beta in enumerate(slopes_scaled):
         n_detected = 0
         original_slope = slopes_arr[idx] # Keep track of user-facing slope
@@ -185,9 +196,11 @@ def power_test(
             x_sim = noise + beta * t_centered
 
             # Run Test
-            # We must use a DIFFERENT random state for the test to avoid correlation
-            # with the generation (though likelihood is low).
-            # Or just let it be random (None).
+            # Determine seed for this run
+            current_seed = None
+            if seeds is not None:
+                current_seed = int(seeds[run_counter])
+            run_counter += 1
 
             # Note: We pass surrogate_kwargs to the test as well
             # The test will generate `n_surrogates` internal surrogates
@@ -201,7 +214,7 @@ def power_test(
                     method=method_used,
                     n_surrogates=n_surrogates,
                     # surrogate_test does not take alpha as argument
-                    random_state=None, # Let it be random
+                    random_state=current_seed,
                     **surr_kwargs
                 )
 
