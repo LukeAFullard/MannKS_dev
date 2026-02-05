@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mannks"
-version = "0.5.0"
+version = "0.6.0"
 description = "Non-parametric trend analysis for unequally spaced time series with censored data and large dataset support"
 authors = ["Luke Fullard"]
 license = "MIT"
@@ -18,7 +18,9 @@ keywords = [
     "piecewise-regression",
     "breakpoint-detection",
     "rolling-trend",
-    "bootstrap"
+    "bootstrap",
+    "surrogate-data",
+    "power-analysis"
 ]
 
 packages = [{ include = "MannKS" }]
@@ -31,6 +33,7 @@ scipy = ">=1.5.0"
 matplotlib = ">=3.3.0"
 seaborn = ">=0.11.0"
 piecewise-regression = "^1.5.0"
+astropy = "^5.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=6.0"
