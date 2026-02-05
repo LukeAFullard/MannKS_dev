@@ -163,6 +163,24 @@ def power_test(
     else:
         raise ValueError(f"Unknown method '{method_used}'")
 
+    # Check for computational complexity
+    # Estimate total operations
+    est_max_iter = surr_kwargs.get('max_iter', 100 if method_used == 'iaaft' else 1)
+    # n_samples * n_surrogates * max_iter * n_simulations * n_slopes
+    total_ops = len(x_arr) * n_surrogates * est_max_iter * n_simulations * len(slopes_scaled)
+
+    # Threshold: 10 million operations for Lomb-Scargle (expensive) or 500M for IAAFT (faster)
+    # LS is significantly slower per op due to trig/grid.
+    limit = 10_000_000 if method_used == 'lomb_scargle' else 500_000_000
+
+    if total_ops > limit:
+         warnings.warn(
+            f"Power analysis involves repeated surrogate generation which is computationally expensive "
+            f"(approx {total_ops:.1e} operations). Expect significant runtime. "
+            "Consider reducing n_simulations, n_surrogates, or using method='iaaft' if appropriate.",
+            UserWarning
+        )
+
     # 2. Monte Carlo Loop
 
     results = []
@@ -205,9 +223,12 @@ def power_test(
             # Note: We pass surrogate_kwargs to the test as well
             # The test will generate `n_surrogates` internal surrogates
 
-            # We suppress warnings to avoid flooding stdout with "Censored data..." or perf warnings
+            # We suppress specific warnings to avoid flooding stdout
             with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
+                warnings.filterwarnings("ignore", message="Censored data detected in surrogate test")
+                warnings.filterwarnings("ignore", message="Lomb-Scargle surrogate generation is computationally expensive")
+                warnings.filterwarnings("ignore", message="Uneven sampling detected but `astropy` not installed")
+                warnings.filterwarnings("ignore", message="Using IAAFT on unevenly spaced data")
 
                 res = surrogate_test(
                     x_sim, t_numeric,
