@@ -88,15 +88,15 @@ class TestNumericalStability(unittest.TestCase):
             self.assertEqual(result, 0)
 
     def test_mk_score_and_var_censored_zero_denominator(self):
-        """Test that _mk_score_and_var_censored warns for a near-zero denominator."""
+        """Test that _mk_score_and_var_censored handles near-zero denominator by setting Tau=0."""
         # Create a case with tied data that leads to D=0
         x = [1, 1, 1]
         t = [1, 2, 3]
         censored = [False, False, False]
         cen_type = ['not', 'not', 'not']
-        with self.assertWarnsRegex(UserWarning, "Denominator near zero"):
-            s, var_s, D, Tau = _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b')
-            self.assertEqual(Tau, 0)
+        # No longer warns in v0.6.0
+        s, var_s, D, Tau = _mk_score_and_var_censored(x, t, censored, cen_type, tau_method='b')
+        self.assertEqual(Tau, 0)
 
 
 if __name__ == '__main__':

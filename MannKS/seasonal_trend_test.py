@@ -271,7 +271,7 @@ def seasonal_trend_test(
                     'insufficient data', analysis_notes,
                     np.nan, np.nan, np.nan, 0, 0, 0, np.nan, np.nan, '',
                     np.nan, np.nan, np.nan, np.nan, None, captured_warnings,
-                    'insufficient', None, None)
+                    'insufficient', None, None, None)
 
         # --- Aggregation Logic ---
         if agg_method != 'none':

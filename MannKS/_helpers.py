@@ -126,7 +126,10 @@ def _prepare_data(x, t, hicensor):
     elif isinstance(x, pd.DataFrame):
         # Fallback for simple DataFrame: treat as numeric values.
         # This bypasses the string check below which iterates column names.
-        x_proc, _ = _preprocessing(x)
+        x_proc, n_cols = _preprocessing(x)
+        if n_cols > 1:
+            raise ValueError("Input DataFrame `x` must be 1-dimensional (single column) or contain a 'value' column.")
+
         data = pd.DataFrame({
             'value': x_proc,
             'censored': np.zeros(len(x_proc), dtype=bool),
@@ -135,7 +138,10 @@ def _prepare_data(x, t, hicensor):
     elif hasattr(x, '__iter__') and any(isinstance(i, str) for i in x):
         raise TypeError("Input data `x` contains strings. Please pre-process it with `prepare_censored_data` first.")
     else:
-        x_proc, _ = _preprocessing(x)
+        x_proc, n_cols = _preprocessing(x)
+        if n_cols > 1:
+            raise ValueError("Input `x` must be 1-dimensional.")
+
         data = pd.DataFrame({
             'value': x_proc,
             'censored': np.zeros(len(x_proc), dtype=bool),
