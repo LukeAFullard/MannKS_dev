@@ -12,7 +12,7 @@ from typing import Union, Optional, List, NamedTuple, Dict
 from scipy.interpolate import interp1d
 
 from ._surrogate import surrogate_test, _iaaft_surrogates, _lomb_scargle_surrogates, HAS_ASTROPY
-from ._helpers import _preprocessing
+from ._helpers import _preprocessing, _get_slope_scaling_factor
 
 class PowerResult(NamedTuple):
     """Container for power analysis results."""
@@ -24,6 +24,7 @@ class PowerResult(NamedTuple):
     alpha: float
     simulation_results: pd.DataFrame
     noise_method: str
+    slope_scaling: Optional[str]
 
 def power_test(
     x: Union[np.ndarray, pd.DataFrame],
@@ -35,6 +36,7 @@ def power_test(
     surrogate_method: str = 'auto',
     random_state: Optional[int] = None,
     surrogate_kwargs: Optional[dict] = None,
+    slope_scaling: Optional[str] = None,
     **kwargs
 ) -> PowerResult:
     """
@@ -56,13 +58,32 @@ def power_test(
         random_state (Optional[int]): Seed for reproducibility.
         surrogate_kwargs (dict, optional): Additional arguments passed to the surrogate generator
             (e.g., {'dy': errors, 'freq_method': 'log'}).
+        slope_scaling (str, optional): The time unit for the provided slopes (e.g., 'year').
+            If provided, input slopes are interpreted as 'units per [slope_scaling]' and
+            converted to 'units per second' before injection.
+            Supports: 's', 'min', 'h', 'D', 'Y' and their full names (e.g. 'year', 'day').
+            Default is None (no conversion, interpreted as units per second or raw time unit).
         **kwargs: Additional arguments passed to `surrogate_test`.
 
     Returns:
         PowerResult: Named tuple containing power curve, MDT, and details.
     """
-    x_arr = np.asarray(x).flatten()
+    # Robustly handle DataFrame input for x
+    if isinstance(x, pd.DataFrame):
+        if 'value' in x.columns:
+            x_arr = x['value'].to_numpy()
+        elif x.shape[1] == 1:
+            x_arr = x.iloc[:, 0].to_numpy()
+        else:
+            raise ValueError(
+                "Input `x` is a DataFrame but has multiple columns and no 'value' column. "
+                "Please provide a Series, 1D array, or DataFrame with a 'value' column."
+            )
+    else:
+        x_arr = np.asarray(x).flatten()
+
     t_arr = np.asarray(t).flatten()
+
     # Convert t to numeric (float seconds if datetime) using internal helper
     t_numeric, _ = _preprocessing(t_arr)
 
@@ -73,6 +94,23 @@ def power_test(
         raise ValueError("x and t must have the same length.")
 
     surr_kwargs = surrogate_kwargs.copy() if surrogate_kwargs else {}
+
+    # Handle Slope Unit Conversion
+    # _get_slope_scaling_factor returns Seconds/Unit.
+    # User slope is Units/Unit.
+    # We want Units/Second.
+    # Units/Second = (Units/Unit) / (Seconds/Unit)
+
+    scaling_divisor = 1.0
+    if slope_scaling:
+        try:
+             scaling_divisor = _get_slope_scaling_factor(slope_scaling)
+        except ValueError as e:
+            # Re-raise with context or just let it bubble
+            # To be safe and informative given the context of power_test:
+            raise ValueError(f"Invalid `slope_scaling` parameter: {e}") from e
+
+    slopes_scaled = slopes_arr / scaling_divisor
 
     # 1. Determine Method and Generate Base Noise Model
     # We generate 'n_simulations' *independent* noise realizations.
@@ -134,8 +172,9 @@ def power_test(
 
     power_values = []
 
-    for beta in slopes_arr:
+    for idx, beta in enumerate(slopes_scaled):
         n_detected = 0
+        original_slope = slopes_arr[idx] # Keep track of user-facing slope
 
         # We assume the noise_bank has shape (n_simulations, n_samples)
         # For each realization...
@@ -174,7 +213,8 @@ def power_test(
         power_values.append(power)
 
         results.append({
-            'slope': beta,
+            'slope': original_slope,
+            'slope_scaled': beta,
             'power': power,
             'n_detected': n_detected,
             'n_simulations': n_simulations
@@ -184,6 +224,7 @@ def power_test(
 
     # 3. Calculate Minimum Detectable Trend (MDT) at 80% Power
     # We use linear interpolation looking for the 0.8 crossing.
+    # Note: MDT is reported in original units (slopes_arr)
 
     mdt = np.nan
     target_power = 0.8
@@ -226,5 +267,6 @@ def power_test(
         n_surrogates_inner=n_surrogates,
         alpha=alpha,
         simulation_results=df_results,
-        noise_method=method_used
+        noise_method=method_used,
+        slope_scaling=slope_scaling
     )
