@@ -86,8 +86,8 @@ def test_audit_heavy_ties():
 
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
-        # Run in fast mode
-        res = trend_test(x, t, large_dataset_mode='fast')
+        # Run in fast mode with robust method to trigger O(N log N) fast path
+        res = trend_test(x, t, large_dataset_mode='fast', mk_test_method='robust')
 
         # Check for the specific warning in captured warnings
         tie_warnings = [str(warn.message) for warn in w if "Heavy ties detected" in str(warn.message)]

@@ -83,7 +83,7 @@ def test_audit_seasonal_surrogate_aggregation_mismatch():
         )
         pytest.fail("Should have raised ValueError for mismatched seasonal surrogate kwargs")
     except ValueError as e:
-        assert "Automatic mapping is not possible" in str(e)
+            assert "cannot be automatically mapped" in str(e)
     except Exception as e:
         pytest.fail(f"Seasonal Aggregation + Surrogate + Kwargs crashed with unexpected error: {e}")
 

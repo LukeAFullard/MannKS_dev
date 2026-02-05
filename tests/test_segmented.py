@@ -152,7 +152,7 @@ def test_dataframe_missing_value_column():
     t = np.arange(10)
     df = pd.DataFrame({'a': np.arange(10), 'b': np.arange(10)})
 
-    with pytest.raises(ValueError, match="must contain a 'value' column"):
+    with pytest.raises(ValueError, match="contain a 'value' column"):
         segmented_trend_test(df, t)
 
 def test_predict_method():

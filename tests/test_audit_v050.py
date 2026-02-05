@@ -79,7 +79,7 @@ def test_heavy_ties():
 
     # Expect warning about heavy ties
     with pytest.warns(UserWarning, match="Heavy ties detected"):
-        result = trend_test(x, t)
+        result = trend_test(x, t, mk_test_method='robust')
 
     assert result.computation_mode == 'fast'
     # Result should be valid
