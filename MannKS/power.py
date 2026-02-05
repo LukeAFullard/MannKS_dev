@@ -99,6 +99,7 @@ def power_test(
         raise ValueError("x and t must have the same length.")
 
     surr_kwargs = surrogate_kwargs.copy() if surrogate_kwargs else {}
+    surr_kwargs.update(kwargs)
 
     # Handle Slope Unit Conversion
     # _get_slope_scaling_factor returns Seconds/Unit.
