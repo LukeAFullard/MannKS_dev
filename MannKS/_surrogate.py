@@ -95,6 +95,8 @@ def _iaaft_surrogates(
             # Check convergence (mean squared change)
             change = np.mean((r_new - r)**2)
             if change < tol or change >= prev_change:
+                 if change >= prev_change and change > tol:
+                     warnings.warn(f"IAAFT convergence stalled at iter {_}. Result may be suboptimal.", UserWarning)
                  r = r_new
                  break
 
@@ -223,7 +225,15 @@ def _lomb_scargle_surrogates(
             # x_surr = Sum( A * cos(2pi*f*t + phi) )
 
             x_synth = np.zeros(n)
-            chunk_size = 1000 # Process 1000 frequencies at a time
+
+            # Memory Optimization (Issue #10)
+            # Reduce chunk size based on N to keep memory usage < 100MB per batch
+            # Memory per batch = N * chunk_size * 8 bytes
+            # Target 100MB = 100 * 10^6 bytes / 8 = 12.5M elements
+            # chunk_size = 12.5M / N
+            safe_elements = 12_500_000
+            chunk_size = max(10, int(safe_elements / max(1, n)))
+            chunk_size = min(chunk_size, 1000) # Cap at 1000 for reasonable frequency batches
 
             for j in range(0, len(freq), chunk_size):
                 end = min(j + chunk_size, len(freq))

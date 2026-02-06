@@ -535,12 +535,18 @@ def seasonal_ats_slope(x: np.ndarray, y: np.ndarray, censored: np.ndarray, seaso
                     n_s = len(idx_s)
 
                     # Resample residuals within this season
+                    # Fix Issue #12: rng.choice(idx_s) returns GLOBAL indices.
+                    # This correctly pulls residuals from the same season but random time points.
+                    # fitted_s uses idx_s (ordered global indices for this season).
+                    # This correctly pairs fitted(t) with residual(t_random) from the same season.
                     resampled_indices = rng.choice(idx_s, size=n_s, replace=True)
 
                     # Construct bootstrapped intervals for this season
                     # Note: x_s_norm is already normalized
-                    # fitted values must be grabbed corresponding to idx_s
+                    # fitted values must be grabbed corresponding to idx_s (ordered time)
                     fitted_s = fitted[idx_s]
+
+                    # Residuals are grabbed from the random indices (bootstrap resampling)
                     resid_lower_s_resampled = resid_lower[resampled_indices]
                     resid_upper_s_resampled = resid_upper[resampled_indices]
 
