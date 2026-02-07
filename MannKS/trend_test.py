@@ -685,12 +685,15 @@ def trend_test(
                 # Even if lengths match (1-to-1 aggregation), the order might differ (unsorted input vs sorted agg).
                 if agg_method != 'none':
                     # Audit v0.6.0: Explicitly forbid ambiguous mapping during aggregation
-                    raise ValueError(
-                        f"Surrogate arguments (e.g. 'dy') cannot be automatically mapped when aggregation "
-                        f"is used (`agg_method='{agg_method}'`) because the link to original indices is lost. "
-                        "Please pre-aggregate your surrogate arguments to match the analysis data or pass "
-                        "arguments that match the aggregated data length."
-                    )
+                    # We only check for array-like arguments that likely correspond to original data.
+                    for k, v in kwargs_base.items():
+                        if hasattr(v, '__len__') and len(v) == n_orig and not isinstance(v, str):
+                            raise ValueError(
+                                f"Surrogate argument '{k}' (length {len(v)}) cannot be automatically mapped when aggregation "
+                                f"is used (`agg_method='{agg_method}'`) because the link to original indices is lost. "
+                                "Please pre-aggregate your surrogate arguments to match the analysis data or pass "
+                                "arguments that match the aggregated data length."
+                            )
 
                 if n_orig != n_filt:
                     # We have filtered or aggregated data, but no map to original indices.
