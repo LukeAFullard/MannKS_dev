@@ -528,7 +528,7 @@ def surrogate_test(
     # Logic: If data is random red noise, how often do we see a trend this strong?
 
     n_extreme = np.sum(np.abs(surrogate_scores) >= np.abs(s_orig))
-    p_value = n_extreme / n_surrogates
+    p_value = (n_extreme + 1) / (n_surrogates + 1)
 
     # Z-score relative to surrogate distribution
     mean_s = np.mean(surrogate_scores)

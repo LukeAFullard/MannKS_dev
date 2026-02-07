@@ -67,7 +67,7 @@ class TestAdversarialCore:
             x, t,
             slopes=[slope],
             n_simulations=10,
-            n_surrogates=10,
+            n_surrogates=50,
             detrend=True,
             surrogate_method='lomb_scargle' # Force LS to test complex path
         )
@@ -91,7 +91,7 @@ class TestAdversarialCore:
         # 2 columns, neither is 'value' -> ambiguous, should fail
         df = pd.DataFrame({'wrong': np.arange(10), 'also_wrong': np.arange(10)})
         t = np.arange(10)
-        with pytest.raises(ValueError, match="no 'value' column"):
+        with pytest.raises(ValueError, match="Input DataFrame `x` must be 1-dimensional"):
             power_test(df, t, slopes=[0.1])
 
     def test_iaaft_uneven_warning(self):
