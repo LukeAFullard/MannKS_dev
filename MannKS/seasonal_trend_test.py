@@ -666,13 +666,18 @@ def seasonal_trend_test(
                         return
 
                     # Case 3: Mismatch
-                    # If it's not scalar and length doesn't match either context, we can't safely use it.
-                    # Note: We can't strict fail here for ALL kwargs because some might be valid scalars/options
-                    # that happen to have __len__ (rare but possible).
-                    # But for things like 'dy' it's critical.
-                    # We will assume if it looks array-like and doesn't match, it's a user error
-                    # unless explicitly handled.
-                    pass
+                    # If it's not scalar and length doesn't match either context, we assume it's an error.
+                    # This prevents crashes later (e.g. in Astropy) due to dimension mismatch.
+                    # We allow strings (obviously) and small iterables that might be options (heuristic: len < 2?)
+                    # But if it's substantial length and doesn't match, raise ValueError.
+                    if v_len > 1:
+                        # Heuristic: If it's short, it might be a valid option list (unlikely for surrogate_test kwargs).
+                        # But typically these are arrays.
+                        raise ValueError(
+                            f"Surrogate argument '{k}' has length {v_len}, which does not match the original data length ({n_raw}) "
+                            f"or the filtered/aggregated data length ({n_current_filtered}). "
+                            "Please ensure array arguments align with the input data."
+                        )
 
             for k, v in kwargs_base.items():
                 _validate_surrogate_kwarg(k, v)
