@@ -20,7 +20,7 @@ def test_trend_test_surrogate_kwargs_median_aggregation_error():
     dy = np.random.rand(n) * 0.1
 
     # Median aggregation loses original index
-    with pytest.raises(ValueError, match="Surrogate arguments .* cannot be automatically mapped"):
+    with pytest.raises(ValueError, match="Surrogate argument .* cannot be automatically mapped"):
         trend_test(
             x, t,
             agg_method='median',

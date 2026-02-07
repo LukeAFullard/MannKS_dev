@@ -169,8 +169,8 @@ def test_n_surrogates_one():
     t = np.arange(20)
     res = surrogate_test(x, t, n_surrogates=1)
     assert len(res.surrogate_scores) == 1
-    # p-value can only be 0.0 or 1.0
-    assert res.p_value in [0.0, 1.0]
+    # p-value = (n_extreme + 1) / (n + 1). For n=1, p can be 1/2 or 2/2.
+    assert res.p_value in [0.5, 1.0]
 
 def test_constant_input_power_test():
     """Power test with constant input (zero variance noise)."""
@@ -178,6 +178,11 @@ def test_constant_input_power_test():
     t = np.arange(20)
 
     slopes = [0.1]
-    res = power_test(x, t, slopes, n_simulations=5, n_surrogates=5, surrogate_method='lomb_scargle')
+    # n_surrogates must be >= 19 to detect p < 0.05
+    res = power_test(x, t, slopes, n_simulations=5, n_surrogates=20, surrogate_method='lomb_scargle')
 
+    # With n_surrogates=20, min p-value is ~0.048 < 0.05.
+    # The original signal (trend) is perfectly monotonic (max S).
+    # Surrogates (phase-shuffled trend) are likely not perfectly monotonic due to spectral leakage/noise.
+    # Thus S_orig > S_surr for all surrogates, leading to significance.
     assert res.power[0] == 1.0
