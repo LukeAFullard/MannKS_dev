@@ -69,6 +69,9 @@ def _iaaft_surrogates(
     sorted_x = np.sort(x)
     fft_x = np.fft.rfft(x)
     amp_x = np.abs(fft_x)
+    var_x = np.var(x)
+    if var_x < 1e-9:
+        var_x = 1.0 # Prevent division by zero for constant data
 
     surrogates = np.empty((n_surrogates, n))
 
@@ -95,14 +98,16 @@ def _iaaft_surrogates(
 
             # Check convergence (mean squared change)
             change = np.mean((r_new - r)**2)
+            rel_change = change / var_x
 
-            if change < tol:
+            if rel_change < tol:
                  r = r_new
                  break
 
             if change >= prev_change:
-                 if change > tol:
-                     warnings.warn(f"IAAFT convergence stalled at iter {i}. Result may be suboptimal.", UserWarning)
+                 # Check relative change to avoid scale-dependent warnings
+                 if rel_change > max(tol, 1e-3):
+                     warnings.warn(f"IAAFT convergence stalled at iter {i} (rel_change={rel_change:.2e}). Result may be suboptimal.", UserWarning)
                  # Keep previous r (better), discard r_new
                  break
 
