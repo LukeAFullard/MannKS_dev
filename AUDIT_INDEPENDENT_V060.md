@@ -8,11 +8,11 @@
 
 An independent, adversarial audit was conducted on the new features introduced in version 0.6.0. The audit focused on "correctness, edge cases, and trust ability," bypassing existing tests to verify the system from first principles.
 
-**Conclusion:** The v0.6.0 features are **production-ready**. No bugs were found in the production code. The system correctly handles edge cases (constant data, huge offsets, invalid inputs) and enforces strict safety checks to prevent silent errors during data aggregation.
+**Conclusion:** The v0.6.0 features are **production-ready**. A critical edge case involving datetime handling in `surrogate_test` was identified and fixed, along with a cosmetic warning bug. The system now robustly handles all tested inputs, including direct datetime array injection.
 
 ## 2. Methodology
 
-A new test suite (`tests/audit_v060/test_independent_audit.py`) was developed to test the system under stress. Key areas tested included:
+Two test suites (`tests/audit_v060/test_independent_audit.py` and `tests/audit_v060/test_v060_regression_fixes.py`) were used to test the system under stress. Key areas tested included:
 
 1.  **Lomb-Scargle Stability:** Verified that the spectral synthesis method handles degenerate cases (constant data, massive numerical offsets) without crashing or producing invalid results (NaNs).
 2.  **Surrogate Argument Integrity:** Verified that `trend_test` and `seasonal_trend_test` raise explicit `ValueError`s when a user attempts to pass array-like arguments (e.g., `dy` error bars) while also aggregating data (e.g., daily to monthly). This ensures that data and error bars never silently become misaligned.
@@ -32,6 +32,8 @@ A new test suite (`tests/audit_v060/test_independent_audit.py`) was developed to
 | **Power Slope Scaling** | ✅ PASS | Large trends detected, negligible trends (when scaled) ignored. |
 | **Power Reproducibility** | ✅ PASS | Identical results with fixed seed. |
 | **Input Validation** | ✅ PASS | Correctly rejects invalid `agg_period` and missing columns. |
+| **Surrogate Time Handling** | ✅ FIXED | `surrogate_test` crashed with datetime inputs due to NumPy 2.x type strictness. Fixed by enforcing numeric conversion. |
+| **Warning Formatting** | ✅ FIXED | Corrected loop variable naming in IAAFT warnings. |
 
 ## 4. Recommendations
 
