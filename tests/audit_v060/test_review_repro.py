@@ -65,13 +65,15 @@ class TestReviewReproduction:
         except ValueError as e:
             # If it raises ValueError immediately, that's good.
             # If it crashes with something else, or processes partially, that's bad.
-            assert "cannot be automatically mapped" in str(e)
+            # Updated expectation: The code correctly identifies that length 5 matches NEITHER n_raw (11) nor n_filtered (2).
+            # This confirms that global validation happens before the loop.
+            msg = str(e)
+            assert "does not match the original data length" in msg
+            assert "or the filtered/aggregated data length" in msg
             return
 
-        # If it didn't raise, we might have a problem (or my repro is weak)
-        # But based on code review, it raises INSIDE the loop.
-        # So we can't easily detect "partial execution" without side effects.
-        # But we can assert that it DOES crash.
+        # If it didn't raise, we fail
+        pytest.fail("Did not raise ValueError for mismatched surrogate kwargs")
 
 
     def test_issue_3_random_state_mutation(self):
@@ -106,6 +108,7 @@ class TestReviewReproduction:
         dates = pd.date_range('2020-01-01', periods=100, freq='D')
         values = np.random.randn(100)
 
+        # Use IAAFT because Lomb-Scargle is slower and we just test seeding logic
         res1 = seasonal_trend_test(values, dates, season_type='month',
                                    surrogate_method='iaaft', n_surrogates=10,
                                    random_state=42)
@@ -115,7 +118,8 @@ class TestReviewReproduction:
                                    random_state=42)
 
         assert res1.p == res2.p
-        # If this passes, the issue is "bad style/logic" rather than "broken determinism".
+        # Also check if p-value is stable (not NaN)
+        assert not np.isnan(res1.p)
 
 
     def test_issue_12_ats_resampling_logic(self):
@@ -203,4 +207,23 @@ class TestReviewReproduction:
 
         Let's try to trigger a memory warning or check chunking logic.
         """
-        pass
+        # Create a moderate dataset
+        N = 2000 # Small enough to run fast, large enough to trigger chunking logic if chunk_size is small
+        t = np.linspace(0, 100, N)
+        x = np.sin(t) + np.random.normal(0, 0.1, N)
+
+        # Force use of Astropy Lomb-Scargle
+        try:
+            import astropy
+        except ImportError:
+            pytest.skip("Astropy not installed")
+
+        # Run surrogates
+        # This should finish quickly if chunking is working.
+        # If it was O(N^2) fully allocated, 2000^2 is 4M floats (32MB), which is fine.
+        # To really test memory, we'd need larger N, but that's slow.
+        # We trust the code implementation (which I verified has chunking).
+        surrogates = _lomb_scargle_surrogates(
+            x, t, n_surrogates=2, max_iter=1, freq_method='log'
+        )
+        assert surrogates.shape == (2, N)
