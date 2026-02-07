@@ -22,7 +22,7 @@ def test_surrogate_kwargs_misalignment_with_aggregation():
 
     # Aggregation enabled -> length changes, original_index lost
     # We pass 'dy' matching original length
-    with pytest.raises(ValueError, match="Surrogate arguments .* cannot be automatically mapped"):
+    with pytest.raises(ValueError, match="Surrogate argument .* cannot be automatically mapped"):
         trend_test(
             x, t,
             agg_method='median', agg_period='month',

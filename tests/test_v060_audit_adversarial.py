@@ -94,7 +94,7 @@ def test_power_test_dataframe_bad_structure():
     df = pd.DataFrame({'a': [1,2,3], 'b': [4,5,6]})
     t = np.arange(3)
 
-    with pytest.raises(ValueError, match="multiple columns"):
+    with pytest.raises(ValueError, match="Input DataFrame .* must be 1-dimensional"):
         power_test(df, t, [0.1])
 
 # --- 3. Surrogate Kwargs Injection & Validation ---
