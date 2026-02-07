@@ -95,10 +95,15 @@ def _iaaft_surrogates(
 
             # Check convergence (mean squared change)
             change = np.mean((r_new - r)**2)
-            if change < tol or change >= prev_change:
-                 if change >= prev_change and change > tol:
-                     warnings.warn(f"IAAFT convergence stalled at iter {i}. Result may be suboptimal.", UserWarning)
+
+            if change < tol:
                  r = r_new
+                 break
+
+            if change >= prev_change:
+                 if change > tol:
+                     warnings.warn(f"IAAFT convergence stalled at iter {i}. Result may be suboptimal.", UserWarning)
+                 # Keep previous r (better), discard r_new
                  break
 
             r = r_new
@@ -451,6 +456,30 @@ def surrogate_test(
         tie_break_method=tie_break_method,
         tau_method=tau_method
     )
+
+    # Consistency Check for Censored Data
+    if np.any(censored):
+        # Calculate S using the imputed values (x_eff) used for surrogate generation
+        s_imputed, _, _, _ = _mk_score_and_var_censored(
+            x_eff, t_arr,
+            censored=censored,
+            cen_type=cen_type,
+            mk_test_method=mk_test_method,
+            tie_break_method=tie_break_method,
+            tau_method=tau_method
+        )
+
+        # If the rank structure of the imputed data differs from the raw data
+        # (e.g. because lt_mult resolves ambiguities that were ties), warn the user.
+        if not np.isclose(s_orig, s_imputed, atol=1e-5):
+             warnings.warn(
+                 f"Imputation with lt_mult={lt_mult} changes the Mann-Kendall S statistic "
+                 f"(Raw: {s_orig}, Imputed: {s_imputed}). "
+                 "The p-value is calculated using the Raw S statistic against surrogates derived from "
+                 "the Imputed data. This may lead to conservative results if imputation resolves "
+                 "ambiguities present in the raw data.",
+                 UserWarning
+             )
 
     # 2. Surrogate Scores
     surrogate_scores = np.zeros(n_surrogates)
