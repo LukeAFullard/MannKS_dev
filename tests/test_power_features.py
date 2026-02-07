@@ -52,7 +52,8 @@ def test_power_test_dataframe_error():
     t = np.arange(20)
     df = pd.DataFrame({'a': np.arange(20), 'b': np.arange(20)})
 
-    with pytest.raises(ValueError, match="no 'value' column"):
+    # Message changed due to _prepare_data usage
+    with pytest.raises(ValueError, match="contain a 'value' column"):
         power_test(df, t, slopes=[0.1], n_simulations=5, n_surrogates=5)
 
 def test_power_test_invalid_unit():

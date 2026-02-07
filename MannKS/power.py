@@ -12,7 +12,7 @@ from typing import Union, Optional, List, NamedTuple, Dict
 from scipy.interpolate import interp1d
 
 from ._surrogate import surrogate_test, _iaaft_surrogates, _lomb_scargle_surrogates, HAS_ASTROPY
-from ._helpers import _preprocessing, _get_slope_scaling_factor
+from ._helpers import _preprocessing, _get_slope_scaling_factor, _prepare_data
 
 class PowerResult(NamedTuple):
     """Container for power analysis results."""
@@ -73,33 +73,42 @@ def power_test(
     Returns:
         PowerResult: Named tuple containing power curve, MDT, and details.
     """
-    # Robustly handle DataFrame input for x
-    if isinstance(x, pd.DataFrame):
-        if 'value' in x.columns:
-            x_arr = x['value'].to_numpy()
-        elif x.shape[1] == 1:
-            x_arr = x.iloc[:, 0].to_numpy()
-        else:
-            raise ValueError(
-                "Input `x` is a DataFrame but has multiple columns and no 'value' column. "
-                "Please provide a Series, 1D array, or DataFrame with a 'value' column."
-            )
-    else:
-        x_arr = np.asarray(x).flatten()
+    # Prepare and filter data (handles NaNs and datetime conversion)
+    # This ensures Lomb-Scargle and other methods receive clean data.
+    # Note: hicensor=False because power_test simulates additive trends on
+    # the observed values, not censored logic directly. If the user provides
+    # 'censored' flags in kwargs, they are responsible for their meaning.
 
-    t_arr = np.asarray(t).flatten()
+    # Robustly handle DataFrame input before passing to _prepare_data
+    # _prepare_data is strict about requiring 'value', 'censored', 'cen_type'
+    # if passing a multi-column DataFrame. power_test only needs the values.
+    x_input = x
+    if isinstance(x, pd.DataFrame) and 'value' in x.columns:
+        x_input = x['value']
 
-    # Convert t to numeric (float seconds if datetime) using internal helper
-    t_numeric, _ = _preprocessing(t_arr)
+    data_filtered, _ = _prepare_data(x_input, t, hicensor=False)
 
-    slopes_arr = np.asarray(slopes)
+    x_arr = data_filtered['value'].to_numpy()
+    t_numeric = data_filtered['t'].to_numpy()
 
-    # Validation
-    if len(x_arr) != len(t_numeric):
-        raise ValueError("x and t must have the same length.")
-
+    # Check if data was filtered (e.g. NaNs removed)
+    # We must align array-like kwargs (e.g. 'dy', 'censored') if provided.
     surr_kwargs = surrogate_kwargs.copy() if surrogate_kwargs else {}
     surr_kwargs.update(kwargs)
+
+    if 'original_index' in data_filtered.columns:
+        kept_indices = data_filtered['original_index'].values
+        n_orig = len(np.asarray(t).flatten())
+
+        for k, v in surr_kwargs.items():
+            if hasattr(v, '__len__') and len(v) == n_orig and not isinstance(v, str):
+                # Slice to match filtered data
+                if isinstance(v, (pd.Series, pd.DataFrame)):
+                    surr_kwargs[k] = v.iloc[kept_indices]
+                else:
+                    surr_kwargs[k] = np.asarray(v)[kept_indices]
+
+    slopes_arr = np.asarray(slopes)
 
     # Handle Slope Unit Conversion
     # _get_slope_scaling_factor returns Seconds/Unit.
