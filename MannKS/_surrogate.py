@@ -22,6 +22,7 @@ except ImportError:
     HAS_ASTROPY = False
 
 from ._stats import _mk_score_and_var_censored, _z_score, _p_value
+from ._datetime import _to_numeric_time
 
 
 class SurrogateResult(NamedTuple):
@@ -77,7 +78,7 @@ def _iaaft_surrogates(
 
         prev_change = float('inf')
 
-        for _ in range(max_iter):
+        for i in range(max_iter):
             # Step 1: Enforce Power Spectrum
             # Take FFT, replace amplitudes with original amp_x, keep phases
             fft_r = np.fft.rfft(r)
@@ -96,7 +97,7 @@ def _iaaft_surrogates(
             change = np.mean((r_new - r)**2)
             if change < tol or change >= prev_change:
                  if change >= prev_change and change > tol:
-                     warnings.warn(f"IAAFT convergence stalled at iter {_}. Result may be suboptimal.", UserWarning)
+                     warnings.warn(f"IAAFT convergence stalled at iter {i}. Result may be suboptimal.", UserWarning)
                  r = r_new
                  break
 
@@ -329,7 +330,7 @@ def surrogate_test(
         SurrogateResult: Named tuple containing p-value, z-score, and details.
     """
     x_arr = np.asarray(x).flatten()
-    t_arr = np.asarray(t).flatten()
+    t_arr = _to_numeric_time(t).flatten()
     n = len(x_arr)
 
     if censored is None:
