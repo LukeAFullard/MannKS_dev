@@ -32,9 +32,10 @@ def test_power_slope_scaling():
     # The injected trend will be 2.0 units PER SECOND.
     # Over 1 year (~3e7 seconds), this is massive.
     # Power should be 1.0 instantly.
+    # Note: With (n+1)/(m+1) p-value logic, n_surrogates must be > 19 to possibly detect at alpha=0.05
     res_unscaled = power_test(
         x, t, slopes=[slope_per_year],
-        n_simulations=10, n_surrogates=10,
+        n_simulations=10, n_surrogates=50,
         slope_scaling=None,
         random_state=42
     )

@@ -136,8 +136,9 @@ class TestIndependentAuditV060:
         slopes = [1.0] # 1 unit
 
         # Case A: slope_scaling='s' (default-ish/explicit). 1 unit/sec. Massive trend. Power should be 1.0.
+        # With corrected p-value logic (n+1)/(m+1), we need > 19 surrogates for alpha=0.05
         res_sec = power_test(self.x_random, self.t_daily, slopes=[1e-5], slope_scaling='s',
-                             n_simulations=10, n_surrogates=10)
+                             n_simulations=10, n_surrogates=50)
         # 1e-5 per second is ~864 per day. Over 100 days -> 86400 change. Huge.
         assert res_sec.power[0] == 1.0, "Should detect massive trend (per second) easily"
 
