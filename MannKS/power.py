@@ -110,6 +110,20 @@ def power_test(
 
     slopes_arr = np.asarray(slopes)
 
+    if len(slopes_arr) == 0:
+        # Return empty result
+        return PowerResult(
+            slopes=np.array([]),
+            power=np.array([]),
+            min_detectable_trend=np.nan,
+            n_simulations=n_simulations,
+            n_surrogates_inner=n_surrogates,
+            alpha=alpha,
+            simulation_results=pd.DataFrame(),
+            noise_method=surrogate_method, # defaulting since we didn't determine it
+            slope_scaling=slope_scaling
+        )
+
     # Handle Slope Unit Conversion
     # _get_slope_scaling_factor returns Seconds/Unit.
     # User slope is Units/Unit.
@@ -233,6 +247,18 @@ def power_test(
     for idx, beta in enumerate(slopes_scaled):
         n_detected = 0
         original_slope = slopes_arr[idx] # Keep track of user-facing slope
+
+        if not np.isfinite(beta):
+            # Skip invalid slopes
+            results.append({
+                'slope': original_slope,
+                'slope_scaled': beta,
+                'power': np.nan,
+                'n_detected': 0,
+                'n_simulations': n_simulations
+            })
+            power_values.append(np.nan)
+            continue
 
         # We assume the noise_bank has shape (n_simulations, n_samples)
         # For each realization...
