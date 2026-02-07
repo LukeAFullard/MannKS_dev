@@ -419,10 +419,22 @@ def surrogate_test(
         if not is_uniform and method != 'auto':
             warnings.warn("Using IAAFT on unevenly spaced data. Results may be biased.", UserWarning)
 
+        # Propagate max_iter (explicit arg) and tol (from kwargs) to IAAFT.
+        # Note: surrogate_test defaults max_iter=1 (suitable for Lomb-Scargle standard mode),
+        # but IAAFT requires iterative refinement (default 100).
+        # If max_iter is left at 1 (the default), we override it to 100 for IAAFT
+        # to ensure convergence unless the user explicitly requested a different value (implied by != 1).
+
+        iaaft_max_iter = max_iter
+        if max_iter == 1:
+            iaaft_max_iter = 100
+
         surrogates = _iaaft_surrogates(
             x_eff,
             n_surrogates=n_surrogates,
-            random_state=random_state
+            random_state=random_state,
+            max_iter=iaaft_max_iter,
+            tol=kwargs.get('tol', 1e-6)
         )
     else:
         raise ValueError(f"Unknown method '{method}'.")

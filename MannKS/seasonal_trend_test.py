@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 import warnings
+import hashlib
 from scipy.stats import norm
 from ._stats import (_z_score, _p_value,
                    _sens_estimator_unequal_spacing, _confidence_intervals,
@@ -681,13 +682,26 @@ def seasonal_trend_test(
             # Avoid mutating random_state. Generate a sequence of seeds upfront.
             season_seeds = {}
             if random_state is not None:
-                # Use a separate generator to produce deterministic seeds for each season
+                # FIX: Use deterministic hashing based on season ID to ensure stability
+                # even if some seasons are missing in the dataset (Issue found in Audit v0.6.0).
+                # This ensures that Season X always gets the same seed for a given random_state,
+                # regardless of whether Season Y is present.
+
+                # Create a generator from the random_state (handles int or RNG object)
                 rng_seeds = np.random.default_rng(random_state)
-                # Generate enough seeds for all potential season IDs
-                # We map season ID to a seed
+                # Derive a base seed from the random state (int or RNG object)
+                # This ensures stability regardless of input type, without using object repr which varies
+                base_seed = rng_seeds.integers(0, 2**32)
+
                 unique_seasons_list = np.unique(season_range)
-                generated_seeds = rng_seeds.integers(0, 2**32, size=len(unique_seasons_list))
-                season_seeds = {s: int(seed) for s, seed in zip(unique_seasons_list, generated_seeds)}
+                for s_id in unique_seasons_list:
+                    # Construct a unique string key combining the base seed and season ID
+                    key_str = f"{base_seed}_{s_id}"
+                    # Hash it to get a deterministic integer
+                    h = hashlib.sha256(key_str.encode('utf-8')).digest()
+                    # Use first 4 bytes as a 32-bit integer seed
+                    seed_val = int.from_bytes(h[:4], 'big')
+                    season_seeds[s_id] = seed_val
 
             # Iterate over seasons
             for i in season_range:
