@@ -343,6 +343,13 @@ def surrogate_test(
     t_arr = _to_numeric_time(t).flatten()
     n = len(x_arr)
 
+    # Validation: Check for NaNs or Infs
+    # We require clean data for spectral analysis/surrogates
+    if not np.isfinite(x_arr).all():
+        raise ValueError("Input `x` contains NaNs or infinite values. Please filter data before running `surrogate_test`.")
+    if not np.isfinite(t_arr).all():
+        raise ValueError("Input `t` contains NaNs or infinite values (or invalid datetimes).")
+
     if censored is None:
         censored = np.zeros_like(x_arr, dtype=bool)
     if cen_type is None:
