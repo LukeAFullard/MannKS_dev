@@ -23,6 +23,7 @@ except ImportError:
 
 from ._stats import _mk_score_and_var_censored, _z_score, _p_value
 from ._datetime import _to_numeric_time
+from ._check_data import check_data_integrity
 
 
 class SurrogateResult(NamedTuple):
@@ -107,7 +108,14 @@ def _iaaft_surrogates(
             if change >= prev_change:
                  # Check relative change to avoid scale-dependent warnings
                  if rel_change > max(tol, 1e-3):
-                     warnings.warn(f"IAAFT convergence stalled at iter {i} (rel_change={rel_change:.2e}). Result may be suboptimal.", UserWarning)
+                     # Throttle warning or provide more context
+                     # We issue this warning only if it's "significant" stalling
+                     warnings.warn(
+                         f"IAAFT convergence stalled at iter {i} (rel_change={rel_change:.2e}). "
+                         "This often indicates data with unusual spectral properties or too few observations. "
+                         "The result may be suboptimal but is usually acceptable.",
+                         UserWarning
+                     )
                  # Keep previous r (better), discard r_new
                  break
 
@@ -343,12 +351,9 @@ def surrogate_test(
     t_arr = _to_numeric_time(t).flatten()
     n = len(x_arr)
 
-    # Validation: Check for NaNs or Infs
-    # We require clean data for spectral analysis/surrogates
-    if not np.isfinite(x_arr).all():
-        raise ValueError("Input `x` contains NaNs or infinite values. Please filter data before running `surrogate_test`.")
-    if not np.isfinite(t_arr).all():
-        raise ValueError("Input `t` contains NaNs or infinite values (or invalid datetimes).")
+    # Validate data integrity (NaNs, Infs, Sample Size)
+    # This prevents cryptic failures during spectral analysis
+    check_data_integrity(x_arr, t_arr, context="surrogate_test")
 
     if censored is None:
         censored = np.zeros_like(x_arr, dtype=bool)
