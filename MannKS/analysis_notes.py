@@ -121,7 +121,9 @@ def get_sens_slope_analysis_note(slopes, t, cen_type):
         # This case indicates a mismatch that shouldn't happen in normal operation
         return "ok"
 
-    cen_type_pairs = (cen_type[i] + " " + cen_type[j])[valid_mask]
+    # Ensure cen_type is treated as string array for np.char.add compatibility
+    cen_type_str = cen_type.astype(str)
+    cen_type_pairs = (np.char.add(np.char.add(cen_type_str[i], " "), cen_type_str[j]))[valid_mask]
 
     # Find the minimum absolute difference from the median
     abs_diffs = np.abs(slopes - median_slope)
