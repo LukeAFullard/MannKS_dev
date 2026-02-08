@@ -325,6 +325,12 @@ def calculate_breakpoint_probability(result, start_date, end_date):
 
     Returns:
         float: Probability (0.0 to 1.0).
+
+    Note:
+        The window is defined as a half-open interval [start_date, end_date).
+        This means a breakpoint exactly at `start_date` is included, but one exactly
+        at `end_date` is excluded. This prevents double-counting when calculating
+        probabilities across adjacent time windows.
     """
     if result.bootstrap_samples is None or len(result.bootstrap_samples) == 0:
         warnings.warn("No bootstrap samples available. Run with use_bagging=True.", UserWarning)
@@ -347,7 +353,8 @@ def calculate_breakpoint_probability(result, start_date, end_date):
         # Check if ANY breakpoint in this iteration is in the window
         found = False
         for bp in iteration_bps:
-            if t_start <= bp <= t_end:
+            # Use half-open interval [start, end) to prevent double counting
+            if t_start <= bp < t_end:
                 found = True
                 break
         if found:

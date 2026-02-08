@@ -167,6 +167,14 @@ def seasonal_trend_test(
 
     Returns:
         namedtuple: A named tuple containing the results of the Seasonal Mann-Kendall test.
+
+    Note:
+        When `slope_scaling` is used, the returned `slope` is scaled to the requested
+        unit (e.g., per year), but the `intercept` corresponds to the unscaled
+        `slope_per_second` (for datetime) or unscaled time units.
+        For manual predictions, use: ``y = slope_per_second * t_numeric + intercept``
+        Do NOT use the scaled `slope` with the intercept directly unless you also
+        scale the time variable ``t``.
     """
 
     # --- Basic Input Validation ---
@@ -1016,8 +1024,12 @@ def seasonal_trend_test(
             slope_units = f"{x_unit} per unit of t"
 
         # Collect warnings
+        seen_warnings = set()
         for w in w_log:
-                captured_warnings.append(str(w.message))
+            w_str = str(w.message)
+            if w_str not in seen_warnings:
+                captured_warnings.append(w_str)
+                seen_warnings.add(w_str)
 
     results = res(trend, h, p, z, Tau, s, var_s, scaled_slope, intercept, scaled_lower_ci, scaled_upper_ci, C, Cd,
                   '', [], sen_prob, sen_prob_max, sen_prob_min,
