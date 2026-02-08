@@ -346,6 +346,15 @@ def surrogate_test(
 
     Returns:
         SurrogateResult: Named tuple containing p-value, z-score, and details.
+
+    Note:
+        When `censored` data is present, censoring flags are mapped to surrogate
+        values based on rank (e.g., the lowest value in the surrogate series is censored
+        if the lowest value in the original series was censored). This assumes that
+        censoring is a property of the value magnitude (i.e., concentration level),
+        not the time of measurement. If censoring is strongly time-dependent (e.g.,
+        due to changing detection limits over time), this assumption may be violated,
+        and surrogate p-values may be biased.
     """
     x_arr = np.asarray(x).flatten()
     t_arr = _to_numeric_time(t).flatten()
@@ -357,8 +366,13 @@ def surrogate_test(
 
     if censored is None:
         censored = np.zeros_like(x_arr, dtype=bool)
+    else:
+        censored = np.asarray(censored)
+
     if cen_type is None:
         cen_type = np.full(x_arr.shape, 'not', dtype=object)
+    else:
+        cen_type = np.asarray(cen_type)
 
     notes = []
 

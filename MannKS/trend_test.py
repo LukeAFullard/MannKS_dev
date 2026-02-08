@@ -173,6 +173,14 @@ def trend_test(
 
     Returns:
         namedtuple: A named tuple containing the results of the Mann-Kendall test.
+
+    Note:
+        When `slope_scaling` is used, the returned `slope` is scaled to the requested
+        unit (e.g., per year), but the `intercept` corresponds to the unscaled
+        `slope_per_second` (for datetime) or unscaled time units.
+        For manual predictions, use: ``y = slope_per_second * t_numeric + intercept``
+        Do NOT use the scaled `slope` with the intercept directly unless you also
+        scale the time variable ``t``.
     """
 
     # --- Basic Input Validation ---

@@ -30,8 +30,8 @@ def test_power_test_reproducibility():
     slopes = [0.1]
 
     # Run twice
-    res1 = power_test(x, t, slopes, n_simulations=10, n_surrogates=10, random_state=123)
-    res2 = power_test(x, t, slopes, n_simulations=10, n_surrogates=10, random_state=123)
+    res1 = power_test(x, t, slopes, n_simulations=10, n_surrogates=20, random_state=123)
+    res2 = power_test(x, t, slopes, n_simulations=10, n_surrogates=20, random_state=123)
 
     assert np.allclose(res1.power, res2.power)
     if np.isnan(res1.min_detectable_trend):
@@ -62,7 +62,7 @@ def test_input_immutability():
     x_orig = x.copy()
     t_num = np.arange(5)
 
-    _ = power_test(x, t_num, [0.1], n_simulations=5, n_surrogates=5)
+    _ = power_test(x, t_num, [0.1], n_simulations=5, n_surrogates=20)
 
     assert np.array_equal(x, x_orig)
 
