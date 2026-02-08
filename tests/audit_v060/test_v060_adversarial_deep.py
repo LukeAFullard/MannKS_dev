@@ -64,7 +64,7 @@ class TestSurrogateAdversarial:
         try:
             res = surrogate_test(x, t, n_surrogates=10)
         except ValueError as e:
-            assert "Input `x` contains NaNs or infinite values" in str(e)
+            assert "Input `x` contains infinite values" in str(e)
         except Exception as e:
              pytest.fail(f"Crashed on Inf input: {e}")
 

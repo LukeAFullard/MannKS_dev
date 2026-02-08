@@ -13,6 +13,7 @@ from scipy.interpolate import interp1d
 
 from ._surrogate import surrogate_test, _iaaft_surrogates, _lomb_scargle_surrogates, HAS_ASTROPY
 from ._helpers import _preprocessing, _get_slope_scaling_factor, _prepare_data
+from ._check_data import check_data_integrity
 
 class PowerResult(NamedTuple):
     """Container for power analysis results."""
@@ -90,6 +91,9 @@ def power_test(
 
     x_arr = data_filtered['value'].to_numpy()
     t_numeric = data_filtered['t'].to_numpy()
+
+    # Final check for data integrity (e.g. infinite values which _prepare_data might not catch)
+    check_data_integrity(x_arr, t_numeric, context="power_test")
 
     # Check if data was filtered (e.g. NaNs removed)
     # We must align array-like kwargs (e.g. 'dy', 'censored') if provided.
