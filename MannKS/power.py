@@ -322,7 +322,7 @@ def power_test(
                 )
 
             # Check detection
-            if res.p_value < alpha:
+            if res.p_value <= alpha:
                 n_detected += 1
 
         power = n_detected / n_simulations
