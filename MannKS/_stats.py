@@ -626,7 +626,9 @@ def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_m
     # 3. Create censor labels for pairs and apply rules
     # The order MUST be j, i to match the R script's lower.tri() logic,
     # which pairs (later_time, earlier_time).
-    cen_type_pairs = cen_type[j_indices] + " " + cen_type[i_indices]
+    # Ensure cen_type is treated as string array for np.char.add compatibility
+    cen_type_str = cen_type.astype(str)
+    cen_type_pairs = np.char.add(np.char.add(cen_type_str[j_indices], " "), cen_type_str[i_indices])
     slopes_final = slopes_mod.copy()
 
     # Determine the value to assign to ambiguous slopes based on the method
