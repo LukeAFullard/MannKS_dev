@@ -109,7 +109,7 @@ def test_power_test_slope_scaling():
                 slopes=slopes,
                 slope_scaling='year',
                 n_simulations=1,
-                n_surrogates=10,
+                n_surrogates=20,
                 surrogate_method='lomb_scargle'
             )
 
@@ -144,7 +144,7 @@ def test_power_test_suppresses_warnings():
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
                 power_test(
-                    x, t, slopes=slopes, n_simulations=1, n_surrogates=10,
+                    x, t, slopes=slopes, n_simulations=1, n_surrogates=20,
                     surrogate_method='lomb_scargle'
                 )
 

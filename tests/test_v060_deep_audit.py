@@ -64,7 +64,7 @@ def test_power_test_minimal_data():
     res = power_test(
         x, t, slopes,
         n_simulations=5,
-        n_surrogates=10,
+        n_surrogates=20,
         surrogate_method='iaaft'
     )
     assert len(res.power) == 2
@@ -129,7 +129,7 @@ def test_power_test_nan_slopes():
     t = np.arange(20)
     slopes = [0.1, np.nan, 0.5]
 
-    res = power_test(x, t, slopes, n_simulations=5, n_surrogates=5)
+    res = power_test(x, t, slopes, n_simulations=5, n_surrogates=20)
 
     # NaN slope injection: x + NaN * t = NaN.
     # surrogate_test on NaN data -> ?
