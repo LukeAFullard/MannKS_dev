@@ -74,11 +74,20 @@ def test_power_test_invalid_alpha():
     # alpha=0 implies strict impossibility?
     # alpha=1 implies always significant?
 
+    # With n_surrogates=5, min possible p is 1/6 = 0.166...
+    # If alpha=1.0, 0.166 < 1.0, so detection is possible (and guaranteed if we force it).
+    # But usually power_test generates noise, so p-values vary.
+    # However, if alpha=1.0, ANY p-value (<= 1.0) is "significant".
+    # So power should be 1.0.
     res = power_test(x, t, slopes, n_simulations=5, n_surrogates=5, alpha=1.0, surrogate_method='iaaft')
-    assert res.power[0] == 1.0 # Should detect everything since p < 1.0 is always true
+    assert res.power[0] == 1.0
 
-    res = power_test(x, t, slopes, n_simulations=5, n_surrogates=5, alpha=0.0, surrogate_method='iaaft')
-    assert res.power[0] == 0.0 # Should detect nothing since p < 0 is impossible
+    # With alpha=0.0, detection is impossible (p < 0 is impossible).
+    # However, code might raise ValueError now because 1/(n+1) > alpha (0.16 > 0).
+    # Or checking alpha=0 specifically might cause division error if not handled.
+    # We fixed the division error. Now we expect ValueError.
+    with pytest.raises(ValueError, match="Impossible to detect trends"):
+        power_test(x, t, slopes, n_simulations=5, n_surrogates=5, alpha=0.0, surrogate_method='iaaft')
 
 def test_power_test_invalid_slope_scaling():
     """Test invalid slope scaling unit."""

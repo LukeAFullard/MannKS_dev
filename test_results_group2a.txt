@@ -1,0 +1,66 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.12, pytest-9.0.2, pluggy-1.6.0 -- /home/jules/.pyenv/versions/3.12.12/bin/python3.12
+cachedir: .pytest_cache
+rootdir: /app
+configfile: pyproject.toml
+collecting ... collected 29 items
+
+tests/test_large_segmented.py::test_large_segmented_aggregation PASSED   [  3%]
+tests/test_large_segmented.py::test_custom_aggregation_parameters PASSED [  6%]
+tests/test_large_segmented.py::test_large_segmented_bagging PASSED       [ 10%]
+tests/test_main_coverage.py::test_seasonal_trend_test_invalid_season_type PASSED [ 13%]
+tests/test_main_coverage.py::test_check_seasonality_no_unique_seasons PASSED [ 17%]
+tests/test_main_coverage.py::test_check_seasonality_agg_errors PASSED    [ 20%]
+tests/test_main_coverage.py::test_get_sens_slope_analysis_note_mismatch PASSED [ 24%]
+tests/test_main_coverage.py::test_get_sens_slope_analysis_note_no_indices PASSED [ 27%]
+tests/test_main_coverage.py::test_mk_score_and_var_censored_tie_break_methods PASSED [ 31%]
+tests/test_main_coverage.py::test_mk_score_and_var_censored_default_delx PASSED [ 34%]
+tests/test_median_thinning.py::test_median_thinning_not_implemented PASSED [ 37%]
+tests/test_median_thinning.py::test_median_thinning_logic PASSED         [ 41%]
+tests/test_multipliers.py::test_trend_test_custom_multipliers PASSED     [ 44%]
+tests/test_multipliers.py::test_seasonal_trend_test_custom_multipliers PASSED [ 48%]
+tests/test_performance.py::test_performance_scaling PASSED               [ 51%]
+tests/test_performance.py::test_accuracy_vs_speed_tradeoff PASSED        [ 55%]
+tests/test_plotting.py::test_inspection_plot_creation_via_inspect_trend_data PASSED [ 58%]
+tests/test_plotting.py::test_inspection_plot_generalization PASSED       [ 62%]
+tests/test_plotting.py::test_inspection_plot_error_handling PASSED       [ 65%]
+tests/test_plotting.py::test_inspection_plot_cycle_generalization PASSED [ 68%]
+tests/test_plotting_coverage.py::test_plot_seasonal_distribution_insufficient_data PASSED [ 72%]
+tests/test_plotting_coverage.py::test_plot_seasonal_distribution_numeric_seasons PASSED [ 75%]
+tests/test_plotting_coverage.py::test_plot_inspection_data_non_datetime PASSED [ 79%]
+tests/test_plotting_coverage.py::test_plot_inspection_data_matrix_exceptions PASSED [ 82%]
+tests/test_plotting_coverage.py::test_plot_trend_no_save_path PASSED     [ 86%]
+tests/test_plotting_coverage.py::test_plot_trend_with_numeric_time PASSED [ 89%]
+tests/test_plotting_diagnostics.py::test_residual_plot_generation PASSED [ 93%]
+tests/test_plotting_diagnostics.py::test_residual_plot_censored PASSED   [ 96%]
+tests/test_plotting_diagnostics.py::test_residual_plot_insufficient_data PASSED [100%]
+
+=============================== warnings summary ===============================
+tests/test_performance.py:7
+  /app/tests/test_performance.py:7: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_performance.py:43
+  /app/tests/test_performance.py:43: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_main_coverage.py::test_get_sens_slope_analysis_note_no_indices
+  /app/MannKS/analysis_notes.py:109: RuntimeWarning: All-NaN slice encountered
+    median_slope = np.nanmedian(slopes)
+
+tests/test_performance.py::test_accuracy_vs_speed_tradeoff
+tests/test_performance.py::test_accuracy_vs_speed_tradeoff
+tests/test_performance.py::test_accuracy_vs_speed_tradeoff
+tests/test_performance.py::test_accuracy_vs_speed_tradeoff
+  /app/MannKS/trend_test.py:790: UserWarning: Large dataset (n=6000): Using fast approximations. Set large_dataset_mode='full' to force exact calculations.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_plotting_coverage.py::test_plot_seasonal_distribution_numeric_seasons
+tests/test_plotting_coverage.py::test_plot_seasonal_distribution_numeric_seasons
+tests/test_plotting_coverage.py::test_plot_seasonal_distribution_numeric_seasons
+tests/test_plotting_coverage.py::test_plot_seasonal_distribution_numeric_seasons
+  /home/jules/.pyenv/versions/3.12.12/lib/python3.12/site-packages/seaborn/categorical.py:700: PendingDeprecationWarning: vert: bool will be deprecated in a future version. Use orientation: {'vertical', 'horizontal'} instead.
+    artists = ax.bxp(**boxplot_kws)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================= 29 passed, 11 warnings in 115.95s (0:01:55) ==================

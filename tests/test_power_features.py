@@ -17,7 +17,7 @@ def test_power_test_slope_scaling():
     # This is small compared to noise (sigma=1). Power should be low.
 
     res = power_test(
-        x, t, slopes=[1.0], n_simulations=10, n_surrogates=10,
+        x, t, slopes=[1.0], n_simulations=10, n_surrogates=20,
         slope_scaling='year'
     )
 
@@ -33,7 +33,7 @@ def test_power_test_dataframe_input():
     df = pd.DataFrame({'value': np.random.normal(0, 1, 20), 'censored': False})
 
     # This previously failed because it flattened the DF. Now it should extract 'value'.
-    res = power_test(df, t, slopes=[0.1], n_simulations=5, n_surrogates=5)
+    res = power_test(df, t, slopes=[0.1], n_simulations=5, n_surrogates=20)
 
     assert res.n_simulations == 5
 
@@ -44,7 +44,7 @@ def test_power_test_dataframe_input_prepared():
     df_prep = prepare_censored_data(['1', '2', '3'] * 6 + ['4', '5']) # 20 items
 
     # Should run without error
-    res = power_test(df_prep, t, slopes=[0.1], n_simulations=5, n_surrogates=5)
+    res = power_test(df_prep, t, slopes=[0.1], n_simulations=5, n_surrogates=20)
     assert res.n_simulations == 5
 
 def test_power_test_dataframe_error():
@@ -54,7 +54,7 @@ def test_power_test_dataframe_error():
 
     # Message changed due to _prepare_data usage
     with pytest.raises(ValueError, match="contain a 'value' column"):
-        power_test(df, t, slopes=[0.1], n_simulations=5, n_surrogates=5)
+        power_test(df, t, slopes=[0.1], n_simulations=5, n_surrogates=20)
 
 def test_power_test_invalid_unit():
     """Verify that invalid slope_scaling raises ValueError."""
@@ -62,4 +62,4 @@ def test_power_test_invalid_unit():
     x = np.random.normal(0, 1, 100)
 
     with pytest.raises(ValueError, match="Invalid `slope_scaling` parameter"):
-        power_test(x, t, slopes=[1.0], n_simulations=5, n_surrogates=5, slope_scaling='foobar')
+        power_test(x, t, slopes=[1.0], n_simulations=5, n_surrogates=20, slope_scaling='foobar')

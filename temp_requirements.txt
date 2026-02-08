@@ -1,0 +1,11 @@
+-e .
+pandas
+matplotlib
+seaborn
+numpy
+scipy
+pytest
+tabulate
+streamlit
+openpyxl
+astropy

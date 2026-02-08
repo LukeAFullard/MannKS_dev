@@ -1,0 +1,987 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.12, pytest-9.0.2, pluggy-1.6.0 -- /home/jules/.pyenv/versions/3.12.12/bin/python3.12
+cachedir: .pytest_cache
+rootdir: /app
+configfile: pyproject.toml
+collecting ... collected 80 items
+
+tests/test_unequal_spacing.py::test_trend_test_unequal_spacing PASSED    [  1%]
+tests/test_unequal_spacing.py::test_seasonal_trend_test_weekly_aggregation PASSED [  2%]
+tests/test_unequal_spacing.py::test_seasonal_trend_test_hourly_aggregation PASSED [  3%]
+tests/test_unequal_spacing.py::test_seasonal_trend_test_parameter_validation PASSED [  5%]
+tests/test_unequal_spacing.py::test_seasonal_trend_test_numeric_year_aggregation PASSED [  6%]
+tests/test_unequal_spacing.py::test_seasonal_trend_test_year_seasonality PASSED [  7%]
+tests/test_unequal_spacing.py::test_seasonal_trend_test_datetime_aggregation PASSED [  8%]
+tests/test_unequal_spacing.py::test_seasonal_trend_test_aggregation PASSED [ 10%]
+tests/test_unequal_spacing.py::test_trend_test_with_datetime64 PASSED    [ 11%]
+tests/test_unequal_spacing.py::test_trend_test_with_datetime_objects PASSED [ 12%]
+tests/test_unequal_spacing.py::test_seasonal_trend_test_unequal_spacing PASSED [ 13%]
+tests/test_unequal_spacing.py::test_trend_test_no_trend PASSED           [ 15%]
+tests/test_unequal_spacing.py::test_seasonal_trend_test_with_trend PASSED [ 16%]
+tests/test_unequal_spacing.py::test_trend_test_with_nan PASSED           [ 17%]
+tests/test_unequal_spacing.py::test_seasonal_trend_test_with_nan PASSED  [ 18%]
+tests/test_unequal_spacing.py::test_tied_timestamp_warning PASSED        [ 20%]
+tests/test_unequal_spacing.py::test_empty_input PASSED                   [ 21%]
+tests/test_unequal_spacing.py::test_all_nan_input PASSED                 [ 22%]
+tests/test_unsorted_inputs.py::test_block_bootstrap_unsorted_input PASSED [ 23%]
+tests/test_utils.py::test_mk_score_and_var_censored_float_precision PASSED [ 25%]
+tests/test_utils_coverage.py::TestUtilsCoverage::test_get_cycle_identifier_edge_cases PASSED [ 26%]
+tests/test_utils_coverage.py::TestUtilsCoverage::test_get_season_func_invalid_period PASSED [ 27%]
+tests/test_utils_coverage.py::TestUtilsCoverage::test_get_season_func_invalid_season PASSED [ 28%]
+tests/test_utils_coverage.py::TestUtilsCoverage::test_mk_score_and_var_censored_no_variance PASSED [ 30%]
+tests/test_utils_coverage.py::TestUtilsCoverage::test_rle_lengths_empty_input PASSED [ 31%]
+tests/test_utils_coverage.py::TestAggregateCensoredMedian::test_empty_group PASSED [ 32%]
+tests/test_utils_coverage.py::TestAggregateCensoredMedian::test_nan_cen_type_mode PASSED [ 33%]
+tests/test_utils_coverage.py::TestNumericalStability::test_mk_score_and_var_censored_zero_denominator PASSED [ 35%]
+tests/test_utils_coverage.py::TestNumericalStability::test_z_score_zero_variance PASSED [ 36%]
+tests/test_v060_audit.py::test_audit_surrogate_aggregation_mismatch PASSED [ 37%]
+tests/test_v060_audit.py::test_audit_surrogate_kwargs_sanitization PASSED [ 38%]
+tests/test_v060_audit.py::test_audit_seasonal_surrogate_aggregation_mismatch PASSED [ 40%]
+tests/test_v060_audit.py::test_audit_bootstrap_constant_data PASSED      [ 41%]
+tests/test_v060_audit.py::test_audit_short_series_surrogate PASSED       [ 42%]
+tests/test_v060_audit.py::test_audit_unsorted_bootstrap PASSED           [ 43%]
+tests/test_v060_audit_adversarial.py::test_lomb_scargle_constant_data PASSED [ 45%]
+tests/test_v060_audit_adversarial.py::test_lomb_scargle_extreme_time PASSED [ 46%]
+tests/test_v060_audit_adversarial.py::test_surrogate_test_nan_handling PASSED [ 47%]
+tests/test_v060_audit_adversarial.py::test_power_test_invalid_alpha FAILED [ 48%]
+tests/test_v060_audit_adversarial.py::test_power_test_invalid_slope_scaling PASSED [ 50%]
+tests/test_v060_audit_adversarial.py::test_power_test_dataframe_bad_structure PASSED [ 51%]
+tests/test_v060_audit_adversarial.py::test_trend_test_surrogate_kwargs_mismatch_aggregation PASSED [ 52%]
+tests/test_v060_audit_adversarial.py::test_trend_test_surrogate_kwargs_length_mismatch_no_agg PASSED [ 53%]
+tests/test_v060_audit_adversarial.py::test_performance_warning_surrogates PASSED [ 55%]
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift PASSED [ 56%]
+tests/test_v060_audit_comprehensive.py::test_surrogate_test_reproducibility PASSED [ 57%]
+tests/test_v060_audit_comprehensive.py::test_power_test_reproducibility PASSED [ 58%]
+tests/test_v060_audit_comprehensive.py::test_input_immutability PASSED   [ 60%]
+tests/test_v060_audit_comprehensive.py::test_seasonal_kwargs_matching_original_no_agg PASSED [ 61%]
+tests/test_v060_audit_comprehensive.py::test_seasonal_kwargs_matching_original_WITH_agg PASSED [ 62%]
+tests/test_v060_audit_comprehensive.py::test_seasonal_kwargs_matching_aggregated PASSED [ 63%]
+tests/test_v060_audit_comprehensive.py::test_seasonal_kwargs_alignment_pandas PASSED [ 65%]
+tests/test_v060_audit_comprehensive.py::test_n_surrogates_one PASSED     [ 66%]
+tests/test_v060_audit_comprehensive.py::test_constant_input_power_test PASSED [ 67%]
+tests/test_v060_audit_fixes.py::test_trend_test_surrogate_kwargs_median_aggregation_error PASSED [ 68%]
+tests/test_v060_audit_fixes.py::test_trend_test_surrogate_kwargs_middle_aggregation_success PASSED [ 70%]
+tests/test_v060_audit_fixes.py::test_seasonal_trend_test_surrogate_aggregation PASSED [ 71%]
+tests/test_v060_audit_fixes.py::test_power_test_slope_scaling FAILED     [ 72%]
+tests/test_v060_audit_fixes.py::test_power_test_suppresses_warnings FAILED [ 73%]
+tests/test_v060_audit_fixes.py::test_power_test_warns_on_complexity PASSED [ 75%]
+tests/test_v060_deep_audit.py::test_surrogate_kwargs_misalignment_with_aggregation PASSED [ 76%]
+tests/test_v060_deep_audit.py::test_seasonal_surrogate_kwargs_misalignment PASSED [ 77%]
+tests/test_v060_deep_audit.py::test_power_test_minimal_data FAILED       [ 78%]
+tests/test_v060_deep_audit.py::test_lomb_scargle_constant_data PASSED    [ 80%]
+tests/test_v060_deep_audit.py::test_surrogate_zero_surrogates PASSED     [ 81%]
+tests/test_v060_deep_audit.py::test_seasonal_missing_season PASSED       [ 82%]
+tests/test_v060_deep_audit.py::test_power_test_nan_slopes FAILED         [ 83%]
+tests/test_v060_deep_audit.py::test_surrogate_memory_warning_check PASSED [ 85%]
+tests/test_v060_edge_cases.py::test_unsorted_aggregation_surrogate_alignment_correctness PASSED [ 86%]
+tests/test_v060_edge_cases.py::test_aggregation_surrogate_mismatch_error PASSED [ 87%]
+tests/test_v060_edge_cases.py::test_seasonal_aggregation_surrogate_crash PASSED [ 88%]
+tests/test_v060_edge_cases.py::test_constant_surrogates PASSED           [ 90%]
+tests/test_v060_edge_cases.py::test_all_censored_surrogates PASSED       [ 91%]
+tests/test_v060_edge_cases.py::test_block_bootstrap_tiny_n PASSED        [ 92%]
+tests/test_v060_edge_cases.py::test_seasonal_missing_seasons PASSED      [ 93%]
+tests/test_warning_returns.py::test_trend_test_return_warnings PASSED    [ 95%]
+tests/test_warning_returns.py::test_seasonal_trend_test_return_warnings PASSED [ 96%]
+tests/test_warning_returns.py::test_segmented_trend_test_return_warnings PASSED [ 97%]
+tests/test_warning_returns.py::test_rolling_trend_test_return_warnings PASSED [ 98%]
+tests/test_warning_returns.py::test_regional_test_return_warnings PASSED [100%]
+
+=================================== FAILURES ===================================
+________________________ test_power_test_invalid_alpha _________________________
+
+    def test_power_test_invalid_alpha():
+        """Test power test with extreme alpha values."""
+        x = np.random.randn(20)
+        t = np.arange(20)
+        slopes = [0.1]
+
+        # alpha=0 implies strict impossibility?
+        # alpha=1 implies always significant?
+
+        res = power_test(x, t, slopes, n_simulations=5, n_surrogates=5, alpha=1.0, surrogate_method='iaaft')
+        assert res.power[0] == 1.0 # Should detect everything since p < 1.0 is always true
+
+>       res = power_test(x, t, slopes, n_simulations=5, n_surrogates=5, alpha=0.0, surrogate_method='iaaft')
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_v060_audit_adversarial.py:80:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+x = array([-0.96903746, -0.109599  ,  0.19589428,  1.75290405,  1.55903766,
+        1.55094106,  0.87682295, -1.78404689, ...776572, -0.02689364,  0.5478616 , -0.53790674,
+        2.18432348, -0.5380644 , -0.52542447,  0.58180688, -0.70790214])
+t = array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
+       17, 18, 19])
+slopes = [0.1], n_simulations = 5, n_surrogates = 5, alpha = 0.0
+surrogate_method = 'iaaft', random_state = None, surrogate_kwargs = None
+slope_scaling = None, detrend = False, kwargs = {}
+x_input = array([-0.96903746, -0.109599  ,  0.19589428,  1.75290405,  1.55903766,
+        1.55094106,  0.87682295, -1.78404689, ...776572, -0.02689364,  0.5478616 , -0.53790674,
+        2.18432348, -0.5380644 , -0.52542447,  0.58180688, -0.70790214])
+data_filtered =        value  censored cen_type  t_original     t  original_index
+0  -0.969037     False      not           0   0.0   ...     False      not          18  18.0              18
+19 -0.707902     False      not          19  19.0              19
+_ = False
+x_arr = array([-0.96903746, -0.109599  ,  0.19589428,  1.75290405,  1.55903766,
+        1.55094106,  0.87682295, -1.78404689, ...776572, -0.02689364,  0.5478616 , -0.53790674,
+        2.18432348, -0.5380644 , -0.52542447,  0.58180688, -0.70790214])
+t_numeric = array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11., 12.,
+       13., 14., 15., 16., 17., 18., 19.])
+surr_kwargs = {}, min_possible_p = 0.16666666666666666
+
+    def power_test(
+        x: Union[np.ndarray, pd.DataFrame],
+        t: np.ndarray,
+        slopes: Union[List[float], np.ndarray],
+        n_simulations: int = 100,
+        n_surrogates: int = 1000,
+        alpha: float = 0.05,
+        surrogate_method: str = 'auto',
+        random_state: Optional[int] = None,
+        surrogate_kwargs: Optional[dict] = None,
+        slope_scaling: Optional[str] = None,
+        detrend: bool = False,
+        **kwargs
+    ) -> PowerResult:
+        """
+        Estimates the statistical power of the surrogate trend test via Monte Carlo simulation.
+
+        Generates synthetic datasets by injecting deterministic trends into colored noise
+        realizations (derived from the input data's spectral properties) and calculating
+        the frequency of significant detections.
+
+        Args:
+            x (Union[np.ndarray, pd.DataFrame]): Input data (used to define the noise model).
+            t (np.ndarray): Time values.
+            slopes (Union[List[float], np.ndarray]): List of trend slopes (beta) to test.
+            n_simulations (int): Number of Monte Carlo simulations per slope.
+            n_surrogates (int): Number of surrogates used in the *inner* significance test.
+            alpha (float): Significance level for detection (default 0.05).
+            surrogate_method (str): Method for surrogate generation ('auto', 'iaaft', 'lomb_scargle').
+                Used for both noise generation and the inner test.
+            random_state (Optional[int]): Seed for reproducibility.
+            surrogate_kwargs (dict, optional): Additional arguments passed to the surrogate generator
+                (e.g., {'dy': errors, 'freq_method': 'log'}).
+            slope_scaling (str, optional): The time unit for the provided slopes (e.g., 'year').
+                If provided, input slopes are interpreted as 'units per [slope_scaling]' and
+                converted to 'units per second' before injection.
+                Supports: 's', 'min', 'h', 'D', 'Y' and their full names (e.g. 'year', 'day').
+                Default is None (no conversion, interpreted as units per second or raw time unit).
+            detrend (bool): If True, linearly detrends the input `x` before generating surrogates.
+                This prevents an existing strong trend in `x` from inflating the low-frequency
+                power of the noise model, which would otherwise reduce the estimated power.
+                Default is False (conservative).
+            **kwargs: Additional arguments passed to `surrogate_test`.
+
+        Returns:
+            PowerResult: Named tuple containing power curve, MDT, and details.
+        """
+        # Prepare and filter data (handles NaNs and datetime conversion)
+        # This ensures Lomb-Scargle and other methods receive clean data.
+        # Note: hicensor=False because power_test simulates additive trends on
+        # the observed values, not censored logic directly. If the user provides
+        # 'censored' flags in kwargs, they are responsible for their meaning.
+
+        # Robustly handle DataFrame input before passing to _prepare_data
+        # _prepare_data is strict about requiring 'value', 'censored', 'cen_type'
+        # if passing a multi-column DataFrame. power_test only needs the values.
+        x_input = x
+        if isinstance(x, pd.DataFrame) and 'value' in x.columns:
+            x_input = x['value']
+
+        data_filtered, _ = _prepare_data(x_input, t, hicensor=False)
+
+        x_arr = data_filtered['value'].to_numpy()
+        t_numeric = data_filtered['t'].to_numpy()
+
+        # Final check for data integrity (e.g. infinite values which _prepare_data might not catch)
+        check_data_integrity(x_arr, t_numeric, context="power_test")
+
+        # Check if data was filtered (e.g. NaNs removed)
+        # We must align array-like kwargs (e.g. 'dy', 'censored') if provided.
+        surr_kwargs = surrogate_kwargs.copy() if surrogate_kwargs else {}
+        surr_kwargs.update(kwargs)
+
+        if 'censored' in surr_kwargs and np.any(surr_kwargs['censored']):
+            warnings.warn(
+                "Censored data simulation in power analysis assumes censoring status and limits "
+                "track the simulated trend (i.e., the limit of detection moves with the mean). "
+                "This may not reflect fixed detection limits common in environmental data. "
+                "Results should be interpreted with caution.",
+                UserWarning
+            )
+
+        # Check for impossible detection (footgun prevention)
+        # The minimum possible p-value with N surrogates is 1 / (N + 1).
+        # If this minimum is greater than alpha, no trend can ever be detected.
+        min_possible_p = 1.0 / (n_surrogates + 1)
+        if min_possible_p > alpha:
+            raise ValueError(
+                f"Impossible to detect trends with n_surrogates={n_surrogates} and alpha={alpha}. "
+                f"The minimum possible p-value is {min_possible_p:.4f}, which is > {alpha}. "
+>               f"Please increase n_surrogates (recommend > {int(1/alpha)}) or increase alpha."
+                                                                 ^^^^^^^
+            )
+E           ZeroDivisionError: float division by zero
+
+MannKS/power.py:120: ZeroDivisionError
+________________________ test_power_test_slope_scaling _________________________
+
+    def test_power_test_slope_scaling():
+        """
+        Verify slope scaling logic in power_test.
+        If we provide slope=1/year, it should be converted to ~3.17e-8 / sec.
+        """
+        x = np.random.randn(100)
+        t = np.arange(100) * 86400 # Daily data in seconds
+        slopes = [365.25 * 86400] # 1 unit per year (if scaling='year')
+
+        # We'll mock _lomb_scargle_surrogates to return zeros so x_sim = beta * t
+        with patch('MannKS.power._lomb_scargle_surrogates', return_value=np.zeros((1, 100))):
+            with patch('MannKS.power.surrogate_test') as mock_test:
+                # Mock return
+                mock_test.return_value = MagicMock(p_value=0.0)
+
+>               power_test(
+                    x, t,
+                    slopes=slopes,
+                    slope_scaling='year',
+                    n_simulations=1,
+                    n_surrogates=10,
+                    surrogate_method='lomb_scargle'
+                )
+
+tests/test_v060_audit_fixes.py:107:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+x = array([ 1.19962008, -1.22305797,  1.11861402, -0.63855574,  1.10055218,
+       -1.84982626,  1.97586205,  0.37484215, ...704288,  0.39886152, -1.20372411,  0.08796466,
+       -1.01232455,  2.27034314, -0.19865198,  1.01428032, -0.57656763])
+t = array([      0,   86400,  172800,  259200,  345600,  432000,  518400,
+        604800,  691200,  777600,  864000,  9504...3200, 7689600, 7776000,
+       7862400, 7948800, 8035200, 8121600, 8208000, 8294400, 8380800,
+       8467200, 8553600])
+slopes = [31557600.0], n_simulations = 1, n_surrogates = 10, alpha = 0.05
+surrogate_method = 'lomb_scargle', random_state = None, surrogate_kwargs = None
+slope_scaling = 'year', detrend = False, kwargs = {}
+x_input = array([ 1.19962008, -1.22305797,  1.11861402, -0.63855574,  1.10055218,
+       -1.84982626,  1.97586205,  0.37484215, ...704288,  0.39886152, -1.20372411,  0.08796466,
+       -1.01232455,  2.27034314, -0.19865198,  1.01428032, -0.57656763])
+data_filtered =        value  censored cen_type  t_original          t  original_index
+0   1.199620     False      not           0    ...467200.0              98
+99 -0.576568     False      not     8553600  8553600.0              99
+
+[100 rows x 6 columns]
+_ = False
+x_arr = array([ 1.19962008, -1.22305797,  1.11861402, -0.63855574,  1.10055218,
+       -1.84982626,  1.97586205,  0.37484215, ...704288,  0.39886152, -1.20372411,  0.08796466,
+       -1.01232455,  2.27034314, -0.19865198,  1.01428032, -0.57656763])
+t_numeric = array([      0.,   86400.,  172800.,  259200.,  345600.,  432000.,
+        518400.,  604800.,  691200.,  777600.,  864...00.,
+       7776000., 7862400., 7948800., 8035200., 8121600., 8208000.,
+       8294400., 8380800., 8467200., 8553600.])
+surr_kwargs = {}, min_possible_p = 0.09090909090909091
+
+    def power_test(
+        x: Union[np.ndarray, pd.DataFrame],
+        t: np.ndarray,
+        slopes: Union[List[float], np.ndarray],
+        n_simulations: int = 100,
+        n_surrogates: int = 1000,
+        alpha: float = 0.05,
+        surrogate_method: str = 'auto',
+        random_state: Optional[int] = None,
+        surrogate_kwargs: Optional[dict] = None,
+        slope_scaling: Optional[str] = None,
+        detrend: bool = False,
+        **kwargs
+    ) -> PowerResult:
+        """
+        Estimates the statistical power of the surrogate trend test via Monte Carlo simulation.
+
+        Generates synthetic datasets by injecting deterministic trends into colored noise
+        realizations (derived from the input data's spectral properties) and calculating
+        the frequency of significant detections.
+
+        Args:
+            x (Union[np.ndarray, pd.DataFrame]): Input data (used to define the noise model).
+            t (np.ndarray): Time values.
+            slopes (Union[List[float], np.ndarray]): List of trend slopes (beta) to test.
+            n_simulations (int): Number of Monte Carlo simulations per slope.
+            n_surrogates (int): Number of surrogates used in the *inner* significance test.
+            alpha (float): Significance level for detection (default 0.05).
+            surrogate_method (str): Method for surrogate generation ('auto', 'iaaft', 'lomb_scargle').
+                Used for both noise generation and the inner test.
+            random_state (Optional[int]): Seed for reproducibility.
+            surrogate_kwargs (dict, optional): Additional arguments passed to the surrogate generator
+                (e.g., {'dy': errors, 'freq_method': 'log'}).
+            slope_scaling (str, optional): The time unit for the provided slopes (e.g., 'year').
+                If provided, input slopes are interpreted as 'units per [slope_scaling]' and
+                converted to 'units per second' before injection.
+                Supports: 's', 'min', 'h', 'D', 'Y' and their full names (e.g. 'year', 'day').
+                Default is None (no conversion, interpreted as units per second or raw time unit).
+            detrend (bool): If True, linearly detrends the input `x` before generating surrogates.
+                This prevents an existing strong trend in `x` from inflating the low-frequency
+                power of the noise model, which would otherwise reduce the estimated power.
+                Default is False (conservative).
+            **kwargs: Additional arguments passed to `surrogate_test`.
+
+        Returns:
+            PowerResult: Named tuple containing power curve, MDT, and details.
+        """
+        # Prepare and filter data (handles NaNs and datetime conversion)
+        # This ensures Lomb-Scargle and other methods receive clean data.
+        # Note: hicensor=False because power_test simulates additive trends on
+        # the observed values, not censored logic directly. If the user provides
+        # 'censored' flags in kwargs, they are responsible for their meaning.
+
+        # Robustly handle DataFrame input before passing to _prepare_data
+        # _prepare_data is strict about requiring 'value', 'censored', 'cen_type'
+        # if passing a multi-column DataFrame. power_test only needs the values.
+        x_input = x
+        if isinstance(x, pd.DataFrame) and 'value' in x.columns:
+            x_input = x['value']
+
+        data_filtered, _ = _prepare_data(x_input, t, hicensor=False)
+
+        x_arr = data_filtered['value'].to_numpy()
+        t_numeric = data_filtered['t'].to_numpy()
+
+        # Final check for data integrity (e.g. infinite values which _prepare_data might not catch)
+        check_data_integrity(x_arr, t_numeric, context="power_test")
+
+        # Check if data was filtered (e.g. NaNs removed)
+        # We must align array-like kwargs (e.g. 'dy', 'censored') if provided.
+        surr_kwargs = surrogate_kwargs.copy() if surrogate_kwargs else {}
+        surr_kwargs.update(kwargs)
+
+        if 'censored' in surr_kwargs and np.any(surr_kwargs['censored']):
+            warnings.warn(
+                "Censored data simulation in power analysis assumes censoring status and limits "
+                "track the simulated trend (i.e., the limit of detection moves with the mean). "
+                "This may not reflect fixed detection limits common in environmental data. "
+                "Results should be interpreted with caution.",
+                UserWarning
+            )
+
+        # Check for impossible detection (footgun prevention)
+        # The minimum possible p-value with N surrogates is 1 / (N + 1).
+        # If this minimum is greater than alpha, no trend can ever be detected.
+        min_possible_p = 1.0 / (n_surrogates + 1)
+        if min_possible_p > alpha:
+>           raise ValueError(
+                f"Impossible to detect trends with n_surrogates={n_surrogates} and alpha={alpha}. "
+                f"The minimum possible p-value is {min_possible_p:.4f}, which is > {alpha}. "
+                f"Please increase n_surrogates (recommend > {int(1/alpha)}) or increase alpha."
+            )
+E           ValueError: Impossible to detect trends with n_surrogates=10 and alpha=0.05. The minimum possible p-value is 0.0909, which is > 0.05. Please increase n_surrogates (recommend > 20) or increase alpha.
+
+MannKS/power.py:117: ValueError
+_____________________ test_power_test_suppresses_warnings ______________________
+
+    def test_power_test_suppresses_warnings():
+        """
+        Verify that power_test does NOT suppress unknown UserWarnings from surrogate_test.
+        But it SHOULD suppress 'Censored data...' warnings.
+        """
+        x = np.random.randn(10)
+        t = np.arange(10)
+        slopes = [0.1]
+
+        def warn_surrogate(*args, **kwargs):
+            warnings.warn("Performance Warning", UserWarning)
+            warnings.warn("Censored data detected in surrogate test", UserWarning)
+            return MagicMock(p_value=0.5)
+
+        with patch('MannKS.power._lomb_scargle_surrogates', return_value=np.zeros((1, 10))):
+            with patch('MannKS.power.surrogate_test', side_effect=warn_surrogate):
+                with warnings.catch_warnings(record=True) as w:
+                    warnings.simplefilter("always")
+>                   power_test(
+                        x, t, slopes=slopes, n_simulations=1, n_surrogates=10,
+                        surrogate_method='lomb_scargle'
+                    )
+
+tests/test_v060_audit_fixes.py:146:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+x = array([-0.18503071,  0.92181532, -1.42153039, -0.30459886,  0.87814555,
+        0.48394672,  0.34068281,  0.13857293,  0.55305416, -0.21786392])
+t = array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]), slopes = [0.1], n_simulations = 1
+n_surrogates = 10, alpha = 0.05, surrogate_method = 'lomb_scargle'
+random_state = None, surrogate_kwargs = None, slope_scaling = None
+detrend = False, kwargs = {}
+x_input = array([-0.18503071,  0.92181532, -1.42153039, -0.30459886,  0.87814555,
+        0.48394672,  0.34068281,  0.13857293,  0.55305416, -0.21786392])
+data_filtered =       value  censored cen_type  t_original    t  original_index
+0 -0.185031     False      not           0  0.0       ...054     False      not           8  8.0               8
+9 -0.217864     False      not           9  9.0               9
+_ = False
+x_arr = array([-0.18503071,  0.92181532, -1.42153039, -0.30459886,  0.87814555,
+        0.48394672,  0.34068281,  0.13857293,  0.55305416, -0.21786392])
+t_numeric = array([0., 1., 2., 3., 4., 5., 6., 7., 8., 9.]), surr_kwargs = {}
+min_possible_p = 0.09090909090909091
+
+    def power_test(
+        x: Union[np.ndarray, pd.DataFrame],
+        t: np.ndarray,
+        slopes: Union[List[float], np.ndarray],
+        n_simulations: int = 100,
+        n_surrogates: int = 1000,
+        alpha: float = 0.05,
+        surrogate_method: str = 'auto',
+        random_state: Optional[int] = None,
+        surrogate_kwargs: Optional[dict] = None,
+        slope_scaling: Optional[str] = None,
+        detrend: bool = False,
+        **kwargs
+    ) -> PowerResult:
+        """
+        Estimates the statistical power of the surrogate trend test via Monte Carlo simulation.
+
+        Generates synthetic datasets by injecting deterministic trends into colored noise
+        realizations (derived from the input data's spectral properties) and calculating
+        the frequency of significant detections.
+
+        Args:
+            x (Union[np.ndarray, pd.DataFrame]): Input data (used to define the noise model).
+            t (np.ndarray): Time values.
+            slopes (Union[List[float], np.ndarray]): List of trend slopes (beta) to test.
+            n_simulations (int): Number of Monte Carlo simulations per slope.
+            n_surrogates (int): Number of surrogates used in the *inner* significance test.
+            alpha (float): Significance level for detection (default 0.05).
+            surrogate_method (str): Method for surrogate generation ('auto', 'iaaft', 'lomb_scargle').
+                Used for both noise generation and the inner test.
+            random_state (Optional[int]): Seed for reproducibility.
+            surrogate_kwargs (dict, optional): Additional arguments passed to the surrogate generator
+                (e.g., {'dy': errors, 'freq_method': 'log'}).
+            slope_scaling (str, optional): The time unit for the provided slopes (e.g., 'year').
+                If provided, input slopes are interpreted as 'units per [slope_scaling]' and
+                converted to 'units per second' before injection.
+                Supports: 's', 'min', 'h', 'D', 'Y' and their full names (e.g. 'year', 'day').
+                Default is None (no conversion, interpreted as units per second or raw time unit).
+            detrend (bool): If True, linearly detrends the input `x` before generating surrogates.
+                This prevents an existing strong trend in `x` from inflating the low-frequency
+                power of the noise model, which would otherwise reduce the estimated power.
+                Default is False (conservative).
+            **kwargs: Additional arguments passed to `surrogate_test`.
+
+        Returns:
+            PowerResult: Named tuple containing power curve, MDT, and details.
+        """
+        # Prepare and filter data (handles NaNs and datetime conversion)
+        # This ensures Lomb-Scargle and other methods receive clean data.
+        # Note: hicensor=False because power_test simulates additive trends on
+        # the observed values, not censored logic directly. If the user provides
+        # 'censored' flags in kwargs, they are responsible for their meaning.
+
+        # Robustly handle DataFrame input before passing to _prepare_data
+        # _prepare_data is strict about requiring 'value', 'censored', 'cen_type'
+        # if passing a multi-column DataFrame. power_test only needs the values.
+        x_input = x
+        if isinstance(x, pd.DataFrame) and 'value' in x.columns:
+            x_input = x['value']
+
+        data_filtered, _ = _prepare_data(x_input, t, hicensor=False)
+
+        x_arr = data_filtered['value'].to_numpy()
+        t_numeric = data_filtered['t'].to_numpy()
+
+        # Final check for data integrity (e.g. infinite values which _prepare_data might not catch)
+        check_data_integrity(x_arr, t_numeric, context="power_test")
+
+        # Check if data was filtered (e.g. NaNs removed)
+        # We must align array-like kwargs (e.g. 'dy', 'censored') if provided.
+        surr_kwargs = surrogate_kwargs.copy() if surrogate_kwargs else {}
+        surr_kwargs.update(kwargs)
+
+        if 'censored' in surr_kwargs and np.any(surr_kwargs['censored']):
+            warnings.warn(
+                "Censored data simulation in power analysis assumes censoring status and limits "
+                "track the simulated trend (i.e., the limit of detection moves with the mean). "
+                "This may not reflect fixed detection limits common in environmental data. "
+                "Results should be interpreted with caution.",
+                UserWarning
+            )
+
+        # Check for impossible detection (footgun prevention)
+        # The minimum possible p-value with N surrogates is 1 / (N + 1).
+        # If this minimum is greater than alpha, no trend can ever be detected.
+        min_possible_p = 1.0 / (n_surrogates + 1)
+        if min_possible_p > alpha:
+>           raise ValueError(
+                f"Impossible to detect trends with n_surrogates={n_surrogates} and alpha={alpha}. "
+                f"The minimum possible p-value is {min_possible_p:.4f}, which is > {alpha}. "
+                f"Please increase n_surrogates (recommend > {int(1/alpha)}) or increase alpha."
+            )
+E           ValueError: Impossible to detect trends with n_surrogates=10 and alpha=0.05. The minimum possible p-value is 0.0909, which is > 0.05. Please increase n_surrogates (recommend > 20) or increase alpha.
+
+MannKS/power.py:117: ValueError
+_________________________ test_power_test_minimal_data _________________________
+
+    def test_power_test_minimal_data():
+        """Test power_test with minimal data (n=3) to ensure no crashes."""
+        x = [1, 2, 3]
+        t = [1, 2, 3]
+        slopes = [0.1, 0.5]
+
+        # Minimal run
+>       res = power_test(
+            x, t, slopes,
+            n_simulations=5,
+            n_surrogates=10,
+            surrogate_method='iaaft'
+        )
+
+tests/test_v060_deep_audit.py:64:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+x = [1, 2, 3], t = [1, 2, 3], slopes = [0.1, 0.5], n_simulations = 5
+n_surrogates = 10, alpha = 0.05, surrogate_method = 'iaaft', random_state = None
+surrogate_kwargs = None, slope_scaling = None, detrend = False, kwargs = {}
+x_input = [1, 2, 3]
+data_filtered =    value  censored cen_type  t_original    t  original_index
+0    1.0     False      not           1  1.0             ...   2.0     False      not           2  2.0               1
+2    3.0     False      not           3  3.0               2
+_ = False, x_arr = array([1., 2., 3.]), t_numeric = array([1., 2., 3.])
+surr_kwargs = {}, min_possible_p = 0.09090909090909091
+
+    def power_test(
+        x: Union[np.ndarray, pd.DataFrame],
+        t: np.ndarray,
+        slopes: Union[List[float], np.ndarray],
+        n_simulations: int = 100,
+        n_surrogates: int = 1000,
+        alpha: float = 0.05,
+        surrogate_method: str = 'auto',
+        random_state: Optional[int] = None,
+        surrogate_kwargs: Optional[dict] = None,
+        slope_scaling: Optional[str] = None,
+        detrend: bool = False,
+        **kwargs
+    ) -> PowerResult:
+        """
+        Estimates the statistical power of the surrogate trend test via Monte Carlo simulation.
+
+        Generates synthetic datasets by injecting deterministic trends into colored noise
+        realizations (derived from the input data's spectral properties) and calculating
+        the frequency of significant detections.
+
+        Args:
+            x (Union[np.ndarray, pd.DataFrame]): Input data (used to define the noise model).
+            t (np.ndarray): Time values.
+            slopes (Union[List[float], np.ndarray]): List of trend slopes (beta) to test.
+            n_simulations (int): Number of Monte Carlo simulations per slope.
+            n_surrogates (int): Number of surrogates used in the *inner* significance test.
+            alpha (float): Significance level for detection (default 0.05).
+            surrogate_method (str): Method for surrogate generation ('auto', 'iaaft', 'lomb_scargle').
+                Used for both noise generation and the inner test.
+            random_state (Optional[int]): Seed for reproducibility.
+            surrogate_kwargs (dict, optional): Additional arguments passed to the surrogate generator
+                (e.g., {'dy': errors, 'freq_method': 'log'}).
+            slope_scaling (str, optional): The time unit for the provided slopes (e.g., 'year').
+                If provided, input slopes are interpreted as 'units per [slope_scaling]' and
+                converted to 'units per second' before injection.
+                Supports: 's', 'min', 'h', 'D', 'Y' and their full names (e.g. 'year', 'day').
+                Default is None (no conversion, interpreted as units per second or raw time unit).
+            detrend (bool): If True, linearly detrends the input `x` before generating surrogates.
+                This prevents an existing strong trend in `x` from inflating the low-frequency
+                power of the noise model, which would otherwise reduce the estimated power.
+                Default is False (conservative).
+            **kwargs: Additional arguments passed to `surrogate_test`.
+
+        Returns:
+            PowerResult: Named tuple containing power curve, MDT, and details.
+        """
+        # Prepare and filter data (handles NaNs and datetime conversion)
+        # This ensures Lomb-Scargle and other methods receive clean data.
+        # Note: hicensor=False because power_test simulates additive trends on
+        # the observed values, not censored logic directly. If the user provides
+        # 'censored' flags in kwargs, they are responsible for their meaning.
+
+        # Robustly handle DataFrame input before passing to _prepare_data
+        # _prepare_data is strict about requiring 'value', 'censored', 'cen_type'
+        # if passing a multi-column DataFrame. power_test only needs the values.
+        x_input = x
+        if isinstance(x, pd.DataFrame) and 'value' in x.columns:
+            x_input = x['value']
+
+        data_filtered, _ = _prepare_data(x_input, t, hicensor=False)
+
+        x_arr = data_filtered['value'].to_numpy()
+        t_numeric = data_filtered['t'].to_numpy()
+
+        # Final check for data integrity (e.g. infinite values which _prepare_data might not catch)
+        check_data_integrity(x_arr, t_numeric, context="power_test")
+
+        # Check if data was filtered (e.g. NaNs removed)
+        # We must align array-like kwargs (e.g. 'dy', 'censored') if provided.
+        surr_kwargs = surrogate_kwargs.copy() if surrogate_kwargs else {}
+        surr_kwargs.update(kwargs)
+
+        if 'censored' in surr_kwargs and np.any(surr_kwargs['censored']):
+            warnings.warn(
+                "Censored data simulation in power analysis assumes censoring status and limits "
+                "track the simulated trend (i.e., the limit of detection moves with the mean). "
+                "This may not reflect fixed detection limits common in environmental data. "
+                "Results should be interpreted with caution.",
+                UserWarning
+            )
+
+        # Check for impossible detection (footgun prevention)
+        # The minimum possible p-value with N surrogates is 1 / (N + 1).
+        # If this minimum is greater than alpha, no trend can ever be detected.
+        min_possible_p = 1.0 / (n_surrogates + 1)
+        if min_possible_p > alpha:
+>           raise ValueError(
+                f"Impossible to detect trends with n_surrogates={n_surrogates} and alpha={alpha}. "
+                f"The minimum possible p-value is {min_possible_p:.4f}, which is > {alpha}. "
+                f"Please increase n_surrogates (recommend > {int(1/alpha)}) or increase alpha."
+            )
+E           ValueError: Impossible to detect trends with n_surrogates=10 and alpha=0.05. The minimum possible p-value is 0.0909, which is > 0.05. Please increase n_surrogates (recommend > 20) or increase alpha.
+
+MannKS/power.py:117: ValueError
+__________________________ test_power_test_nan_slopes __________________________
+
+    def test_power_test_nan_slopes():
+        """Test power_test with NaN in slopes list."""
+        x = np.random.randn(20)
+        t = np.arange(20)
+        slopes = [0.1, np.nan, 0.5]
+
+>       res = power_test(x, t, slopes, n_simulations=5, n_surrogates=5)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_v060_deep_audit.py:132:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+x = array([ 0.52200475, -0.52574264, -0.35115208,  0.18969034,  1.12329415,
+        0.90832984,  0.63215848, -0.22977956, ...775885, -0.63363925,  0.62706628,  0.58775463,
+       -0.2975438 , -0.63298825,  0.9075941 ,  0.14206446,  0.41812714])
+t = array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
+       17, 18, 19])
+slopes = [0.1, nan, 0.5], n_simulations = 5, n_surrogates = 5, alpha = 0.05
+surrogate_method = 'auto', random_state = None, surrogate_kwargs = None
+slope_scaling = None, detrend = False, kwargs = {}
+x_input = array([ 0.52200475, -0.52574264, -0.35115208,  0.18969034,  1.12329415,
+        0.90832984,  0.63215848, -0.22977956, ...775885, -0.63363925,  0.62706628,  0.58775463,
+       -0.2975438 , -0.63298825,  0.9075941 ,  0.14206446,  0.41812714])
+data_filtered =        value  censored cen_type  t_original     t  original_index
+0   0.522005     False      not           0   0.0   ...     False      not          18  18.0              18
+19  0.418127     False      not          19  19.0              19
+_ = False
+x_arr = array([ 0.52200475, -0.52574264, -0.35115208,  0.18969034,  1.12329415,
+        0.90832984,  0.63215848, -0.22977956, ...775885, -0.63363925,  0.62706628,  0.58775463,
+       -0.2975438 , -0.63298825,  0.9075941 ,  0.14206446,  0.41812714])
+t_numeric = array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11., 12.,
+       13., 14., 15., 16., 17., 18., 19.])
+surr_kwargs = {}, min_possible_p = 0.16666666666666666
+
+    def power_test(
+        x: Union[np.ndarray, pd.DataFrame],
+        t: np.ndarray,
+        slopes: Union[List[float], np.ndarray],
+        n_simulations: int = 100,
+        n_surrogates: int = 1000,
+        alpha: float = 0.05,
+        surrogate_method: str = 'auto',
+        random_state: Optional[int] = None,
+        surrogate_kwargs: Optional[dict] = None,
+        slope_scaling: Optional[str] = None,
+        detrend: bool = False,
+        **kwargs
+    ) -> PowerResult:
+        """
+        Estimates the statistical power of the surrogate trend test via Monte Carlo simulation.
+
+        Generates synthetic datasets by injecting deterministic trends into colored noise
+        realizations (derived from the input data's spectral properties) and calculating
+        the frequency of significant detections.
+
+        Args:
+            x (Union[np.ndarray, pd.DataFrame]): Input data (used to define the noise model).
+            t (np.ndarray): Time values.
+            slopes (Union[List[float], np.ndarray]): List of trend slopes (beta) to test.
+            n_simulations (int): Number of Monte Carlo simulations per slope.
+            n_surrogates (int): Number of surrogates used in the *inner* significance test.
+            alpha (float): Significance level for detection (default 0.05).
+            surrogate_method (str): Method for surrogate generation ('auto', 'iaaft', 'lomb_scargle').
+                Used for both noise generation and the inner test.
+            random_state (Optional[int]): Seed for reproducibility.
+            surrogate_kwargs (dict, optional): Additional arguments passed to the surrogate generator
+                (e.g., {'dy': errors, 'freq_method': 'log'}).
+            slope_scaling (str, optional): The time unit for the provided slopes (e.g., 'year').
+                If provided, input slopes are interpreted as 'units per [slope_scaling]' and
+                converted to 'units per second' before injection.
+                Supports: 's', 'min', 'h', 'D', 'Y' and their full names (e.g. 'year', 'day').
+                Default is None (no conversion, interpreted as units per second or raw time unit).
+            detrend (bool): If True, linearly detrends the input `x` before generating surrogates.
+                This prevents an existing strong trend in `x` from inflating the low-frequency
+                power of the noise model, which would otherwise reduce the estimated power.
+                Default is False (conservative).
+            **kwargs: Additional arguments passed to `surrogate_test`.
+
+        Returns:
+            PowerResult: Named tuple containing power curve, MDT, and details.
+        """
+        # Prepare and filter data (handles NaNs and datetime conversion)
+        # This ensures Lomb-Scargle and other methods receive clean data.
+        # Note: hicensor=False because power_test simulates additive trends on
+        # the observed values, not censored logic directly. If the user provides
+        # 'censored' flags in kwargs, they are responsible for their meaning.
+
+        # Robustly handle DataFrame input before passing to _prepare_data
+        # _prepare_data is strict about requiring 'value', 'censored', 'cen_type'
+        # if passing a multi-column DataFrame. power_test only needs the values.
+        x_input = x
+        if isinstance(x, pd.DataFrame) and 'value' in x.columns:
+            x_input = x['value']
+
+        data_filtered, _ = _prepare_data(x_input, t, hicensor=False)
+
+        x_arr = data_filtered['value'].to_numpy()
+        t_numeric = data_filtered['t'].to_numpy()
+
+        # Final check for data integrity (e.g. infinite values which _prepare_data might not catch)
+        check_data_integrity(x_arr, t_numeric, context="power_test")
+
+        # Check if data was filtered (e.g. NaNs removed)
+        # We must align array-like kwargs (e.g. 'dy', 'censored') if provided.
+        surr_kwargs = surrogate_kwargs.copy() if surrogate_kwargs else {}
+        surr_kwargs.update(kwargs)
+
+        if 'censored' in surr_kwargs and np.any(surr_kwargs['censored']):
+            warnings.warn(
+                "Censored data simulation in power analysis assumes censoring status and limits "
+                "track the simulated trend (i.e., the limit of detection moves with the mean). "
+                "This may not reflect fixed detection limits common in environmental data. "
+                "Results should be interpreted with caution.",
+                UserWarning
+            )
+
+        # Check for impossible detection (footgun prevention)
+        # The minimum possible p-value with N surrogates is 1 / (N + 1).
+        # If this minimum is greater than alpha, no trend can ever be detected.
+        min_possible_p = 1.0 / (n_surrogates + 1)
+        if min_possible_p > alpha:
+>           raise ValueError(
+                f"Impossible to detect trends with n_surrogates={n_surrogates} and alpha={alpha}. "
+                f"The minimum possible p-value is {min_possible_p:.4f}, which is > {alpha}. "
+                f"Please increase n_surrogates (recommend > {int(1/alpha)}) or increase alpha."
+            )
+E           ValueError: Impossible to detect trends with n_surrogates=5 and alpha=0.05. The minimum possible p-value is 0.1667, which is > 0.05. Please increase n_surrogates (recommend > 20) or increase alpha.
+
+MannKS/power.py:117: ValueError
+=============================== warnings summary ===============================
+tests/test_v060_audit_adversarial.py::test_power_test_invalid_alpha
+  /app/MannKS/_surrogate.py:113: UserWarning: IAAFT convergence stalled at iter 3 (rel_change=4.12e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(
+
+tests/test_v060_audit_adversarial.py::test_performance_warning_surrogates
+  /app/MannKS/trend_test.py:790: UserWarning: IAAFT convergence stalled at iter 3 (rel_change=1.76e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_performance_warning_surrogates
+  /app/MannKS/trend_test.py:790: UserWarning: IAAFT convergence stalled at iter 4 (rel_change=1.03e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_performance_warning_surrogates
+  /app/MannKS/trend_test.py:790: UserWarning: IAAFT convergence stalled at iter 4 (rel_change=1.39e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 3 (rel_change=8.36e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 2 (rel_change=9.43e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 1 (rel_change=2.47e-01). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 2 (rel_change=2.40e-01). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 2 (rel_change=8.24e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 1 (rel_change=2.40e-01). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 2 (rel_change=2.77e-02). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 2 (rel_change=1.08e-02). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 3 (rel_change=9.43e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 3 (rel_change=8.24e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 1 (rel_change=5.36e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 2 (rel_change=2.46e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 3 (rel_change=1.19e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 1 (rel_change=4.63e-01). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 2 (rel_change=8.36e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 3 (rel_change=9.55e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 3 (rel_change=1.62e-02). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 1 (rel_change=2.65e-01). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 2 (rel_change=1.66e-02). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 2 (rel_change=5.12e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 3 (rel_change=2.46e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 1 (rel_change=1.91e-02). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 1 (rel_change=4.95e-02). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 1 (rel_change=2.50e-01). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_adversarial.py::test_seasonal_surrogate_random_state_drift
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: IAAFT convergence stalled at iter 3 (rel_change=3.93e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_comprehensive.py::test_surrogate_test_reproducibility
+  /app/MannKS/_surrogate.py:113: UserWarning: IAAFT convergence stalled at iter 3 (rel_change=1.04e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(
+
+tests/test_v060_audit_comprehensive.py::test_surrogate_test_reproducibility
+  /app/MannKS/_surrogate.py:113: UserWarning: IAAFT convergence stalled at iter 2 (rel_change=1.38e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(
+
+tests/test_v060_audit_comprehensive.py::test_surrogate_test_reproducibility
+  /app/MannKS/_surrogate.py:113: UserWarning: IAAFT convergence stalled at iter 4 (rel_change=1.96e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(
+
+tests/test_v060_audit_comprehensive.py::test_power_test_reproducibility
+tests/test_v060_audit_comprehensive.py::test_power_test_reproducibility
+  /app/MannKS/_surrogate.py:113: UserWarning: IAAFT convergence stalled at iter 2 (rel_change=1.71e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(
+
+tests/test_v060_audit_comprehensive.py::test_power_test_reproducibility
+tests/test_v060_audit_comprehensive.py::test_power_test_reproducibility
+  /app/MannKS/_surrogate.py:113: UserWarning: IAAFT convergence stalled at iter 4 (rel_change=3.41e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(
+
+tests/test_v060_audit_comprehensive.py::test_power_test_reproducibility
+tests/test_v060_audit_comprehensive.py::test_power_test_reproducibility
+  /app/MannKS/_surrogate.py:113: UserWarning: IAAFT convergence stalled at iter 4 (rel_change=1.69e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(
+
+tests/test_v060_audit_comprehensive.py::test_power_test_reproducibility
+tests/test_v060_audit_comprehensive.py::test_power_test_reproducibility
+  /app/MannKS/_surrogate.py:113: UserWarning: IAAFT convergence stalled at iter 5 (rel_change=6.97e-03). This often indicates data with unusual spectral properties or too few observations. The result may be suboptimal but is usually acceptable.
+    warnings.warn(
+
+tests/test_v060_audit_comprehensive.py::test_seasonal_kwargs_matching_aggregated
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: Variance near zero, Z-score may be unreliable
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_audit_comprehensive.py::test_n_surrogates_one
+  /home/jules/.pyenv/versions/3.12.12/lib/python3.12/site-packages/numpy/core/_methods.py:206: RuntimeWarning: Degrees of freedom <= 0 for slice
+    ret = _var(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+
+tests/test_v060_audit_comprehensive.py::test_n_surrogates_one
+  /home/jules/.pyenv/versions/3.12.12/lib/python3.12/site-packages/numpy/core/_methods.py:198: RuntimeWarning: invalid value encountered in scalar divide
+    ret = ret.dtype.type(ret / rcount)
+
+tests/test_v060_audit_fixes.py::test_trend_test_surrogate_kwargs_middle_aggregation_success
+  /app/MannKS/trend_test.py:790: UserWarning: Using IAAFT on unevenly spaced data. Results may be biased.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_v060_edge_cases.py::test_all_censored_surrogates
+  /app/MannKS/_surrogate.py:402: UserWarning: Censored data detected in surrogate test. Surrogate series are generated using imputed values (lt_mult=0.5, gt_mult=1.1). Censoring flags are propagated to the surrogates to ensure a consistent S-statistic distribution.
+    warnings.warn(
+
+tests/test_warning_returns.py::test_trend_test_return_warnings
+  /app/MannKS/trend_test.py:790: UserWarning: Slope scaling failed: Invalid time unit for slope scaling: 'invalid_unit'. Must be one of: year, month, week, day, hour, minute, second.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_warning_returns.py::test_seasonal_trend_test_return_warnings
+  /app/MannKS/seasonal_trend_test.py:1055: UserWarning: Cannot apply `slope_scaling` to a numeric (non-datetime) time vector `t`. The slope's unit is inherited from `t`.
+    warnings.warn(w_str, UserWarning)
+
+tests/test_warning_returns.py::test_rolling_trend_test_return_warnings
+tests/test_warning_returns.py::test_rolling_trend_test_return_warnings
+  /app/MannKS/trend_test.py:790: UserWarning: Cannot apply `slope_scaling` to a numeric (non-datetime) time vector `t`. The slope's unit is inherited from `t`.
+    warnings.warn(w_str, UserWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_v060_audit_adversarial.py::test_power_test_invalid_alpha - ...
+FAILED tests/test_v060_audit_fixes.py::test_power_test_slope_scaling - ValueE...
+FAILED tests/test_v060_audit_fixes.py::test_power_test_suppresses_warnings - ...
+FAILED tests/test_v060_deep_audit.py::test_power_test_minimal_data - ValueErr...
+FAILED tests/test_v060_deep_audit.py::test_power_test_nan_slopes - ValueError...
+================== 5 failed, 75 passed, 72 warnings in 10.20s ==================

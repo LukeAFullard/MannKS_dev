@@ -114,10 +114,11 @@ def power_test(
     # If this minimum is greater than alpha, no trend can ever be detected.
     min_possible_p = 1.0 / (n_surrogates + 1)
     if min_possible_p > alpha:
+        rec_n = int(1 / alpha) if alpha > 0 else "infinity"
         raise ValueError(
             f"Impossible to detect trends with n_surrogates={n_surrogates} and alpha={alpha}. "
             f"The minimum possible p-value is {min_possible_p:.4f}, which is > {alpha}. "
-            f"Please increase n_surrogates (recommend > {int(1/alpha)}) or increase alpha."
+            f"Please increase n_surrogates (recommend > {rec_n}) or increase alpha."
         )
 
     if 'original_index' in data_filtered.columns:
