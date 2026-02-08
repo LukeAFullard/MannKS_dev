@@ -100,6 +100,15 @@ def power_test(
     surr_kwargs = surrogate_kwargs.copy() if surrogate_kwargs else {}
     surr_kwargs.update(kwargs)
 
+    if 'censored' in surr_kwargs and np.any(surr_kwargs['censored']):
+        warnings.warn(
+            "Censored data simulation in power analysis assumes censoring status and limits "
+            "track the simulated trend (i.e., the limit of detection moves with the mean). "
+            "This may not reflect fixed detection limits common in environmental data. "
+            "Results should be interpreted with caution.",
+            UserWarning
+        )
+
     if 'original_index' in data_filtered.columns:
         kept_indices = data_filtered['original_index'].values
         n_orig = len(np.asarray(t).flatten())

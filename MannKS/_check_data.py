@@ -46,10 +46,18 @@ def check_data_integrity(
 
     # Check for Sample Size
     if len(x_arr) < 3:
-        raise ValueError(
-            f"Insufficient data for {context} (n={len(x_arr)}). "
-            "At least 3 observations are required for meaningful statistical analysis."
-        )
+        # Contextual relaxation: For internal seasonal surrogate tests, n=2 might be passed.
+        # We allow it but warn, or rely on the caller to handle degenerate cases.
+        # However, for general analysis, < 3 is usually insufficient.
+        # Given that seasonal_trend_test calls surrogate_test for n > 1, we must allow n=2
+        # to prevent crashes in that loop.
+        if len(x_arr) < 2:
+            raise ValueError(
+                f"Insufficient data for {context} (n={len(x_arr)}). "
+                "At least 2 observations are required."
+            )
+        # If n=2, we proceed (S statistic is defined).
+        pass
 
     # Check for Constant Data (Warning? Or just allow it?)
     # Constant data is valid but degenerate. surrogate_test handles it (p=1.0).
