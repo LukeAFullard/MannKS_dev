@@ -155,7 +155,7 @@ class TestIndependentAuditV060:
         kwargs = dict(
             x=self.x_random, t=self.t_daily,
             slopes=[0.5, 1.0], slope_scaling='year',
-            n_simulations=10, n_surrogates=10, random_state=123
+            n_simulations=10, n_surrogates=20, random_state=123
         )
 
         res1 = power_test(**kwargs)
@@ -178,7 +178,7 @@ class TestIndependentAuditV060:
         })
 
         # Should not crash
-        res = power_test(df, df['t'], slopes=[1.0], n_simulations=5, n_surrogates=5)
+        res = power_test(df, df['t'], slopes=[1.0], n_simulations=5, n_surrogates=20)
         assert len(res.power) == 1
 
     # --- 4. Adversarial Inputs ---
