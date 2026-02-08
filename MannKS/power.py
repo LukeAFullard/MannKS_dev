@@ -109,6 +109,17 @@ def power_test(
             UserWarning
         )
 
+    # Check for impossible detection (footgun prevention)
+    # The minimum possible p-value with N surrogates is 1 / (N + 1).
+    # If this minimum is greater than alpha, no trend can ever be detected.
+    min_possible_p = 1.0 / (n_surrogates + 1)
+    if min_possible_p > alpha:
+        raise ValueError(
+            f"Impossible to detect trends with n_surrogates={n_surrogates} and alpha={alpha}. "
+            f"The minimum possible p-value is {min_possible_p:.4f}, which is > {alpha}. "
+            f"Please increase n_surrogates (recommend > {int(1/alpha)}) or increase alpha."
+        )
+
     if 'original_index' in data_filtered.columns:
         kept_indices = data_filtered['original_index'].values
         n_orig = len(np.asarray(t).flatten())
@@ -297,6 +308,8 @@ def power_test(
                 warnings.filterwarnings("ignore", message="Lomb-Scargle surrogate generation is computationally expensive")
                 warnings.filterwarnings("ignore", message="Uneven sampling detected but `astropy` not installed")
                 warnings.filterwarnings("ignore", message="Using IAAFT on unevenly spaced data")
+                # Suppress "stalled" warnings to prevent flooding during MC loops
+                warnings.filterwarnings("ignore", message="IAAFT convergence stalled")
 
                 res = surrogate_test(
                     x_sim, t_numeric,

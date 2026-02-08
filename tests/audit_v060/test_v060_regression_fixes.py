@@ -21,7 +21,7 @@ class TestDeepAudit:
         """
         # Slopes that are very small
         slopes = [1e-9, 2e-9]
-        res = power_test(self.x, self.t, slopes=slopes, n_simulations=10, n_surrogates=10, random_state=42)
+        res = power_test(self.x, self.t, slopes=slopes, n_simulations=10, n_surrogates=20, random_state=42)
 
         # Power should be near alpha (0.05)
         assert np.all(res.power < 0.5)
@@ -76,8 +76,8 @@ class TestDeepAudit:
         x = self.rng.standard_normal(60)
 
         # Run twice
-        res1 = seasonal_trend_test(x, t, season_type='month', surrogate_method='auto', n_surrogates=10, random_state=123)
-        res2 = seasonal_trend_test(x, t, season_type='month', surrogate_method='auto', n_surrogates=10, random_state=123)
+        res1 = seasonal_trend_test(x, t, season_type='month', surrogate_method='auto', n_surrogates=20, random_state=123)
+        res2 = seasonal_trend_test(x, t, season_type='month', surrogate_method='auto', n_surrogates=20, random_state=123)
 
         np.testing.assert_array_equal(res1.surrogate_result.surrogate_scores, res2.surrogate_result.surrogate_scores)
 

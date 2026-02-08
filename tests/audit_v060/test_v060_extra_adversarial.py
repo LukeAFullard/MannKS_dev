@@ -95,7 +95,7 @@ def test_power_test_censored_warning():
         warnings.simplefilter("always") # Cause all warnings to be caught
         res = power_test(
             x, t, [0.1],
-            n_simulations=5, n_surrogates=10,
+            n_simulations=5, n_surrogates=20,
             surrogate_kwargs={'censored': censored}
         )
 

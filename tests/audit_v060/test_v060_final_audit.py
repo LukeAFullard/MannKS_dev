@@ -60,14 +60,15 @@ def test_power_test_slope_scaling_verification():
     with patch('MannKS.power._iaaft_surrogates', return_value=np.zeros((1, 100))) as mock_noise:
         with patch('MannKS.power.surrogate_test') as mock_test:
             from MannKS._surrogate import SurrogateResult
+                # Use n_surrogates=20 to satisfy the new alpha<0.05 safety check (1/21 approx 0.047 < 0.05)
             mock_test.return_value = SurrogateResult(
-                method='test', original_score=0, surrogate_scores=np.zeros(10),
-                p_value=0.5, z_score=0, n_surrogates=10, trend_significant=False, notes=[]
+                    method='test', original_score=0, surrogate_scores=np.zeros(20),
+                    p_value=0.5, z_score=0, n_surrogates=20, trend_significant=False, notes=[]
             )
 
             res = power_test(
                 x, t, slopes=slopes, slope_scaling='year', surrogate_method='iaaft',
-                n_simulations=1, n_surrogates=10, random_state=42
+                    n_simulations=1, n_surrogates=20, random_state=42
             )
 
             # Now x_injected should be exactly slope * t_centered

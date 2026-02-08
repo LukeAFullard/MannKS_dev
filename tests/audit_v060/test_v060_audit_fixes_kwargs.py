@@ -28,7 +28,7 @@ def test_power_test_kwargs_propagation():
         custom_arg = "test_value"
         censored_arg = np.zeros(50, dtype=bool)
 
-        power_test(x, t, slopes, n_simulations=2, n_surrogates=10,
+        power_test(x, t, slopes, n_simulations=2, n_surrogates=20,
                    my_custom_arg=custom_arg, censored=censored_arg)
 
         # Check call args
@@ -87,7 +87,7 @@ def test_surrogate_test_constant_input():
     # mk score should be 0
 
     from MannKS._surrogate import surrogate_test
-    res = surrogate_test(x, t, method='lomb_scargle', n_surrogates=10)
+    res = surrogate_test(x, t, method='lomb_scargle', n_surrogates=20)
 
     assert res.original_score == 0
     assert np.all(res.surrogate_scores == 0)

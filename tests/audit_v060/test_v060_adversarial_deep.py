@@ -151,7 +151,8 @@ class TestSeasonalAdversarial:
         t = pd.date_range('2020-01-01', periods=24, freq='ME')
         x = np.random.randn(24)
         res = seasonal_trend_test(x, t, period=12, agg_method='median')
-        assert res.trend in ['increasing', 'decreasing', 'no trend']
+        # Allow 'indeterminate' which happens if Z=0 (e.g. constant/symmetric data or small N)
+        assert res.trend in ['increasing', 'decreasing', 'no trend', 'indeterminate']
 
     def test_seasonal_surrogate_agg_conflict(self):
         """
