@@ -278,7 +278,7 @@ def seasonal_trend_test(
                  captured_warnings.append(str(w.message))
             return res('no trend', False, np.nan, 0, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
                     'insufficient data', analysis_notes,
-                    np.nan, np.nan, np.nan, 0, 0, 0, np.nan, np.nan, '',
+                    np.nan, np.nan, np.nan, 0, 0, 0, np.nan, np.nan, np.nan, np.nan, '',
                     np.nan, np.nan, np.nan, np.nan, None, captured_warnings,
                     'insufficient', None, None, None)
 
