@@ -247,6 +247,9 @@ def rolling_trend_test(
                 'slope_per_second': result.slope_per_second,
                 'lower_ci_per_second': result.lower_ci_per_second,
                 'upper_ci_per_second': result.upper_ci_per_second,
+                'scaled_slope': result.scaled_slope,
+                'scaled_lower_ci': result.scaled_lower_ci,
+                'scaled_upper_ci': result.scaled_upper_ci,
                 'warnings': result.warnings
             })
 
@@ -259,7 +262,8 @@ def rolling_trend_test(
             'window_start', 'window_end', 'window_center', 'n_obs',
             'slope', 'lower_ci', 'upper_ci', 'p_value', 'h',
             'classification', 'C', 'Cd', 'tau', 's',
-            'intercept', 'slope_per_second', 'lower_ci_per_second', 'upper_ci_per_second', 'warnings'
+            'intercept', 'slope_per_second', 'lower_ci_per_second', 'upper_ci_per_second',
+            'scaled_slope', 'scaled_lower_ci', 'scaled_upper_ci', 'warnings'
         ])
 
     return pd.DataFrame(results)

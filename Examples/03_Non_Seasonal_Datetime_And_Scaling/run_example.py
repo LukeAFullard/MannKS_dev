@@ -49,7 +49,9 @@ print(f"Basic Trend: {result.trend}")
 print(f"Classification: {result.classification}")
 print(f"p-value: {result.p:.4f}")
 print(f"Sen's Slope: {result.slope:.4f} (mg/L per year)") # Note the unit!
+print(f"Scaled Slope Attribute: {result.scaled_slope:.4f}") # Explicit attribute
 print(f"Confidence Interval: [{result.lower_ci:.4f}, {result.upper_ci:.4f}]")
+print(f"Scaled CI Attributes: [{result.scaled_lower_ci:.4f}, {result.scaled_upper_ci:.4f}]") # Explicit attributes
 
 # Just to demonstrate, let's look at the raw unscaled slope (per second) which is also returned
 print(f"\\n(For comparison) Raw Slope: {result.slope_per_second:.10f} (units/second)")
