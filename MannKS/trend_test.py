@@ -197,7 +197,7 @@ def trend_test(
         'sen_probability', 'sen_probability_max', 'sen_probability_min',
         'prop_censored', 'prop_unique', 'n_censor_levels',
         'slope_per_second', 'lower_ci_per_second', 'upper_ci_per_second',
-        'scaled_slope', 'slope_units',
+        'scaled_slope', 'scaled_lower_ci', 'scaled_upper_ci', 'slope_units',
         'acf1', 'n_effective', 'block_size_used', 'warnings',
         'computation_mode', 'pairs_used', 'approximation_error',
         'surrogate_result'
@@ -768,7 +768,7 @@ def trend_test(
                   '', [], sen_prob, sen_prob_max, sen_prob_min,
                   prop_censored, prop_unique, n_censor_levels,
                   slope_per_second, lower_ci, upper_ci,
-                  scaled_slope, slope_units,
+                  scaled_slope, scaled_lower_ci, scaled_upper_ci, slope_units,
                   acf1, n_eff, block_size_used, captured_warnings,
                   computation_mode, pairs_used, approximation_error,
                   surrogate_result)
