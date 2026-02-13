@@ -563,7 +563,10 @@ def surrogate_test(
 
     # Z-score relative to surrogate distribution
     mean_s = np.mean(surrogate_scores)
-    std_s = np.std(surrogate_scores, ddof=1)
+    if n_surrogates > 1:
+        std_s = np.std(surrogate_scores, ddof=1)
+    else:
+        std_s = 0.0
 
     if std_s > 0:
         z_score = (s_orig - mean_s) / std_s
