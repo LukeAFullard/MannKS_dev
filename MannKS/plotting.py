@@ -1,6 +1,7 @@
 """
 This script provides plotting utilities for the MannKS package.
 """
+import warnings
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -36,7 +37,7 @@ def plot_seasonal_distribution(x, t, period=12, season_type='month', plot_path='
     x, t = x_raw[mask], t_raw[mask]
 
     if len(x) < 2:
-        print("Not enough data to generate a plot.")
+        warnings.warn("Not enough data to generate a plot.", UserWarning)
         return None
 
     if is_datetime:
@@ -362,7 +363,7 @@ def plot_residuals(data, results, save_path):
     slope = getattr(results, 'slope_per_second', results.slope)
 
     if pd.isna(slope):
-        print("Cannot plot residuals: Slope is NaN.")
+        warnings.warn("Cannot plot residuals: Slope is NaN.", UserWarning)
         return
 
     t_numeric = data['t'].values
