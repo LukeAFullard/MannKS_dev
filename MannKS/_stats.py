@@ -627,7 +627,7 @@ def _sens_estimator_censored(x, t, cen_type, lt_mult=DEFAULT_LT_MULTIPLIER, gt_m
     # The order MUST be j, i to match the R script's lower.tri() logic,
     # which pairs (later_time, earlier_time).
     # Ensure cen_type is treated as string array for np.char.add compatibility
-    cen_type_str = cen_type.astype(str)
+    cen_type_str = np.array(cen_type).astype(str).astype('U')
     cen_type_pairs = np.char.add(np.char.add(cen_type_str[j_indices], " "), cen_type_str[i_indices])
     slopes_final = slopes_mod.copy()
 

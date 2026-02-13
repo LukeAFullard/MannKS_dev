@@ -122,7 +122,7 @@ def get_sens_slope_analysis_note(slopes, t, cen_type):
         return "ok"
 
     # Ensure cen_type is treated as string array for np.char.add compatibility
-    cen_type_str = cen_type.astype(str)
+    cen_type_str = np.array(cen_type).astype(str).astype('U')
     cen_type_pairs = (np.char.add(np.char.add(cen_type_str[i], " "), cen_type_str[j]))[valid_mask]
 
     # Find the minimum absolute difference from the median
