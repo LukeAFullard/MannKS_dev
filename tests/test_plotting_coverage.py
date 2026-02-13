@@ -17,12 +17,11 @@ def temp_plot_path(tmpdir):
     """Fixture to create a temporary file path for plots."""
     return os.path.join(tmpdir, "test_plot.png")
 
-def test_plot_seasonal_distribution_insufficient_data(capsys):
+def test_plot_seasonal_distribution_insufficient_data():
     """Test plot_seasonal_distribution with less than 2 data points."""
-    result = plot_seasonal_distribution([1], [1])
-    captured = capsys.readouterr()
+    with pytest.warns(UserWarning, match="Not enough data to generate a plot"):
+        result = plot_seasonal_distribution([1], [1])
     assert result is None
-    assert "Not enough data to generate a plot" in captured.out
 
 def test_plot_seasonal_distribution_numeric_seasons(temp_plot_path):
     """Test plot_seasonal_distribution with numeric season data."""

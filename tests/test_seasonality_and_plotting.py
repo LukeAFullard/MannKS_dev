@@ -207,7 +207,8 @@ def test_plot_seasonal_distribution_insufficient_data():
     """Test plot_seasonal_distribution with insufficient data."""
     x = [1]
     t = [pd.to_datetime('2020-01-01')]
-    result = plot_seasonal_distribution(x, t, plot_path='test.png')
+    with pytest.warns(UserWarning, match="Not enough data to generate a plot"):
+        result = plot_seasonal_distribution(x, t, plot_path='test.png')
     assert result is None
 
 def test_check_seasonality_insufficient_unique_values():
