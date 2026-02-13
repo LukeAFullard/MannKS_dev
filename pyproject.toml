@@ -39,6 +39,11 @@ astropy = "^5.0"
 pytest = ">=6.0"
 pytest-cov = "*"
 
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
